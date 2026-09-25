@@ -29,7 +29,6 @@ export function Companion({
         className="companion-img select-none"
         style={{ objectFit: "contain" }}
       />
-      {label && <span className="sr-only">{label}</span>}
     </span>
   );
 }
