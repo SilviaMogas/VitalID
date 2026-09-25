@@ -57,7 +57,11 @@ export class MemoryShareStore implements ShareStore {
 
   async listVitalIdShares() {
     return Array.from(this.map.values())
-      .map(stripSnapshot)
+      .map((record) => {
+        const summary = stripSnapshot(record);
+        const sentTo = record.snapshot.sentTo;
+        return sentTo === undefined ? summary : { ...summary, sentTo: structuredClone(sentTo) };
+      })
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 

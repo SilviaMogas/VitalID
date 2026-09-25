@@ -30,7 +30,7 @@ interface VitalIdShareRow {
 }
 
 const LIST_PAGE_SIZE = 500;
-const SUMMARY_COLUMNS = 'id, token, created_at, expires_at, revoked, purpose, selected_fields';
+const SUMMARY_COLUMNS = 'id, token, created_at, expires_at, revoked, purpose, selected_fields, sentTo:snapshot->sentTo';
 
 function fromRow(row: VitalIdShareRow): VitalIdShareRecord {
   return {
@@ -104,6 +104,25 @@ export class SupabaseShareStore implements ShareStore {
     return this.revokeWhere('id', tokenOrId);
   }
 
+  async setVitalIdShareSnapshotKey(token: string, key: string, value: Json): Promise<boolean> {
+    const { data, error } = await this.client
+      .from(VITAL_ID_SHARES_TABLE)
+      .select('snapshot')
+      .eq('token', token)
+      .maybeSingle<{ snapshot: Record<string, Json> | null }>();
+    if (error) throw new Error(`setVitalIdShareSnapshotKey failed: ${error.message}`);
+    if (!data) return false;
+
+    const snapshot = { ...(data.snapshot ?? {}), [key]: value };
+    const { data: updated, error: updateError } = await this.client
+      .from(VITAL_ID_SHARES_TABLE)
+      .update({ snapshot })
+      .eq('token', token)
+      .select('id');
+    if (updateError) throw new Error(`setVitalIdShareSnapshotKey failed: ${updateError.message}`);
+    return (updated?.length ?? 0) > 0;
+  }
+
   private async revokeWhere(column: 'token' | 'id', value: string): Promise<boolean> {
     const { data, error } = await this.client
       .from(VITAL_ID_SHARES_TABLE)
@@ -119,7 +138,7 @@ export class SupabaseShareStore implements ShareStore {
   }
 
   async listVitalIdShares() {
-    const rows: Omit<VitalIdShareRow, 'snapshot'>[] = [];
+    const rows: (Omit<VitalIdShareRow, 'snapshot'> & { sentTo?: Json })[] = [];
     for (let from = 0; ; from += LIST_PAGE_SIZE) {
       const { data, error } = await this.client
         .from(VITAL_ID_SHARES_TABLE)
@@ -127,7 +146,7 @@ export class SupabaseShareStore implements ShareStore {
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
         .range(from, from + LIST_PAGE_SIZE - 1)
-        .returns<Omit<VitalIdShareRow, 'snapshot'>[]>();
+        .returns<(Omit<VitalIdShareRow, 'snapshot'> & { sentTo?: Json })[]>();
       if (error) throw new Error(`listVitalIdShares failed: ${error.message}`);
       rows.push(...(data ?? []));
       if (!data || data.length < LIST_PAGE_SIZE) break;
@@ -140,6 +159,7 @@ export class SupabaseShareStore implements ShareStore {
       revoked: row.revoked,
       purpose: row.purpose,
       selectedFields: row.selected_fields ?? [],
+      sentTo: row.sentTo,
     }));
   }
 

@@ -33,6 +33,7 @@ function summarize(p: SharePayload) {
     expiresAt: p.expiresAt,
     revoked: p.revoked,
     selectedFields: p.selectedFields,
+    sentTo: p.sentTo ?? [],
   };
 }
 
