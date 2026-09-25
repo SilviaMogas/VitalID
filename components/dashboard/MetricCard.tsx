@@ -53,14 +53,9 @@ export function MetricCard({ metric, href, index = 0 }: { metric: HealthMetric; 
             <span className="text-sm text-muted">{t(`unit.${metric.unit}` as TranslationKey)}</span>
           </p>
         </div>
-        <div className="flex items-start gap-2">
-          <Companion
-            name={COMPANION_FOR_METRIC[metric.metric]}
-            mood={companionMood(metric)}
-            size={44}
-            className="shrink-0"
-          />
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
           <StatusBadge status={metric.status} tone={tone} />
+          <Companion name={COMPANION_FOR_METRIC[metric.metric]} mood={companionMood(metric)} size={44} />
         </div>
       </div>
 
