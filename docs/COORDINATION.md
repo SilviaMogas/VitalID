@@ -71,6 +71,10 @@ Helpers: `generateShareToken()`, `pickSelectedFields(full, fields)`, `isVitalIdS
 5. Recipient URL: build `/shared/${record.token}` yourself; QR is yours. Backend only returns the token.
 6. Existing `lib/share-store.ts` (Upstash/file) can be deleted once routes use `getShareStore()`.
 7. Env: `.env.example` lists everything. No Supabase env → memory store, nothing breaks.
+8. **Supabase is LIVE**: `vital_id_shares` (+ optional tables) exist in the Subirachs Ventures project
+   (ref `dhvwycxkkbqzvmrkysym`). `SUPABASE_URL` / `SUPABASE_SECRET_KEY` are saved as org-level Devin
+   secrets, so they are injected into every Devin shell — put them in `.env.local` for `next dev`.
+   Create → get → revoke → 410 verified end-to-end against the live table; anon key gets 401.
 
 ## Shared interface expectations
 - Chat A exposes stable demo data and Vital ID snapshot types.
