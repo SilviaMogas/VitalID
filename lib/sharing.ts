@@ -75,5 +75,6 @@ export function buildSnapshot(
 }
 
 export function isShareActive(p: SharePayload, now = Date.now()): boolean {
-  return !p.revoked && new Date(p.expiresAt).getTime() > now;
+  const expires = Date.parse(p.expiresAt);
+  return !p.revoked && Number.isFinite(expires) && expires > now;
 }
