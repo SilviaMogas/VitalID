@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
-import type { TranslationKey } from "@/lib/i18n";
+import { nationalityLabel, type TranslationKey } from "@/lib/i18n";
 import { isShareActive, type SharePayload } from "@/lib/sharing";
 import { getInsurer } from "@/lib/insurers";
 import { LogoMark } from "@/components/layout/Logo";
@@ -144,7 +144,7 @@ export default function SharedViewClient({ id }: { id: string }) {
               {t(`vitalId.sex.${s.identity.sex}` as TranslationKey)}
             </Row>
             <Row label={t("vitalId.nationality")}>
-              {t(`vitalId.nationality.${s.identity.nationality}` as TranslationKey)}
+              {nationalityLabel(s.identity.nationality, t)}
             </Row>
             <Row label={t("vitalId.idLabel")}>
               <span className="tabular font-mono" dir="ltr">

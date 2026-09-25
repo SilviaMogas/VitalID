@@ -29,6 +29,7 @@ import {
   type UserSetupPatch,
 } from "@/lib/onboarding/types";
 import { PLANS } from "@/lib/plans";
+import { providerName } from "@/lib/connectors-i18n";
 import type { TranslationKey } from "@/lib/i18n";
 import { Choice, Field, NumberInput, StepHeader, SummaryRow, inputClass } from "./ui";
 
@@ -507,7 +508,7 @@ function StepConnectors({ setup, update }: StepProps) {
                   >
                     <ProviderMark provider={pid} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-ink">{def.name}</span>
+                      <span className="block truncate text-sm font-medium text-ink">{providerName(def, t)}</span>
                       <ConnectorBadge status={status} className="mt-1" />
                       {selected && def.integration === "oauth" && status !== "connected" && (
                         <Link
@@ -639,7 +640,7 @@ function StepReview({
                 <li key={`${c.provider}-${c.category}`} className="flex items-center gap-2.5 text-sm">
                   <ProviderMark provider={c.provider} size={28} />
                   <span className="flex-1">
-                    <span className="font-medium">{PROVIDERS[c.provider].name}</span>
+                    <span className="font-medium">{providerName(PROVIDERS[c.provider], t)}</span>
                     <span className="text-muted"> · {t(CATEGORY_KEY[c.category])}</span>
                   </span>
                   <ConnectorBadge status={c.status} />

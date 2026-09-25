@@ -151,6 +151,7 @@ function memberIdentity(userId: string, setup: UserSetup): Identity {
     dateOfBirth: p.dob || "",
     sex: p.gender === "male" ? "male" : p.gender === "female" ? "female" : "other",
     nationality: p.nationality || p.country,
+    photoUrl: p.photoUrl || undefined,
   };
 }
 

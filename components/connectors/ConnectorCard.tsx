@@ -13,6 +13,7 @@ import type { TranslationKey } from "@/lib/i18n";
 import { PLANS, planRank } from "@/lib/plans";
 import { UpgradeChip, LockIcon } from "@/components/membership/UpgradeChip";
 import { ConnectorBadge, ProviderMark } from "@/components/connectors/ConnectorBadge";
+import { providerName } from "@/lib/connectors-i18n";
 
 export function ConnectorCard({
   provider,
@@ -36,7 +37,7 @@ export function ConnectorCard({
         <div className="flex items-center gap-3">
           <ProviderMark provider={provider.id} size={40} />
           <div>
-            <h3 className="text-sm font-semibold leading-tight">{provider.name}</h3>
+            <h3 className="text-sm font-semibold leading-tight">{providerName(provider, t)}</h3>
             <p className="mt-0.5 flex flex-wrap gap-1">
               {categories.map((cat) => (
                 <span

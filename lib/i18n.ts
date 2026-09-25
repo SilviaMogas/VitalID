@@ -64,7 +64,7 @@ const shareStrings = {
   "share.sharedBy": ["Shared by", "شاركه"],
   "share.purposeLabel": ["Purpose", "الغرض"],
   "share.unavailable": ["This Vital ID access has expired or been revoked.", "انتهت صلاحية هذا الوصول إلى المعرّف الحيوي أو تم إلغاؤه."],
-  "share.readonlyFooter": ["Read-only. Data source: Circular Ring sample data", "للقراءة فقط. مصدر البيانات: بيانات نموذجية من Circular Ring"],
+  "share.readonlyFooter": ["Read-only snapshot. Sources are listed above.", "لقطة للقراءة فقط. المصادر مذكورة أعلاه."],
 } as const satisfies Record<string, readonly [string, string]>;
 
 const companionStrings = {
@@ -333,6 +333,9 @@ const connectorStrings = {
   "connectors.filter.healthRecords": ["Health Records", "السجلات الصحية"],
   "connectors.filter.habits": ["Habits", "العادات"],
   "connectors.status.sample": ["Sample data available", "بيانات نموذجية متاحة"],
+  "connectors.provider.medicalRecords": ["Generic Medical Records", "السجلات الطبية العامة"],
+  "connectors.provider.uaeHealth": ["UAE health integrations", "تكاملات الصحة الإماراتية"],
+  "connectors.provider.wellbeingFuture": ["Wellbeing integrations", "تكاملات الرفاه"],
   "connectors.apiStatus": ["API integration: {status}", "تكامل الواجهة البرمجية: {status}"],
   "connectors.data.sleep": ["Sleep", "النوم"],
   "connectors.data.recovery": ["Recovery", "التعافي"],
@@ -406,6 +409,78 @@ const dataStrings = {
   "insight.noData": ["Nothing to compare yet. Once you add a baseline or connect a provider, insights will appear here.", "لا شيء للمقارنة بعد. عند إضافة خط أساس أو ربط مزود ستظهر الرؤى هنا."],
 } as const satisfies Record<string, readonly [string, string]>;
 
+const coachStrings = {
+  "coach.title": ["Your AI Coach", "مدرّبك الذكي"],
+  "coach.subtitle": ["I analyze all your data and goals to give you personalized recommendations.", "أحلّل جميع بياناتك وأهدافك لأقدّم لك توصيات مخصصة."],
+  "coach.notMedical": [
+    "Not medical advice. Vital ID compares your signals with your own baseline and goals; talk to a healthcare professional for medical questions.",
+    "ليست نصيحة طبية. يقارن Vital ID مؤشراتك بخط أساسك وأهدافك؛ استشر مختصًا صحيًا للأسئلة الطبية.",
+  ],
+  "coach.badge": ["AI coach · beta", "مدرّب ذكي · تجريبي"],
+  "coach.doctorAlt": ["Illustration of a friendly doctor", "رسم توضيحي لطبيب ودود"],
+  "coach.hello": ["Hi {name}!", "أهلًا {name}!"],
+  "coach.bubble": ["Here are some recommendations to help you reach your goals!", "إليك بعض التوصيات لمساعدتك على تحقيق أهدافك!"],
+  "coach.inputs": ["What I look at", "ما الذي أراجعه"],
+  "coach.area.activity": ["Activity & Workouts", "النشاط والتمارين"],
+  "coach.area.nutrition": ["Nutrition & Habits", "التغذية والعادات"],
+  "coach.area.sleep": ["Sleep & Recovery", "النوم والتعافي"],
+  "coach.area.progress": ["Progress & Goals", "التقدم والأهداف"],
+  "coach.area.mood": ["Mood & Wellbeing", "المزاج والعافية"],
+  "coach.area.lifestyle": ["Preferences & Lifestyle", "التفضيلات ونمط الحياة"],
+  "coach.yourGoals": ["Your goals", "أهدافك"],
+  "coach.addGoals": ["Add your goals", "أضف أهدافك"],
+  "coach.recommendations": ["Personalized recommendations", "توصيات مخصصة لك"],
+  "coach.rec.sleepBelow": ["Aim for a consistent bedtime tonight — your sleep is {percent}% under your baseline.", "التزم بموعد نوم ثابت الليلة — نومك أقل بنسبة {percent}% من خط أساسك."],
+  "coach.rec.recoveryLow": ["Recovery is {percent}% below your usual — consider a lighter session and an earlier night.", "التعافي أقل بنسبة {percent}% من المعتاد — جرّب تمرينًا أخف ونومًا أبكر."],
+  "coach.rec.stressSignal": ["HRV down and resting heart rate up — a good day for a short breathing break or a walk.", "تقلب النبض منخفض ونبض القلب أثناء الراحة مرتفع — يوم مناسب لاستراحة تنفس قصيرة أو مشي."],
+  "coach.rec.walk30": ["Try a 30-minute walk today — it matches your activity goal.", "جرّب مشيًا لمدة 30 دقيقة اليوم — يتوافق مع هدف نشاطك."],
+  "coach.rec.activityDip": ["Your active minutes dipped {percent}% — a short walk gets you back on track.", "انخفضت دقائق نشاطك بنسبة {percent}% — مشي قصير يعيدك إلى المسار."],
+  "coach.rec.protein": ["Add more protein at lunch — supports your {goal} goal.", "أضف المزيد من البروتين في الغداء — يدعم هدفك في {goal}."],
+  "coach.rec.proteinTarget": ["You set a {target} g protein target — spread it across 3 meals.", "حددت هدفًا للبروتين قدره {target} غ — وزّعه على 3 وجبات."],
+  "coach.rec.hydration": ["Keep water nearby — you're aiming for {liters} L today.", "أبقِ الماء قريبًا — هدفك {liters} لتر اليوم."],
+  "coach.rec.mindfulMinutes": ["Ten quiet minutes today — a small habit that pays off over weeks.", "عشر دقائق هادئة اليوم — عادة صغيرة تؤتي ثمارها مع الأسابيع."],
+  "coach.rec.onTrack": ["You're on track! Keep going, you're doing great.", "أنت على المسار الصحيح! واصل، أنت تقوم بعمل رائع."],
+  "coach.rec.setGoals": ["Tell me your goals so I can tailor these tips.", "أخبرني بأهدافك لأخصص لك هذه النصائح."],
+  "coach.rec.sleep8": ["Aim for around 8 hours of sleep — it helps your recovery.", "استهدف نحو 8 ساعات من النوم — يساعد ذلك على تعافيك."],
+  "coach.reason.goal": ["Matches your {goal} goal", "يتوافق مع هدفك في {goal}"],
+  "coach.reason.signal": ["Based on your {metric} signal", "بناءً على مؤشر {metric} لديك"],
+  "coach.reason.general": ["A good habit for everyone", "عادة جيدة للجميع"],
+  "mascot.coach": ["Small steps, checked against your own baseline.", "خطوات صغيرة، مفحوصة مقابل خط أساسك."],
+} as const satisfies Record<string, readonly [string, string]>;
+
+const communityStrings = {
+  "community.title": ["A Community That Moves With You", "مجتمع يتحرّك معك"],
+  "community.subtitle": ["Connect with people who share your hobbies, goals and cities.", "تواصل مع أشخاص يشاركونك هواياتك وأهدافك ومدنك."],
+  "community.hobbies": ["Shared hobbies", "هوايات مشتركة"],
+  "community.hobbiesHint": ["Select yours", "اختر هواياتك"],
+  "community.cities": ["Find your people", "اعثر على أشخاصك"],
+  "community.yourCity": ["Your city", "مدينتك"],
+  "community.members": ["{count} members", "{count} عضو"],
+  "community.groups": ["Your groups", "مجموعاتك"],
+  "community.groupsEmpty": ["Pick a hobby or a city to see groups.", "اختر هواية أو مدينة لرؤية المجموعات."],
+  "community.join": ["Join", "انضم"],
+  "community.joined": ["Joined", "انضممت"],
+  "community.tagline": ["Same goals. Different paths. A stronger you, together.", "أهداف واحدة. مسارات مختلفة. نسخة أقوى منك، معًا."],
+  "community.privacy": ["Community shows only what you choose. Your health data is never shared here.", "يعرض المجتمع فقط ما تختاره. لا تُشارك بياناتك الصحية هنا أبدًا."],
+  "community.group.goal": ["{goal} circle", "دائرة {goal}"],
+  "community.group.hobby": ["{hobby} in {city}", "{hobby} في {city}"],
+  "community.group.hobbyWorld": ["{hobby} worldwide", "{hobby} حول العالم"],
+  "community.group.city": ["Vital ID · {city}", "Vital ID · {city}"],
+  "community.hobby.fitness": ["Fitness", "اللياقة"],
+  "community.hobby.hiking": ["Hiking", "التنزّه"],
+  "community.hobby.photography": ["Photography", "التصوير"],
+  "community.hobby.cooking": ["Cooking", "الطبخ"],
+  "community.hobby.music": ["Music", "الموسيقى"],
+  "community.hobby.art": ["Art", "الفن"],
+  "community.hobby.travel": ["Travel", "السفر"],
+  "community.hobby.reading": ["Reading", "القراءة"],
+  "community.hobby.yoga": ["Yoga", "اليوغا"],
+  "community.hobby.cycling": ["Cycling", "ركوب الدراجات"],
+  "community.hobby.running": ["Running", "الجري"],
+  "community.hobby.swimming": ["Swimming", "السباحة"],
+  "mascot.community": ["Your people are out there.", "أشخاصك موجودون في مكان ما."],
+} as const satisfies Record<string, readonly [string, string]>;
+
 function pickLocale<T extends Record<string, readonly [string, string]>>(table: T, index: 0 | 1): { [K in keyof T]: string } {
   return Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v[index]])) as { [K in keyof T]: string };
 }
@@ -441,6 +516,17 @@ const brandStrings = {
   "mascot.vitalId": ["Your identity travels with you.", "هويتك تسافر معك."],
 } as const satisfies Record<string, readonly [string, string]>;
 
+const profileStrings = {
+  "profile.you": ["You", "أنت"],
+  "profile.viewData": ["View my Vital ID", "عرض معرّفي الحيوي"],
+  "profile.photo.title": ["Profile photo", "صورة الملف الشخصي"],
+  "profile.photo.hint": ["Shown on your card and in the menu. Stored privately.", "تظهر على بطاقتك وفي القائمة. تُحفظ بشكل خاص."],
+  "profile.photo.add": ["Add photo", "إضافة صورة"],
+  "profile.photo.change": ["Change photo", "تغيير الصورة"],
+  "profile.photo.remove": ["Remove", "إزالة"],
+  "profile.photo.error": ["Could not save the photo. Try a smaller image.", "تعذّر حفظ الصورة. جرّب صورة أصغر."],
+} as const satisfies Record<string, readonly [string, string]>;
+
 const en = {
   "app.name": "Vital ID",
   "app.tagline": "Your portable health identity",
@@ -450,6 +536,8 @@ const en = {
   "nav.trends": "Trends",
   "nav.vitalId": "Vital ID",
   "nav.connectors": "Connectors",
+  "nav.coach": "Coach",
+  "nav.community": "Community",
   "nav.share": "Share",
   "lang.switch": "العربية",
   "lang.label": "Language",
@@ -573,6 +661,9 @@ const en = {
   ...pickLocale(connectorStrings, 0),
   ...pickLocale(whoopStrings, 0),
   ...pickLocale(dataStrings, 0),
+  ...pickLocale(coachStrings, 0),
+  ...pickLocale(communityStrings, 0),
+  ...pickLocale(profileStrings, 0),
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -586,6 +677,8 @@ const ar: Record<TranslationKey, string> = {
   "nav.trends": "الاتجاهات",
   "nav.vitalId": "Vital ID",
   "nav.connectors": "الموصلات",
+  "nav.coach": "المدرّب",
+  "nav.community": "المجتمع",
   "nav.share": "المشاركة",
   "lang.switch": "English",
   "lang.label": "اللغة",
@@ -709,6 +802,9 @@ const ar: Record<TranslationKey, string> = {
   ...pickLocale(connectorStrings, 1),
   ...pickLocale(whoopStrings, 1),
   ...pickLocale(dataStrings, 1),
+  ...pickLocale(coachStrings, 1),
+  ...pickLocale(communityStrings, 1),
+  ...pickLocale(profileStrings, 1),
 };
 
 export const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, ar };
@@ -740,4 +836,14 @@ export function formatDate(locale: Locale, iso: string, opts?: Intl.DateTimeForm
     month: "short",
     ...opts,
   }).format(new Date(iso));
+}
+
+/** Translates an ISO nationality code; falls back to the raw text for free-form entries. */
+export function nationalityLabel(
+  nationality: string,
+  t: (key: TranslationKey) => string,
+): string {
+  const key = `vitalId.nationality.${nationality}` as TranslationKey;
+  const translated = t(key);
+  return translated === key ? nationality || "—" : translated;
 }

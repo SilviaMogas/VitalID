@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { ConnectorBadge, ProviderMark } from "@/components/connectors/ConnectorBadge";
 import { PROVIDERS } from "@/lib/connectors";
+import { providerName } from "@/lib/connectors-i18n";
 import type { UserSetup } from "@/lib/onboarding/types";
 import type { TranslationKey } from "@/lib/i18n";
 
@@ -81,7 +82,7 @@ export function MemberSetupPanel({ setup, editable = true }: { setup: UserSetup;
               {providers.map((c) => (
                 <li key={c.provider} className="flex items-center gap-2.5">
                   <ProviderMark provider={c.provider} size={28} />
-                  <span className="flex-1 truncate text-sm font-medium">{PROVIDERS[c.provider].name}</span>
+                  <span className="flex-1 truncate text-sm font-medium">{providerName(PROVIDERS[c.provider], t)}</span>
                   <ConnectorBadge status={c.status} />
                 </li>
               ))}

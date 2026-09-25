@@ -108,7 +108,7 @@ export const METRIC_SOURCE: Record<MetricKey, DataSource> = {
 export const DEMO_IDENTITY: Identity = {
   fullName: "Fatima Al Mansoori",
   localizedName: { ar: "فاطمة المنصوري" },
-  avatarUrl: "/demo/fatima.svg",
+  photoUrl: "/demo/fatima.svg",
   vitalId: "VID-AE-10284",
   dateOfBirth: "1991-03-14",
   sex: "female",
@@ -145,6 +145,7 @@ export const DEMO_SETUP: UserSetup = {
     city: "Dubai",
     heightCm: DEMO_PROFILE.heightCm,
     weightKg: DEMO_PROFILE.weightKg,
+    photoUrl: DEMO_IDENTITY.photoUrl ?? "",
   },
   goals: ["sleep", "recovery", "fitness"],
   health: {

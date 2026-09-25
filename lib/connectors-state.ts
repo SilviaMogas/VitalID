@@ -43,7 +43,7 @@ function readDemoSelection(): UserConnector[] {
         connectedAt: null,
       });
     }
-    return list.length ? list : DEFAULT_SELECTION;
+    return list;
   } catch {
     return DEFAULT_SELECTION;
   }

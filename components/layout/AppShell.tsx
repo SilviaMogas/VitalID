@@ -11,7 +11,9 @@ import type { TranslationKey } from "@/lib/i18n";
 import { LogoMark } from "@/components/layout/Logo";
 import { Broccoli } from "@/components/mascot/Broccoli";
 import { Onboarding } from "@/components/onboarding/Onboarding";
+import { UserAvatar } from "@/components/layout/UserAvatar";
 import { CONNECTORS_STORAGE_KEY } from "@/lib/connectors-state";
+import { DEMO_IDENTITY } from "@/lib/demo-data";
 
 /** Routes rendered without the app navigation (auth + setup journey, public share view). */
 const BARE_PREFIXES = ["/shared", "/signup", "/signin", "/checkout", "/pricing", "/onboarding"];
@@ -56,6 +58,28 @@ const NAV: { href: string; key: TranslationKey; icon: ReactNode }[] = [
         <path d="M9 7V3.5M15 7V3.5" strokeLinecap="round" />
         <path d="M7 7h10v4a5 5 0 0 1-10 0V7z" strokeLinejoin="round" />
         <path d="M12 16v4.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    href: "/coach",
+    key: "nav.coach",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+        <path d="M4 6.5h16v9a2 2 0 0 1-2 2H9l-5 4v-13a2 2 0 0 1 2-2z" strokeLinejoin="round" />
+        <path d="M12 9.5l.9 1.8 1.8.9-1.8.9-.9 1.8-.9-1.8-1.8-.9 1.8-.9.9-1.8z" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    href: "/community",
+    key: "nav.community",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+        <circle cx="9" cy="8.5" r="3" />
+        <path d="M3.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5" strokeLinecap="round" />
+        <circle cx="17" cy="9.5" r="2.4" />
+        <path d="M16.2 14.3c2.4.2 4 1.9 4.3 4.2" strokeLinecap="round" />
       </svg>
     ),
   },
@@ -105,6 +129,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  const avatarName =
+    status === "member"
+      ? account?.firstName || t("profile.you")
+      : DEMO_IDENTITY.localizedName?.[locale] ?? DEMO_IDENTITY.fullName;
+  const avatarPhoto = status === "member" ? account?.photoUrl : DEMO_IDENTITY.photoUrl;
 
   if (isBare) {
     return (
@@ -179,6 +209,18 @@ export function AppShell({ children }: { children: ReactNode }) {
               {t("mascot.vitalId")}
             </p>
           </div>
+          <Link
+            href="/vital-id"
+            className={`press surface flex items-center gap-3 rounded-2xl px-3 py-2.5 ${
+              pathname.startsWith("/vital-id") ? "ring-2 ring-brand/40" : ""
+            }`}
+          >
+            <UserAvatar name={avatarName} photoUrl={avatarPhoto} size={40} />
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-sm font-semibold">{avatarName}</span>
+              <span className="block text-xs text-muted">{t("profile.viewData")}</span>
+            </span>
+          </Link>
           <div className="flex items-center gap-2">
             <PlanBadge />
             <LangButton />
@@ -198,6 +240,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="flex items-center justify-between px-5 pt-5 md:hidden">
           <Brand compact />
           <div className="flex items-center gap-1.5">
+            <Link href="/vital-id" aria-label={t("profile.viewData")}>
+              <UserAvatar name={avatarName} photoUrl={avatarPhoto} size={36} />
+            </Link>
             <PlanBadge />
             <LangButton />
             <button
@@ -222,14 +267,17 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/92 backdrop-blur md:hidden"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          <ul className="mx-auto grid max-w-md grid-cols-5">
+          <ul
+            className="mx-auto grid max-w-md"
+            style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}
+          >
             {NAV.map((item) => {
               const active = isActive(item.href);
               return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className={`press flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition ${
+                    className={`press flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition ${
                       active ? "text-brand" : "text-muted"
                     }`}
                     aria-current={active ? "page" : undefined}

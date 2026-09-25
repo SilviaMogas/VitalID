@@ -51,10 +51,10 @@ export function Dashboard({
     <div className="space-y-7">
       <section className="rise flex items-end justify-between gap-4" style={{ ["--i" as string]: 0 }}>
         <div className="flex items-center gap-4">
-          {identity.avatarUrl && (
+          {identity.photoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={identity.avatarUrl}
+              src={identity.photoUrl}
               alt=""
               width={64}
               height={64}

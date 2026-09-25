@@ -5,6 +5,7 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import { PremiumShowcase } from "@/components/membership/PremiumShowcase";
 import type { VitalIdSnapshot } from "@/types";
 import { CredentialCard } from "@/components/vital-id/CredentialCard";
+import { PhotoUploader } from "@/components/vital-id/PhotoUploader";
 import { MascotNote } from "@/components/mascot/MascotNote";
 import {
   EmergencySection,
@@ -17,7 +18,13 @@ import {
 
 const SIGNAL_KEYS = ["recovery", "hrv", "sleep"] as const;
 
-export function VitalIdView({ snapshot }: { snapshot: VitalIdSnapshot }) {
+export function VitalIdView({
+  snapshot,
+  canEditPhoto = false,
+}: {
+  snapshot: VitalIdSnapshot;
+  canEditPhoto?: boolean;
+}) {
   const { t } = useLocale();
   const { identity, emergencyInfo, healthProfile } = snapshot;
   const signals = snapshot.currentSignals.filter((m) =>
@@ -35,6 +42,12 @@ export function VitalIdView({ snapshot }: { snapshot: VitalIdSnapshot }) {
       <div className="rise" style={{ ["--i" as string]: 1 }}>
         <CredentialCard identity={identity} emergencyInfo={emergencyInfo} />
       </div>
+
+      {canEditPhoto && (
+        <div className="rise" style={{ ["--i" as string]: 2 }}>
+          <PhotoUploader hasPhoto={Boolean(identity.photoUrl)} />
+        </div>
+      )}
 
       {/* Emergency information */}
       <div className="rise" style={{ ["--i" as string]: 2 }}>

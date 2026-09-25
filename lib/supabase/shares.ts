@@ -30,7 +30,8 @@ interface VitalIdShareRow {
 }
 
 const LIST_PAGE_SIZE = 500;
-const SUMMARY_COLUMNS = 'id, token, created_at, expires_at, revoked, purpose, selected_fields, sentTo:snapshot->sentTo';
+type SummaryRow = Omit<VitalIdShareRow, 'snapshot'> & { sentTo?: Json; ownerKey?: string | null; sharedBy?: string | null };
+const SUMMARY_COLUMNS = 'id, token, created_at, expires_at, revoked, purpose, selected_fields, sentTo:snapshot->sentTo, ownerKey:snapshot->>ownerKey, sharedBy:snapshot->>sharedBy';
 
 function fromRow(row: VitalIdShareRow): VitalIdShareRecord {
   return {
@@ -138,7 +139,7 @@ export class SupabaseShareStore implements ShareStore {
   }
 
   async listVitalIdShares() {
-    const rows: (Omit<VitalIdShareRow, 'snapshot'> & { sentTo?: Json })[] = [];
+    const rows: SummaryRow[] = [];
     for (let from = 0; ; from += LIST_PAGE_SIZE) {
       const { data, error } = await this.client
         .from(VITAL_ID_SHARES_TABLE)
@@ -146,7 +147,7 @@ export class SupabaseShareStore implements ShareStore {
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
         .range(from, from + LIST_PAGE_SIZE - 1)
-        .returns<(Omit<VitalIdShareRow, 'snapshot'> & { sentTo?: Json })[]>();
+        .returns<SummaryRow[]>();
       if (error) throw new Error(`listVitalIdShares failed: ${error.message}`);
       rows.push(...(data ?? []));
       if (!data || data.length < LIST_PAGE_SIZE) break;
@@ -160,6 +161,8 @@ export class SupabaseShareStore implements ShareStore {
       purpose: row.purpose,
       selectedFields: row.selected_fields ?? [],
       sentTo: row.sentTo,
+      ownerKey: row.ownerKey ?? undefined,
+      sharedBy: row.sharedBy ?? undefined,
     }));
   }
 

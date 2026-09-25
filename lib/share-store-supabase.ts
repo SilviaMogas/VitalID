@@ -33,9 +33,19 @@ function toPayload(share: {
   selectedFields: string[];
   snapshot?: Record<string, Json>;
   sentTo?: Json;
+  ownerKey?: string;
+  sharedBy?: string;
 }): SharePayload {
-  const { sharedBy, sharedByLocalized, ownerKey, sentTo: snapshotSentTo, ...rest } = share.snapshot ?? {};
+  const {
+    sharedBy: snapshotSharedBy,
+    sharedByLocalized,
+    ownerKey: snapshotOwnerKey,
+    sentTo: snapshotSentTo,
+    ...rest
+  } = share.snapshot ?? {};
   const sentTo = share.sentTo ?? snapshotSentTo;
+  const ownerKey = share.ownerKey ?? snapshotOwnerKey;
+  const sharedBy = share.sharedBy ?? snapshotSharedBy;
   return {
     id: share.token,
     createdAt: share.createdAt,

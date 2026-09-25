@@ -2,7 +2,7 @@
 
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { LogoMark } from "@/components/layout/Logo";
-import type { TranslationKey } from "@/lib/i18n";
+import { nationalityLabel, type TranslationKey } from "@/lib/i18n";
 import type { EmergencyInfo, Identity } from "@/types";
 
 function Field({ label, value, ltr = false }: { label: string; value: string; ltr?: boolean }) {
@@ -32,10 +32,6 @@ export function CredentialCard({
 }) {
   const { t, d, locale } = useLocale();
   const name = identity.localizedName?.[locale] ?? identity.fullName;
-  const nationalityKey = `vitalId.nationality.${identity.nationality}` as TranslationKey;
-  const translatedNationality = t(nationalityKey);
-  const nationalityLabel =
-    translatedNationality === nationalityKey ? identity.nationality || "—" : translatedNationality;
   const initials = identity.fullName
     .split(" ")
     .map((p) => p[0])
@@ -77,13 +73,11 @@ export function CredentialCard({
               {identity.vitalId}
             </p>
           </div>
-          {identity.avatarUrl ? (
+          {identity.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={identity.avatarUrl}
-              alt=""
-              width={48}
-              height={48}
+              src={identity.photoUrl}
+              alt={name}
               className="h-12 w-12 shrink-0 rounded-2xl object-cover ring-1 ring-white/25"
             />
           ) : (
@@ -97,7 +91,7 @@ export function CredentialCard({
           <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3 border-t border-white/15 pt-4">
             <Field label={t("vitalId.dob")} value={d(identity.dateOfBirth, { year: "numeric" })} ltr />
             <Field label={t("vitalId.sex")} value={t(`vitalId.sex.${identity.sex}` as TranslationKey)} />
-            <Field label={t("vitalId.nationality")} value={nationalityLabel} />
+            <Field label={t("vitalId.nationality")} value={nationalityLabel(identity.nationality, t)} />
           </div>
         )}
 
