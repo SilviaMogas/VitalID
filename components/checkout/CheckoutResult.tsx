@@ -69,14 +69,10 @@ export function CheckoutResult({
 
       <div className="mt-8 flex w-full flex-col gap-2 sm:flex-row">
         <Link
-          href={status === "cancelled" ? "/pricing" : status === "activated" ? "/onboarding" : primary.href}
+          href={status === "cancelled" ? "/pricing" : primary.href}
           className="flex-1 rounded-2xl bg-brand py-3 text-sm font-semibold text-white shadow-md transition hover:bg-ink"
         >
-          {status === "cancelled"
-            ? t("checkout.backToPricing")
-            : status === "activated"
-              ? t("checkout.continueOnboarding")
-              : primary.label}
+          {status === "cancelled" ? t("checkout.backToPricing") : primary.label}
         </Link>
         <Link
           href={status === "cancelled" ? "/" : secondary.href}
