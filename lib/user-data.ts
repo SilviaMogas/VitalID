@@ -205,7 +205,7 @@ function distinctSources(metrics: HealthMetric[]): DataSource[] {
 
 function lastUpdated(metrics: HealthMetric[], whoop: WhoopConnectionPublic): string {
   if (whoop.connected && whoop.lastSyncedAt) return whoop.lastSyncedAt;
-  const latest = metrics.map((m) => m.timestamp).sort().pop();
+  const latest = metrics.map((m) => m.timestamp).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)).pop();
   return latest ? new Date(`${latest}T00:00:00Z`).toISOString() : new Date().toISOString();
 }
 

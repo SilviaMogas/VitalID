@@ -43,7 +43,7 @@ export function Dashboard({
 }) {
   const { t, d, locale } = useLocale();
   const firstName = (identity.localizedName?.[locale] ?? identity.fullName).split(" ")[0];
-  const today = metrics.map((m) => m.timestamp).sort().pop();
+  const today = metrics.map((m) => m.timestamp).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)).pop();
   const unusual = metrics.filter((m) => m.status === "unusual").length;
   const isEmpty = metrics.length === 0;
 
