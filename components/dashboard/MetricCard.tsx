@@ -47,16 +47,16 @@ export function MetricCard({ metric, href }: { metric: HealthMetric; href?: stri
       </div>
 
       <div className="mt-3 flex items-end justify-between gap-3">
-        <div className="text-xs text-muted">
+        <div className="min-w-0 flex-1 text-xs text-muted">
           <p>
             {t("baseline.30day")}{" "}
-            <span className="tabular font-medium text-ink-2">
+            <span className="tabular whitespace-nowrap font-medium text-ink-2">
               {n(metric.baseline, decimals)} {t(`unit.${metric.unit}` as TranslationKey)}
             </span>
           </p>
-          <p className="mt-0.5 flex items-center gap-1.5">
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0">
             <span
-              className={`tabular font-semibold ${
+              className={`tabular whitespace-nowrap font-semibold ${
                 tone === "good" ? "text-good" : tone === "bad" ? "text-bad" : tone === "warn" ? "text-warn" : "text-ink-2"
               }`}
               dir="ltr"
@@ -66,7 +66,7 @@ export function MetricCard({ metric, href }: { metric: HealthMetric; href?: stri
             <span>{t(rangeKey(metric))}</span>
           </p>
         </div>
-        <Sparkline values={metric.history.slice(-14).map((h) => h.value)} baseline={metric.baseline} tone={tone} className="h-9 w-24" />
+        <Sparkline values={metric.history.slice(-14).map((h) => h.value)} baseline={metric.baseline} tone={tone} className="h-9 w-20 shrink-0" />
       </div>
 
       <p className="mt-3 text-[11px] text-muted">

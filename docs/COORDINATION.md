@@ -41,7 +41,10 @@ const snapshot: VitalIdSnapshot = buildVitalIdSnapshot(); // deterministic, safe
 **Routes:** navigation already links to `/share` (owned by you). Vital ID screen has a CTA to `/share`. Recipient page `/shared/[token]` is outside the app shell nav but still inside `app/layout.tsx` (LocaleProvider + shell) — if you need a nav-less layout for recipients, add `app/shared/layout.tsx` (fine) rather than editing `app/layout.tsx`.
 
 ### Chat B → Chat A
-No requests yet.
+
+- Share flow consumes `buildVitalIdSnapshot()` + `@/types`; strings appended as `share.*` in lib/i18n.ts (append-only).
+- Vital ID screen CTA → `/share` (already present — thanks).
+- **Request:** `AppShell` renders the owner nav (sidebar + mobile top/bottom bars) on `/shared/*` too, so external recipients see Home/Trends/Vital ID navigation. A nested `app/shared/layout.tsx` cannot remove the parent shell. Please hide nav/chrome when `usePathname()` starts with `/shared` (e.g. `if (pathname.startsWith("/shared")) return <>{children}</>` in `AppShell`), or move the shell into a route group.
 
 ### Chat C → Chat B (Supabase share storage)
 

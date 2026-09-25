@@ -8,6 +8,59 @@ export function getDirection(locale: Locale): "ltr" | "rtl" {
   return locale === "ar" ? "rtl" : "ltr";
 }
 
+const shareStrings = {
+  "share.title": ["Share your Vital ID", "شارك معرّفك الحيوي"],
+  "share.subtitle": ["Create a secure, temporary link to selected health information.", "أنشئ رابطًا آمنًا ومؤقتًا لمعلومات صحية مختارة."],
+  "share.stepPurpose": ["1. Purpose", "١. الغرض"],
+  "share.stepInfo": ["2. Information", "٢. المعلومات"],
+  "share.stepExpiry": ["3. Expiration", "٣. مدة الصلاحية"],
+  "share.purpose.emergency": ["Emergency", "طوارئ"],
+  "share.purpose.doctor": ["Doctor visit", "زيارة طبيب"],
+  "share.purpose.travel": ["Travel", "سفر"],
+  "share.purpose.caregiver": ["Caregiver", "مقدّم رعاية"],
+  "share.purpose.custom": ["Custom", "مخصص"],
+  "share.field.identity": ["Identity", "الهوية"],
+  "share.field.emergencyInfo": ["Emergency Information", "معلومات الطوارئ"],
+  "share.field.currentSignals": ["Current Health Signals", "المؤشرات الصحية الحالية"],
+  "share.field.recentTrends": ["Recent Trends", "الاتجاهات الأخيرة"],
+  "share.field.healthProfile": ["Selected Health Profile Information", "معلومات مختارة من الملف الصحي"],
+  "share.preview.identity": ["Name, date of birth, blood type, Vital ID.", "الاسم وتاريخ الميلاد وفصيلة الدم والمعرّف الحيوي."],
+  "share.preview.emergencyInfo": ["Emergency contact, allergies, conditions.", "جهة اتصال الطوارئ والحساسية والحالات."],
+  "share.preview.currentSignals": ["Latest recovery, sleep, HRV and activity readings.", "أحدث قراءات التعافي والنوم وتقلب النبض والنشاط."],
+  "share.preview.recentTrends": ["Trend insights against your own baseline.", "رؤى الاتجاهات مقارنة بخط أساسك الشخصي."],
+  "share.preview.healthProfile": ["Height, weight, medications.", "الطول والوزن والأدوية."],
+  "share.duration.15": ["15 minutes", "١٥ دقيقة"],
+  "share.duration.60": ["1 hour", "ساعة واحدة"],
+  "share.duration.1440": ["24 hours", "٢٤ ساعة"],
+  "share.generate": ["Generate secure link", "إنشاء رابط آمن"],
+  "share.generating": ["Generating…", "جارٍ الإنشاء…"],
+  "share.yourLink": ["Your secure link", "رابطك الآمن"],
+  "share.copy": ["Copy", "نسخ"],
+  "share.copied": ["Copied", "تم النسخ"],
+  "share.validUntil": ["Valid until", "صالح حتى"],
+  "share.openRecipient": ["Open recipient view", "فتح عرض المستلم"],
+  "share.revoke": ["Revoke Access", "إلغاء الوصول"],
+  "share.revoked": ["Access revoked", "تم إلغاء الوصول"],
+  "share.selectAtLeastOne": ["Select at least one information category.", "اختر فئة معلومات واحدة على الأقل."],
+  "share.activeShares": ["Active shares", "المشاركات النشطة"],
+  "share.noShares": ["No shares yet.", "لا توجد مشاركات بعد."],
+  "share.status.active": ["active", "نشط"],
+  "share.status.expired": ["expired", "منتهٍ"],
+  "share.status.revoked": ["revoked", "ملغى"],
+  "share.reset": ["Reset Demo", "إعادة تعيين العرض"],
+  "share.resetConfirm": ["Clear all demo shares? This cannot be undone.", "مسح جميع المشاركات التجريبية؟ لا يمكن التراجع."],
+  "share.qrNote": ["The QR contains only a temporary link — never health data.", "يحتوي رمز QR على رابط مؤقت فقط — وليس بيانات صحية أبدًا."],
+  "share.recipientTitle": ["Vital ID — shared view", "المعرّف الحيوي — عرض مشترك"],
+  "share.sharedBy": ["Shared by", "شاركه"],
+  "share.purposeLabel": ["Purpose", "الغرض"],
+  "share.unavailable": ["This Vital ID access has expired or been revoked.", "انتهت صلاحية هذا الوصول إلى المعرّف الحيوي أو تم إلغاؤه."],
+  "share.readonlyFooter": ["Read-only. Data source: demo dataset (synthetic)", "للقراءة فقط. مصدر البيانات: مجموعة بيانات تجريبية (اصطناعية)"],
+} as const satisfies Record<string, readonly [string, string]>;
+
+function pickLocale<T extends Record<string, readonly [string, string]>>(table: T, index: 0 | 1): { [K in keyof T]: string } {
+  return Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v[index]])) as { [K in keyof T]: string };
+}
+
 const en = {
   "app.name": "Vital ID",
   "app.tagline": "Your portable health identity",
@@ -129,6 +182,8 @@ const en = {
   "common.empty": "Nothing to show yet.",
   "common.notFound": "This page does not exist.",
   "common.goHome": "Go to Home",
+
+  ...pickLocale(shareStrings, 0),
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -162,7 +217,7 @@ const ar: Record<TranslationKey, string> = {
   "metric.restingHeartRate": "معدل ضربات القلب أثناء الراحة",
   "metric.activity": "النشاط",
 
-  "unit.%": "٪",
+  "unit.%": "%",
   "unit.h": "س",
   "unit.ms": "م.ث",
   "unit.bpm": "نبضة/د",
@@ -201,7 +256,7 @@ const ar: Record<TranslationKey, string> = {
   "insight.sleepBelowBaselineStreak":
     "كان نومك أقل من خط أساسك لـ 30 يومًا خلال {days} ليالٍ متتالية.",
   "insight.recoveryBelowBaseline":
-    "تعافيك أقل بنسبة {percent}٪ من خط أساسك لـ 30 يومًا.",
+    "تعافيك أقل بنسبة {percent}% من خط أساسك لـ 30 يومًا.",
   "insight.hrvDownRhrUp":
     "تقلب معدل ضربات قلبك يتراجع بينما يرتفع معدل ضربات القلب أثناء الراحة — تغيّر يستحق الملاحظة.",
   "insight.activityStable":
@@ -254,6 +309,8 @@ const ar: Record<TranslationKey, string> = {
   "common.empty": "لا يوجد شيء لعرضه بعد.",
   "common.notFound": "هذه الصفحة غير موجودة.",
   "common.goHome": "الانتقال إلى الرئيسية",
+
+  ...pickLocale(shareStrings, 1),
 };
 
 export const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, ar };
@@ -273,7 +330,7 @@ export function translate(
 }
 
 export function formatNumber(locale: Locale, value: number, decimals = 0): string {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-EG" : "en-US", {
+  return new Intl.NumberFormat(locale === "ar" ? "ar-AE" : "en-US", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(value);
