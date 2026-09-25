@@ -3,6 +3,7 @@ import {
   DEMO_IDENTITY,
   DEMO_PROFILE,
   METRIC_META,
+  METRIC_SOURCE,
   getDailyRecords,
 } from "@/lib/demo-data";
 import {
@@ -95,7 +96,7 @@ export function buildHealthMetric(records: DailyRecord[], metric: MetricKey): He
     value,
     unit: meta.unit,
     timestamp: latest.date,
-    source: "demoWearable",
+    source: METRIC_SOURCE[metric],
     baseline,
     sevenDayAverage,
     delta: roundTo(delta, meta.decimals),
@@ -188,7 +189,7 @@ export function buildVitalIdSnapshot(records: DailyRecord[] = getDailyRecords())
     currentSignals: buildHealthMetrics(records),
     recentTrends: generateInsights(records),
     healthProfile: DEMO_PROFILE,
-    sources: ["demoWearable", "manualProfile"],
+    sources: ["circularRing", "demoWearable", "manualProfile"],
     lastUpdated: `${latest.date}T08:00:00.000Z`,
   };
 }

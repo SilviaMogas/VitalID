@@ -1,4 +1,5 @@
 import type {
+  DataSource,
   DailyRecord,
   EmergencyInfo,
   HealthProfile,
@@ -6,14 +7,11 @@ import type {
   MetricKey,
   MetricPolarity,
 } from "@/types";
+import { CIRCULAR_RING_DAILY } from "@/lib/circular-ring-data";
 
 /**
- * Deterministic 30-day synthetic dataset. Fictional demo data only.
- * Values depend only on day index, so every reload produces the same story:
- *  - sleep drops below baseline for the last 3 nights
- *  - recovery falls with it
- *  - HRV drifts down slightly, resting heart rate drifts up slightly
- *  - activity stays stable
+ * Circular Ring supplies the 24-day demo signals; resting heart rate is aligned
+ * from the end of a deterministic synthetic series because the export omits it.
  */
 
 export const DEMO_DAYS = 30;
@@ -42,7 +40,7 @@ function isoDate(daysAgo: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function getDailyRecords(): DailyRecord[] {
+function syntheticDailyRecords(): DailyRecord[] {
   const records: DailyRecord[] = [];
   for (let i = 0; i < DEMO_DAYS; i++) {
     const daysAgo = DEMO_DAYS - 1 - i;
@@ -77,6 +75,14 @@ export function getDailyRecords(): DailyRecord[] {
   return records;
 }
 
+export function getDailyRecords(): DailyRecord[] {
+  const synth = syntheticDailyRecords();
+  return CIRCULAR_RING_DAILY.map((record, i) => ({
+    ...record,
+    restingHeartRate: synth[synth.length - CIRCULAR_RING_DAILY.length + i].restingHeartRate,
+  }));
+}
+
 export const METRIC_META: Record<
   MetricKey,
   { unit: string; polarity: MetricPolarity; decimals: number }
@@ -86,6 +92,14 @@ export const METRIC_META: Record<
   hrv: { unit: "ms", polarity: "higherIsBetter", decimals: 0 },
   restingHeartRate: { unit: "bpm", polarity: "lowerIsBetter", decimals: 0 },
   activity: { unit: "min", polarity: "higherIsBetter", decimals: 0 },
+};
+
+export const METRIC_SOURCE: Record<MetricKey, DataSource> = {
+  recovery: "circularRing",
+  sleep: "circularRing",
+  hrv: "circularRing",
+  restingHeartRate: "demoWearable",
+  activity: "circularRing",
 };
 
 export const DEMO_IDENTITY: Identity = {

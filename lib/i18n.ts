@@ -80,6 +80,7 @@ const brandStrings = {
   "onboarding.signIn": ["Sign in", "تسجيل الدخول"],
   "onboarding.signUp": ["Sign up", "إنشاء حساب"],
   "onboarding.demoCta": ["Login as Fatima", "الدخول كفاطمة"],
+  "onboarding.dataProvidedBy": ["Data provided by Circular Ring", "البيانات مقدمة من Circular Ring"],
   "onboarding.demoHint": ["Explore the demo instantly as Fatima", "استكشف النسخة التجريبية فورًا كفاطمة"],
   "onboarding.demoOnly": ["Accounts are not part of this demo — continue as Fatima.", "الحسابات ليست جزءًا من هذه النسخة التجريبية — تابع كفاطمة."],
   "onboarding.previewTag": ["Health has a new identity", "للصحة هوية جديدة"],
@@ -87,7 +88,7 @@ const brandStrings = {
   "onboarding.pill.private": ["Private", "خاص"],
   "onboarding.pill.portable": ["Portable", "محمول"],
   "onboarding.foot.privacy": ["Your data, your control", "بياناتك، تحت سيطرتك"],
-  "onboarding.foot.demo": ["Synthetic demo data", "بيانات تجريبية اصطناعية"],
+  "onboarding.foot.demo": ["Sample data from Circular Ring", "بيانات نموذجية من Circular Ring"],
   "onboarding.signOut": ["Sign out", "تسجيل الخروج"],
   "mascot.insightAttention": ["Worth a look — compared with your own baseline.", "يستحق نظرة — مقارنةً بخط أساسك."],
   "mascot.insightCalm": ["Looking steady. Nice work.", "الأمور مستقرة. أحسنت."],
@@ -148,6 +149,7 @@ const en = {
   "range.above": "Above usual range",
   "range.within": "Within usual range",
 
+  "source.circularRing": "Circular Ring",
   "source.demoWearable": "Demo wearable",
   "source.manualProfile": "Manual profile",
   "source.label": "Source",
@@ -277,6 +279,7 @@ const ar: Record<TranslationKey, string> = {
   "range.above": "أعلى من النطاق المعتاد",
   "range.within": "ضمن النطاق المعتاد",
 
+  "source.circularRing": "Circular Ring",
   "source.demoWearable": "جهاز قابل للارتداء تجريبي",
   "source.manualProfile": "ملف يدوي",
   "source.label": "المصدر",

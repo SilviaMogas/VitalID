@@ -77,7 +77,15 @@ export function Welcome({ onEnter }: { onEnter: () => void }) {
               <Arrow />
             </button>
           </div>
-          <p className="rise mt-3 text-sm text-muted" style={{ ["--i" as string]: 6 }}>
+          <p className="rise mt-3 flex items-center gap-2 text-xs font-medium text-ink-2" style={{ ["--i" as string]: 6 }}>
+            <span className="text-brand">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
+                <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2.5" fill="none" />
+              </svg>
+            </span>
+            {t("onboarding.dataProvidedBy")}
+          </p>
+          <p className="rise mt-1.5 text-sm text-muted" style={{ ["--i" as string]: 6 }}>
             {t("onboarding.demoHint")}
           </p>
           {note && (
