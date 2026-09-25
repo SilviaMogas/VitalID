@@ -3,7 +3,7 @@ import type Stripe from 'stripe';
 import { DEMO_CHARGE_CENTS, DEMO_CURRENCY, type PlanId } from '@/lib/plans';
 import { getMembershipStore } from '@/lib/membership/store';
 import type { MembershipRecord } from '@/lib/membership/types';
-import { getDemoPriceId, getStripe } from './server';
+import { getDemoPriceId, getStripe, StripeConfigError } from './server';
 
 export type VerifyResult =
   | { ok: true; plan: 'plus' | 'pro'; userKey: string; session: Stripe.Checkout.Session }
@@ -113,7 +113,15 @@ export async function assertDemoPrice(priceId: string, plan: PlanId): Promise<vo
     price.currency !== DEMO_CURRENCY ||
     price.recurring
   ) {
-    throw new Error(
+    const why = !price.active
+      ? 'price_inactive'
+      : price.type !== 'one_time' || price.recurring
+        ? 'price_recurring'
+        : price.currency !== DEMO_CURRENCY
+          ? 'price_not_usd'
+          : `price_amount_${price.unit_amount ?? 'null'}`;
+    throw new StripeConfigError(
+      why,
       `Configured price for plan "${plan}" is not an active one-time $1 USD price — refusing to create checkout.`,
     );
   }

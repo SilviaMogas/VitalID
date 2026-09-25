@@ -19,6 +19,17 @@ export function getStripe(): Stripe {
   return g.__vitalIdStripe;
 }
 
+/** Configuration error carrying a stable, client-safe `code`. */
+export class StripeConfigError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'StripeConfigError';
+  }
+}
+
 export function isStripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY);
 }
@@ -31,7 +42,8 @@ export function getDemoPriceId(plan: PlanId): string {
   const candidates = [`STRIPE_PRICE_${upper}`, envKey, `STRIPE_PRODUCT_${upper}`];
   const priceId = candidates.map((k) => process.env[k]).find(Boolean);
   if (!priceId) {
-    throw new Error(
+    throw new StripeConfigError(
+      'price_env_missing',
       `Missing env var: set one of ${candidates.join(', ')} (price_… or prod_… id) — or run scripts/stripe-setup.mjs.`,
     );
   }
@@ -51,7 +63,8 @@ export async function resolveDemoPriceId(plan: PlanId): Promise<string> {
   const defaultPrice = product.default_price;
   const priceId = typeof defaultPrice === "string" ? defaultPrice : defaultPrice?.id;
   if (!product.active || !priceId) {
-    throw new Error(
+    throw new StripeConfigError(
+      product.active ? 'product_no_default_price' : 'product_inactive',
       `Configured product "${configured}" for plan "${plan}" is inactive or has no default_price.`,
     );
   }
