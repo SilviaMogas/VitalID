@@ -61,6 +61,36 @@ function pickLocale<T extends Record<string, readonly [string, string]>>(table: 
   return Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v[index]])) as { [K in keyof T]: string };
 }
 
+const brandStrings = {
+  "onboarding.splashLine": ["A healthier tomorrow, together", "غدٌ أكثر صحة، معًا"],
+  "onboarding.splashFoot": ["Your signals. Your baseline. Your control.", "مؤشراتك. خط أساسك. أنت المتحكم."],
+  "onboarding.getStarted": ["Get started", "ابدأ الآن"],
+  "onboarding.skip": ["Skip intro", "تخطّي المقدمة"],
+  "onboarding.welcome": ["Welcome to Vital ID", "مرحبًا بك في Vital ID"],
+  "onboarding.welcomeSub": ["Access your health identity securely", "ادخل إلى هويتك الصحية بأمان"],
+  "onboarding.signIn": ["Sign in", "تسجيل الدخول"],
+  "onboarding.signUp": ["Sign up", "إنشاء حساب"],
+  "onboarding.demoCta": ["Login as Fatima", "الدخول كفاطمة"],
+  "onboarding.demoHint": ["Explore the demo instantly as Fatima", "استكشف النسخة التجريبية فورًا كفاطمة"],
+  "onboarding.demoOnly": ["Accounts are not part of this demo — continue as Fatima.", "الحسابات ليست جزءًا من هذه النسخة التجريبية — تابع كفاطمة."],
+  "onboarding.previewTag": ["Health has a new identity", "للصحة هوية جديدة"],
+  "onboarding.pill.verified": ["Verified", "موثّق"],
+  "onboarding.pill.private": ["Private", "خاص"],
+  "onboarding.pill.portable": ["Portable", "محمول"],
+  "onboarding.foot.privacy": ["Your data, your control", "بياناتك، تحت سيطرتك"],
+  "onboarding.foot.demo": ["Synthetic demo data", "بيانات تجريبية اصطناعية"],
+  "onboarding.signOut": ["Sign out", "تسجيل الخروج"],
+  "mascot.insightAttention": ["Worth a look — compared with your own baseline.", "يستحق نظرة — مقارنةً بخط أساسك."],
+  "mascot.insightCalm": ["Looking steady. Nice work.", "الأمور مستقرة. أحسنت."],
+  "mascot.metricUnusual": ["This one moved more than usual.", "هذا المؤشر تحرّك أكثر من المعتاد."],
+  "mascot.metricStable": ["Right in your usual range.", "ضمن نطاقك المعتاد تمامًا."],
+  "mascot.shareIntro": ["Share only what matters — for as long as you choose.", "شارك ما يهم فقط — وللمدة التي تختارها."],
+  "mascot.shareReady": ["Your secure link is ready.", "رابطك الآمن جاهز."],
+  "mascot.shareRevoked": ["Access closed. You are back in control.", "تم إغلاق الوصول. أنت المتحكم من جديد."],
+  "mascot.recipient": ["Shared temporarily by the Vital ID holder.", "تمت المشاركة مؤقتًا من صاحب Vital ID."],
+  "mascot.vitalId": ["Your identity travels with you.", "هويتك تسافر معك."],
+} as const satisfies Record<string, readonly [string, string]>;
+
 const en = {
   "app.name": "Vital ID",
   "app.tagline": "Your portable health identity",
@@ -184,6 +214,7 @@ const en = {
   "common.goHome": "Go to Home",
 
   ...pickLocale(shareStrings, 0),
+  ...pickLocale(brandStrings, 0),
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -311,6 +342,7 @@ const ar: Record<TranslationKey, string> = {
   "common.goHome": "الانتقال إلى الرئيسية",
 
   ...pickLocale(shareStrings, 1),
+  ...pickLocale(brandStrings, 1),
 };
 
 export const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, ar };

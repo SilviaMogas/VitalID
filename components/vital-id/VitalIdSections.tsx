@@ -9,9 +9,7 @@ import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { isWorse, statusTone } from "@/components/dashboard/MetricCard";
 
 export function SectionTitle({ children }: { children: string }) {
-  return (
-    <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted">{children}</h2>
-  );
+  return <h2 className="eyebrow">{children}</h2>;
 }
 
 export function Row({ label, children }: { label: string; children: ReactNode }) {
@@ -27,7 +25,7 @@ export function EmergencySection({ info }: { info: EmergencyInfo }) {
   const { t, locale } = useLocale();
   const listSep = locale === "ar" ? "، " : ", ";
   return (
-    <div className="card p-5">
+    <div className="rounded-[1.25rem] border border-peach/60 bg-sand p-5">
       <SectionTitle>{t("vitalId.emergency")}</SectionTitle>
       <div className="mt-3 divide-y divide-line">
         <Row label={t("vitalId.bloodType")}>
@@ -63,7 +61,7 @@ export function EmergencySection({ info }: { info: EmergencyInfo }) {
 export function SignalsSection({ signals }: { signals: HealthMetric[] }) {
   const { t, n } = useLocale();
   return (
-    <div className="card p-5">
+    <div className="card lift p-5">
       <SectionTitle>{t("vitalId.currentSignals")}</SectionTitle>
       <div className="mt-3 divide-y divide-line">
         {signals.map((m) => {
@@ -94,7 +92,7 @@ export function SignalsSection({ signals }: { signals: HealthMetric[] }) {
 export function TrendsSection({ insights }: { insights: Insight[] }) {
   const { t } = useLocale();
   return (
-    <div className="card p-5">
+    <div className="surface p-5">
       <SectionTitle>{t("vitalId.recentTrends")}</SectionTitle>
       <ul className="mt-3 space-y-2.5">
         {insights.map((insight) => (
@@ -117,7 +115,7 @@ export function HealthProfileSection({ profile }: { profile: HealthProfile }) {
   const { t, n, locale } = useLocale();
   const listSep = locale === "ar" ? "، " : ", ";
   return (
-    <div className="card p-5">
+    <div className="surface p-5">
       <SectionTitle>{t("vitalId.healthProfile")}</SectionTitle>
       <div className="mt-3 divide-y divide-line">
         <Row label={t("vitalId.height")}>

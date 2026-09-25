@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import { isShareActive, type SharePayload } from "@/lib/sharing";
+import { LogoMark } from "@/components/layout/Logo";
+import { Broccoli } from "@/components/mascot/Broccoli";
 import {
   EmergencySection,
   HealthProfileSection,
@@ -69,7 +71,8 @@ export default function SharedViewClient({ id }: { id: string }) {
   if (state === "unavailable" || !payload) {
     return (
       <div className="card mx-auto mt-16 max-w-sm p-8 text-center">
-        <p className="text-lg font-semibold">{t("share.unavailable")}</p>
+        <Broccoli state="neutral" size={72} className="anim-float mx-auto" />
+        <p className="mt-4 text-lg font-semibold">{t("share.unavailable")}</p>
       </div>
     );
   }
@@ -79,6 +82,16 @@ export default function SharedViewClient({ id }: { id: string }) {
 
   return (
     <div className="space-y-5">
+      <header className="flex items-center gap-2.5">
+        <LogoMark size={28} tone="brand" />
+        <span className="text-sm font-semibold tracking-tight">{t("app.name")}</span>
+      </header>
+
+      <div className="surface flex items-center gap-3 p-4">
+        <Broccoli state="neutral" size={40} className="anim-float shrink-0" />
+        <p className="text-sm font-medium text-ink-2">{t("mascot.recipient")}</p>
+      </div>
+
       <div className="card p-5">
         <SectionTitle>{t("share.recipientTitle")}</SectionTitle>
         <div className="mt-3 divide-y divide-line">
@@ -93,7 +106,7 @@ export default function SharedViewClient({ id }: { id: string }) {
       </div>
 
       {s.identity && (
-        <div className="card p-5">
+        <div className="surface p-5">
           <SectionTitle>{t("share.field.identity")}</SectionTitle>
           <div className="mt-3 divide-y divide-line">
             <Row label={t("vitalId.holder")}>{s.identity.fullName}</Row>
@@ -124,7 +137,7 @@ export default function SharedViewClient({ id }: { id: string }) {
       {s.healthProfile && <HealthProfileSection profile={s.healthProfile} />}
 
       {s.sources && (
-        <div className="card p-5">
+        <div className="surface p-5">
           <SectionTitle>{t("vitalId.dataSources")}</SectionTitle>
           <SourcePills sources={s.sources} />
         </div>
