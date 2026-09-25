@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import type { TranslationKey } from "@/lib/i18n";
+import { SectionTitle } from "@/components/vital-id/VitalIdSections";
 import {
   PURPOSE_PRESETS,
   SHARE_DURATIONS,
@@ -34,12 +35,6 @@ const STATUS_BADGE: Record<ReturnType<typeof statusOf>, string> = {
   expired: "bg-canvas text-muted",
   revoked: "bg-bad-soft text-bad",
 };
-
-function SectionTitle({ children }: { children: string }) {
-  return (
-    <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted">{children}</h2>
-  );
-}
 
 export default function ShareClient() {
   const { t, d } = useLocale();
