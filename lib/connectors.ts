@@ -96,7 +96,7 @@ export interface ProviderDef {
 }
 
 export const PROVIDERS: Record<ProviderId, ProviderDef> = {
-  whoop: { id: "whoop", name: "WHOOP", mark: "W", tint: "#111111", integration: "none", data: ["sleep", "recovery", "hrv", "restingHeartRate", "activity"], requiredPlan: "free", website: "https://www.whoop.com" },
+  whoop: { id: "whoop", name: "WHOOP", mark: "W", tint: "#111111", integration: "oauth", data: ["sleep", "recovery", "hrv", "restingHeartRate", "activity"], requiredPlan: "free", website: "https://www.whoop.com" },
   oura: { id: "oura", name: "Oura", mark: "O", tint: "#2b2b2b", integration: "none", data: ["sleep", "readiness", "hrv", "restingHeartRate", "activity"], requiredPlan: "free", website: "https://ouraring.com" },
   circular_ring: { id: "circular_ring", name: "Circular Ring", mark: "C", tint: "#1f8a70", integration: "none", data: ["sleep", "hrv", "restingHeartRate", "recovery"], requiredPlan: "free", sampleData: true, website: "https://www.circular.xyz" },
   fitbit: { id: "fitbit", name: "Fitbit", mark: "fb", tint: "#00B0B9", integration: "none", data: ["sleep", "steps", "activity", "restingHeartRate"], requiredPlan: "free", website: "https://www.fitbit.com" },
