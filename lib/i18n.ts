@@ -54,7 +54,7 @@ const shareStrings = {
   "share.sharedBy": ["Shared by", "شاركه"],
   "share.purposeLabel": ["Purpose", "الغرض"],
   "share.unavailable": ["This Vital ID access has expired or been revoked.", "انتهت صلاحية هذا الوصول إلى المعرّف الحيوي أو تم إلغاؤه."],
-  "share.readonlyFooter": ["Read-only. Data source: demo dataset (synthetic)", "للقراءة فقط. مصدر البيانات: مجموعة بيانات تجريبية (اصطناعية)"],
+  "share.readonlyFooter": ["Read-only. Data source: Circular Ring sample data", "للقراءة فقط. مصدر البيانات: بيانات نموذجية من Circular Ring"],
 } as const satisfies Record<string, readonly [string, string]>;
 
 const companionStrings = {
