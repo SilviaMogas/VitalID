@@ -12,6 +12,7 @@ import { CIRCULAR_RING_DAILY } from "@/lib/circular-ring-data";
 /**
  * Circular Ring supplies the 24-day demo signals; resting heart rate is aligned
  * from the end of a deterministic synthetic series because the export omits it.
+ * Dates are re-anchored so the latest reading is always today.
  */
 
 export const DEMO_DAYS = 30;
@@ -79,6 +80,7 @@ export function getDailyRecords(): DailyRecord[] {
   const synth = syntheticDailyRecords();
   return CIRCULAR_RING_DAILY.map((record, i) => ({
     ...record,
+    date: isoDate(CIRCULAR_RING_DAILY.length - 1 - i),
     restingHeartRate: synth[synth.length - CIRCULAR_RING_DAILY.length + i].restingHeartRate,
   }));
 }
