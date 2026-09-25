@@ -159,8 +159,10 @@ Every number on screen is labelled with where it came from.
 | Table | Purpose |
 |---|---|
 | `vital_id_shares` | Temporary selective shares (token, expiry, revoked, selected fields, snapshot) |
-| `vital_id_memberships` | Plan per user, Stripe session / payment references |
-| `vital_id_onboarding` | Goals, chosen providers, baseline metrics, profile photo |
+| `vital_id_memberships` | Plan per user and Stripe checkout references |
+| `vital_id_user_profiles` / `vital_id_health_profiles` | Account profile (incl. photo) and health profile from onboarding |
+| `vital_id_health_goals` / `vital_id_health_baselines` | Onboarding goals and manual baseline metrics |
+| `vital_id_user_connectors` | Providers chosen per user and their connection status |
 | `vital_id_whoop_connections` / `vital_id_whoop_daily` | WHOOP tokens and daily mapped metrics |
 | `vital_id_profiles` / `vital_id_metrics` / `vital_id_events` | Optional extension tables |
 
