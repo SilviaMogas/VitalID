@@ -131,12 +131,6 @@ export function Welcome({ onEnter }: { onEnter: () => void }) {
           <p className="rise mt-3 text-sm text-muted" style={{ ["--i" as string]: 6 }}>
             {t("onboarding.demoHint")}
           </p>
-          {notFound && (
-            <div className="pop mt-4 flex items-center gap-3 rounded-2xl bg-sand px-3.5 py-2.5 text-sm text-ink-2 ring-1 ring-line">
-              <Broccoli state="encouraging" size={40} />
-              {t("onboarding.signInNotFound")}
-            </div>
-          )}
         </div>
 
         <footer className="rise flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted" style={{ ["--i" as string]: 7 }}>

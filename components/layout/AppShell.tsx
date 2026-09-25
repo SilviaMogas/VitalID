@@ -61,7 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { t, locale } = useLocale();
-  const { planChosen, onboardingComplete, loading: membershipLoading } = useMembership();
+  const { planChosen, onboardingComplete, loading: membershipLoading, refresh } = useMembership();
   const [session, setSession] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -72,11 +72,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   // (e.g. right after signup) isn't masked by stale state (splash flash fix).
   const effectiveSession = session === null ? null : hasSession();
 
-  const enter = () => {
+  const enter = async () => {
+    // Clear any lingering member cookie BEFORE entering so the membership
+    // provider re-fetches as fatima, not the previous member.
+    await fetch("/api/membership/signout", { method: "POST" }).catch(() => {});
     window.localStorage.setItem(SESSION_KEY, "fatima");
+    await refresh();
     setSession(true);
-    // Clear any lingering member cookie so Fatima stays the demo user.
-    void fetch("/api/membership/signout", { method: "POST" }).catch(() => {});
     if (pathname === "/welcome") router.push("/");
   };
 
@@ -94,12 +96,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Member funnel gating on shell routes: signed-up users must pick a plan and
   // finish onboarding before reaching the app. Fatima is never gated.
   const sessionKind = effectiveSession ? window.localStorage.getItem(SESSION_KEY) : null;
+  const isShellRoute =
+    pathname === "/" ||
+    pathname.startsWith("/trends") ||
+    pathname.startsWith("/vital-id") ||
+    (pathname.startsWith("/share") && !pathname.startsWith("/shared"));
   useEffect(() => {
-    if (sessionKind !== "member" || membershipLoading) return;
-    if (pathname === "/pricing" || pathname === "/onboarding") return;
+    if (sessionKind !== "member" || membershipLoading || !isShellRoute) return;
     if (!planChosen) router.replace("/pricing");
     else if (!onboardingComplete) router.replace("/onboarding");
-  }, [sessionKind, membershipLoading, planChosen, onboardingComplete, pathname, router]);
+  }, [sessionKind, membershipLoading, isShellRoute, planChosen, onboardingComplete, router]);
 
   if (["/shared", "/signup", "/checkout", "/onboarding"].some((p) => pathname.startsWith(p))) {
     return (
