@@ -57,6 +57,15 @@ const shareStrings = {
   "share.readonlyFooter": ["Read-only. Data source: demo dataset (synthetic)", "للقراءة فقط. مصدر البيانات: مجموعة بيانات تجريبية (اصطناعية)"],
 } as const satisfies Record<string, readonly [string, string]>;
 
+const companionStrings = {
+  "companion.heart": ["Heart companion", "رفيق القلب"],
+  "companion.muscle": ["Recovery companion", "رفيق التعافي"],
+  "companion.dumbbell": ["Activity companion", "رفيق النشاط"],
+  "companion.moon": ["Sleep companion", "رفيق النوم"],
+  "companion.shield": ["Privacy guardian", "حارس الخصوصية"],
+  "companion.shieldNote": ["You choose what to share — and for how long.", "أنت تختار ما تشاركه — ولأي مدة."],
+} as const satisfies Record<string, readonly [string, string]>;
+
 function pickLocale<T extends Record<string, readonly [string, string]>>(table: T, index: 0 | 1): { [K in keyof T]: string } {
   return Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v[index]])) as { [K in keyof T]: string };
 }
@@ -215,6 +224,7 @@ const en = {
 
   ...pickLocale(shareStrings, 0),
   ...pickLocale(brandStrings, 0),
+  ...pickLocale(companionStrings, 0),
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -343,6 +353,7 @@ const ar: Record<TranslationKey, string> = {
 
   ...pickLocale(shareStrings, 1),
   ...pickLocale(brandStrings, 1),
+  ...pickLocale(companionStrings, 1),
 };
 
 export const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, ar };

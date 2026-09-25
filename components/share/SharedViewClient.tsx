@@ -6,6 +6,7 @@ import type { TranslationKey } from "@/lib/i18n";
 import { isShareActive, type SharePayload } from "@/lib/sharing";
 import { LogoMark } from "@/components/layout/Logo";
 import { Broccoli } from "@/components/mascot/Broccoli";
+import { Companion } from "@/components/companions/Companion";
 import {
   EmergencySection,
   HealthProfileSection,
@@ -94,6 +95,10 @@ export default function SharedViewClient({ id }: { id: string }) {
 
       <div className="card p-5">
         <SectionTitle>{t("share.recipientTitle")}</SectionTitle>
+        <div className="mt-3 flex items-center gap-3">
+          <Companion name="shield" mood="calm" size={48} label={t("companion.shield")} />
+          <p className="text-xs text-muted">{t("companion.shieldNote")}</p>
+        </div>
         <div className="mt-3 divide-y divide-line">
           <Row label={t("share.sharedBy")}>{sharedBy}</Row>
           <Row label={t("share.purposeLabel")}>

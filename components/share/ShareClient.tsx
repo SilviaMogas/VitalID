@@ -6,6 +6,7 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import { SectionTitle } from "@/components/vital-id/VitalIdSections";
 import { MascotNote } from "@/components/mascot/MascotNote";
+import { Companion } from "@/components/companions/Companion";
 import {
   PURPOSE_PRESETS,
   SHARE_DURATIONS,
@@ -146,9 +147,12 @@ export default function ShareClient() {
 
   return (
     <div className="space-y-5">
-      <section>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("share.title")}</h1>
-        <p className="mt-1 text-sm text-muted">{t("share.subtitle")}</p>
+      <section className="flex items-center gap-3">
+        <Companion name="shield" mood="idle" size={56} label={t("companion.shield")} className="shrink-0" />
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("share.title")}</h1>
+          <p className="mt-1 text-sm text-muted">{t("share.subtitle")}</p>
+        </div>
       </section>
 
       <div className="rise" style={{ ["--i" as string]: 0 }}>
