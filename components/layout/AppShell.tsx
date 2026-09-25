@@ -11,6 +11,7 @@ import type { TranslationKey } from "@/lib/i18n";
 import { LogoMark } from "@/components/layout/Logo";
 import { Broccoli } from "@/components/mascot/Broccoli";
 import { Onboarding } from "@/components/onboarding/Onboarding";
+import { CONNECTORS_STORAGE_KEY } from "@/lib/connectors-state";
 
 /** Routes rendered without the app navigation (auth + setup journey, public share view). */
 const BARE_PREFIXES = ["/shared", "/signup", "/signin", "/checkout", "/pricing", "/onboarding"];
@@ -44,6 +45,17 @@ const NAV: { href: string; key: TranslationKey; icon: ReactNode }[] = [
         <rect x="3" y="5" width="18" height="14" rx="3" />
         <circle cx="8.5" cy="12" r="2" />
         <path d="M13.5 10h4M13.5 14h4" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    href: "/connectors",
+    key: "nav.connectors",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+        <path d="M9 7V3.5M15 7V3.5" strokeLinecap="round" />
+        <path d="M7 7h10v4a5 5 0 0 1-10 0V7z" strokeLinejoin="round" />
+        <path d="M12 16v4.5" strokeLinecap="round" />
       </svg>
     ),
   },
@@ -86,6 +98,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   const signOut = () => {
+    window.localStorage.removeItem(CONNECTORS_STORAGE_KEY);
     router.push("/welcome");
     void authSignOut().then(() => void refreshMembership());
   };
@@ -209,7 +222,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/92 backdrop-blur md:hidden"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          <ul className="mx-auto grid max-w-md grid-cols-4">
+          <ul className="mx-auto grid max-w-md grid-cols-5">
             {NAV.map((item) => {
               const active = isActive(item.href);
               return (
@@ -249,7 +262,7 @@ function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function LangButton() {
+export function LangButton() {
   const { t, toggleLocale, locale } = useLocale();
   return (
     <button

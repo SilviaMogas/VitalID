@@ -6,6 +6,7 @@ import type { TranslationKey } from "@/lib/i18n";
 
 const STATUS_KEY: Record<ConnectorStatus, TranslationKey> = {
   connected: "connectors.status.connected",
+  sample_data: "connectors.status.sample",
   waiting_implementation: "connectors.status.waiting",
   coming_soon: "connectors.status.comingSoon",
   disconnected: "connectors.status.disconnected",
@@ -13,6 +14,7 @@ const STATUS_KEY: Record<ConnectorStatus, TranslationKey> = {
 
 const STATUS_CLASS: Record<ConnectorStatus, string> = {
   connected: "bg-brand-soft text-brand-deep ring-brand/20",
+  sample_data: "bg-brand-soft text-brand-deep ring-brand/20",
   waiting_implementation: "bg-sand text-ink-2 ring-line",
   coming_soon: "bg-canvas text-muted ring-line",
   disconnected: "bg-white text-muted ring-line",

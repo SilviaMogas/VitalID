@@ -33,6 +33,7 @@ export type MetricPolarity = "higherIsBetter" | "lowerIsBetter";
 export type ProviderSource =
   | "whoop"
   | "oura"
+  | "circular_ring"
   | "fitbit"
   | "garmin"
   | "apple_health"
@@ -42,7 +43,10 @@ export type ProviderSource =
   | "lifesum"
   | "strava"
   | "medical_records"
-  | "uae_health";
+  | "uae_health"
+  | "calm"
+  | "headspace"
+  | "wellbeing_future";
 
 export type DataSource = "circularRing" | "demoWearable" | "manualProfile" | "manual" | "demo" | ProviderSource;
 

@@ -274,6 +274,7 @@ const setupStrings = {
   "connectors.cat.sleep": ["Sleep", "النوم"],
   "connectors.cat.records": ["Health Records", "السجلات الصحية"],
   "connectors.cat.hydration": ["Hydration & Habits", "الترطيب والعادات"],
+  "connectors.cat.mental": ["Mental wellbeing", "الصحة النفسية"],
   "connectors.status.connected": ["Connected", "متصل"],
   "connectors.status.waiting": ["Waiting for implementation", "بانتظار التنفيذ"],
   "connectors.status.comingSoon": ["Coming soon — API integration pending", "قريبًا — تكامل API قيد الانتظار"],
@@ -315,6 +316,57 @@ const setupStrings = {
   "source.medical_records": ["Medical records", "السجلات الطبية"],
   "source.uae_health": ["UAE health", "الصحة الإماراتية"],
   "dashboard.yourGoals": ["Your goals", "أهدافك"],
+} as const satisfies Record<string, readonly [string, string]>;
+
+const connectorStrings = {
+  "connectors.title": ["Connectors", "الموصلات"],
+  "connectors.subtitle": [
+    "Vital ID is an aggregation layer: connect the wearables, nutrition, fitness and health tools you already use — one portable identity.",
+    "Vital ID طبقة تجميع: اربط الأجهزة القابلة للارتداء وأدوات التغذية واللياقة والصحة التي تستخدمها بالفعل — هوية واحدة محمولة.",
+  ],
+  "connectors.search": ["Search connectors", "ابحث في الموصلات"],
+  "connectors.filter.all": ["All", "الكل"],
+  "connectors.filter.wearables": ["Wearables", "الأجهزة القابلة للارتداء"],
+  "connectors.filter.sleep": ["Sleep", "النوم"],
+  "connectors.filter.diet": ["Diet & Macros", "النظام الغذائي والعناصر"],
+  "connectors.filter.fitness": ["Fitness", "اللياقة"],
+  "connectors.filter.healthRecords": ["Health Records", "السجلات الصحية"],
+  "connectors.filter.habits": ["Habits", "العادات"],
+  "connectors.status.sample": ["Sample data available", "بيانات نموذجية متاحة"],
+  "connectors.apiStatus": ["API integration: {status}", "تكامل الواجهة البرمجية: {status}"],
+  "connectors.data.sleep": ["Sleep", "النوم"],
+  "connectors.data.recovery": ["Recovery", "التعافي"],
+  "connectors.data.hrv": ["HRV", "تقلب النبض"],
+  "connectors.data.restingHeartRate": ["Resting heart rate", "نبض القلب أثناء الراحة"],
+  "connectors.data.activity": ["Activity", "النشاط"],
+  "connectors.data.readiness": ["Readiness", "الجاهزية"],
+  "connectors.data.calories": ["Calories", "السعرات الحرارية"],
+  "connectors.data.protein": ["Protein", "البروتين"],
+  "connectors.data.carbs": ["Carbs", "الكربوهيدرات"],
+  "connectors.data.fat": ["Fat", "الدهون"],
+  "connectors.data.macros": ["Macros", "العناصر الغذائية الكبرى"],
+  "connectors.data.micronutrients": ["Micronutrients", "العناصر الغذائية الدقيقة"],
+  "connectors.data.workouts": ["Workouts", "التمارين"],
+  "connectors.data.distance": ["Distance", "المسافة"],
+  "connectors.data.steps": ["Steps", "الخطوات"],
+  "connectors.data.hydration": ["Hydration", "الترطيب"],
+  "connectors.data.habits": ["Habits", "العادات"],
+  "connectors.data.medicalRecords": ["Medical records", "السجلات الطبية"],
+  "connectors.data.labResults": ["Lab results", "نتائج المختبر"],
+  "connectors.data.meditation": ["Meditation", "التأمل"],
+  "connectors.data.mindfulness": ["Mindfulness", "اليقظة الذهنية"],
+  "connectors.data.stress": ["Stress", "التوتر"],
+  "connectors.provides": ["Provides", "يوفّر"],
+  "connectors.select": ["Add to Vital ID", "أضف إلى Vital ID"],
+  "connectors.selected": ["Selected · syncs when the API is live", "محدد · تتم المزامنة عند تفعيل الواجهة البرمجية"],
+  "connectors.remove": ["Remove", "إزالة"],
+  "connectors.upgradeToConnectMore": ["Upgrade to connect more", "قم بالترقية لربط المزيد"],
+  "connectors.planRequired": ["{plan} plan", "خطة {plan}"],
+  "connectors.usage": ["{count}/{limit} connectors on {plan}", "{count}/{limit} موصلات على خطة {plan}"],
+  "connectors.usageUnlimited": ["Unlimited connectors on {plan}", "موصلات غير محدودة على خطة {plan}"],
+  "connectors.stats": ["{providers} providers · {categories} categories", "{providers} مزوّدًا · {categories} فئات"],
+  "connectors.noResults": ["No connectors match your search.", "لا توجد موصلات تطابق بحثك."],
+  "mascot.connectors": ["One identity, many sources. Pick what feeds your Vital ID.", "هوية واحدة، مصادر متعددة. اختر ما يغذّي معرّفك الحيوي."],
 } as const satisfies Record<string, readonly [string, string]>;
 
 function pickLocale<T extends Record<string, readonly [string, string]>>(table: T, index: 0 | 1): { [K in keyof T]: string } {
@@ -360,6 +412,7 @@ const en = {
   "nav.home": "Home",
   "nav.trends": "Trends",
   "nav.vitalId": "Vital ID",
+  "nav.connectors": "Connectors",
   "nav.share": "Share",
   "lang.switch": "العربية",
   "lang.label": "Language",
@@ -480,6 +533,7 @@ const en = {
   ...pickLocale(companionStrings, 0),
   ...pickLocale(pricingStrings, 0),
   ...pickLocale(setupStrings, 0),
+  ...pickLocale(connectorStrings, 0),
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -492,6 +546,7 @@ const ar: Record<TranslationKey, string> = {
   "nav.home": "الرئيسية",
   "nav.trends": "الاتجاهات",
   "nav.vitalId": "Vital ID",
+  "nav.connectors": "الموصلات",
   "nav.share": "المشاركة",
   "lang.switch": "English",
   "lang.label": "اللغة",
@@ -612,6 +667,7 @@ const ar: Record<TranslationKey, string> = {
   ...pickLocale(companionStrings, 1),
   ...pickLocale(pricingStrings, 1),
   ...pickLocale(setupStrings, 1),
+  ...pickLocale(connectorStrings, 1),
 };
 
 export const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, ar };

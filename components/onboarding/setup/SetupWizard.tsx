@@ -50,6 +50,7 @@ const CATEGORY_KEY: Record<ConnectorCategory, TranslationKey> = {
   sleep: "connectors.cat.sleep",
   records: "connectors.cat.records",
   hydration: "connectors.cat.hydration",
+  mental: "connectors.cat.mental",
 };
 
 function clampStep(n: number): number {
@@ -454,13 +455,17 @@ function StepBaseline({ setup, update }: StepProps) {
 
 function StepConnectors({ setup, update }: StepProps) {
   const { t } = useLocale();
+  const { connectorLimit } = useMembership();
   const isSelected = (provider: ProviderId, category: ConnectorCategory) =>
     setup.connectors.some((c) => c.provider === provider && c.category === category);
+  const selectedProviders = new Set(setup.connectors.map((c) => c.provider));
+  const atLimit = connectorLimit !== null && selectedProviders.size >= connectorLimit;
 
   const toggle = (provider: ProviderId, category: ConnectorCategory) => {
     if (PROVIDERS[provider].announcedOnly) return;
     const exists = setup.connectors.find((c) => c.provider === provider && c.category === category);
     if (exists?.status === "connected") return;
+    if (!exists && atLimit && !selectedProviders.has(provider)) return;
     const next: UserConnector[] = exists
       ? setup.connectors.filter((c) => c !== exists)
       : [...setup.connectors, { provider, category, status: initialStatusFor(provider), connectedAt: null }];
@@ -484,7 +489,8 @@ function StepConnectors({ setup, update }: StepProps) {
                 const selected = isSelected(pid, cat.id);
                 const current = setup.connectors.find((c) => c.provider === pid && c.category === cat.id);
                 const status = current?.status ?? initialStatusFor(pid);
-                const disabled = Boolean(def.announcedOnly);
+                const overLimit = atLimit && !selectedProviders.has(pid);
+                const disabled = Boolean(def.announcedOnly) || overLimit;
                 return (
                   <button
                     key={pid}
@@ -503,6 +509,15 @@ function StepConnectors({ setup, update }: StepProps) {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-ink">{def.name}</span>
                       <ConnectorBadge status={status} className="mt-1" />
+                      {overLimit && (
+                        <Link
+                          href="/pricing"
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-1 block text-[11px] font-medium text-muted underline"
+                        >
+                          {t("connectors.upgradeToConnectMore")}
+                        </Link>
+                      )}
                     </span>
                     <span
                       aria-hidden
