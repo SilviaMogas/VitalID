@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { PlanBadge } from "@/components/membership/PlanBadge";
 import type { HealthMetric, Identity, Insight } from "@/types";
 import { InsightCard } from "./InsightCard";
 import { MetricCard } from "./MetricCard";
@@ -39,6 +40,9 @@ export function Dashboard({
             {t(greetingKey(), { name: firstName })}
           </h1>
           <p className="mt-1.5 text-sm text-ink-2">{t("home.subtitle")}</p>
+          <div className="mt-3">
+            <PlanBadge />
+          </div>
         </div>
         <Link
           href="/vital-id"

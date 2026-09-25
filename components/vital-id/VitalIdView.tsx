@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { PremiumShowcase } from "@/components/membership/PremiumShowcase";
 import type { VitalIdSnapshot } from "@/types";
 import { CredentialCard } from "@/components/vital-id/CredentialCard";
 import { MascotNote } from "@/components/mascot/MascotNote";
@@ -54,6 +55,9 @@ export function VitalIdView({ snapshot }: { snapshot: VitalIdSnapshot }) {
       <div className="rise" style={{ ["--i" as string]: 5 }}>
         <HealthProfileSection profile={healthProfile} />
       </div>
+
+      {/* Membership plan showcase */}
+      <PremiumShowcase sources={snapshot.sources} />
 
       {/* Data sources + last updated */}
       <div className="rise" style={{ ["--i" as string]: 6 }}>
