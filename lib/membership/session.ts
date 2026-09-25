@@ -4,7 +4,8 @@ import { cookies } from 'next/headers';
 import { getMembershipStore } from './store';
 import type { MembershipRecord } from './types';
 
-export const DEMO_USER_KEY = 'fatima';
+export { DEMO_USER_KEY } from './constants';
+import { DEMO_USER_KEY } from './constants';
 const COOKIE_NAME = 'vitalid_uid';
 const USER_KEY_RE = /^[A-Za-z0-9_-]{16,64}$/;
 

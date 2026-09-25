@@ -31,23 +31,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'stripe_not_configured' }, { status: 503 });
   }
 
-  const userKey = await getCurrentUserKey();
-  const membership = await getMembershipStore().upsert({ userKey });
-  const priceId = getDemoPriceId(plan as 'plus' | 'pro');
-  await assertDemoPrice(priceId, plan as 'plus' | 'pro');
+  try {
+    const userKey = await getCurrentUserKey();
+    const membership = await getMembershipStore().upsert({ userKey });
+    const priceId = getDemoPriceId(plan as 'plus' | 'pro');
+    await assertDemoPrice(priceId, plan as 'plus' | 'pro');
 
-  const origin = requestOrigin(req);
-  const session = await getStripe().checkout.sessions.create({
-    mode: 'payment',
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}/checkout/cancel?plan=${plan}`,
-    client_reference_id: userKey,
-    metadata: { plan: plan as string, userKey, app: 'vital-id', offer: 'hackathon-demo' },
-    payment_intent_data: { metadata: { plan: plan as string, userKey } },
-    customer_email: membership.email ?? undefined,
-    locale: 'auto',
-    allow_promotion_codes: false,
-  });
-  return NextResponse.json({ url: session.url }, { headers: { 'Cache-Control': 'no-store' } });
+    const origin = requestOrigin(req);
+    const session = await getStripe().checkout.sessions.create({
+      mode: 'payment',
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/checkout/cancel?plan=${plan}`,
+      client_reference_id: userKey,
+      metadata: { plan: plan as string, userKey, app: 'vital-id', offer: 'hackathon-demo' },
+      payment_intent_data: { metadata: { plan: plan as string, userKey } },
+      customer_email: membership.email ?? undefined,
+      locale: 'auto',
+      allow_promotion_codes: false,
+    });
+    return NextResponse.json({ url: session.url }, { headers: { 'Cache-Control': 'no-store' } });
+  } catch (err) {
+    console.error('[stripe checkout] failed:', err);
+    return NextResponse.json({ error: 'checkout_failed' }, { status: 500 });
+  }
 }

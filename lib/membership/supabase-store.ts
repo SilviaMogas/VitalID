@@ -1,6 +1,7 @@
 import 'server-only';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { isPlanId, planRank, type PlanId } from '@/lib/plans';
+import { DEMO_USER_KEY } from './constants';
 import type { MembershipRecord, MembershipStore } from './types';
 
 const TABLE = 'vital_id_memberships';
@@ -67,7 +68,11 @@ export class SupabaseMembershipStore implements MembershipStore {
         userKey: input.userKey,
         displayName: input.displayName ?? null,
         email: input.email ?? null,
-        plan: isPlanId(process.env.DEMO_DEFAULT_PLAN) ? (process.env.DEMO_DEFAULT_PLAN as PlanId) : 'free',
+        // DEMO_DEFAULT_PLAN applies only to the Fatima demo user.
+        plan:
+          input.userKey === DEMO_USER_KEY && isPlanId(process.env.DEMO_DEFAULT_PLAN)
+            ? process.env.DEMO_DEFAULT_PLAN
+            : 'free',
         stripeCustomerId: null,
         stripeCheckoutSessionId: null,
         stripePaymentIntentId: null,

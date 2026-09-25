@@ -1,4 +1,5 @@
 import { isPlanId, planRank, type PlanId } from "@/lib/plans";
+import { DEMO_USER_KEY } from "./constants";
 import type { MembershipRecord, MembershipStore } from "./types";
 
 interface MemoryGlobal {
@@ -36,7 +37,7 @@ export class MemoryMembershipStore implements MembershipStore {
         userKey: input.userKey,
         displayName: input.displayName ?? null,
         email: input.email ?? null,
-        plan: defaultPlan(),
+        plan: defaultPlan(input.userKey),
         stripeCustomerId: null,
         stripeCheckoutSessionId: null,
         stripePaymentIntentId: null,
@@ -116,7 +117,8 @@ export class MemoryMembershipStore implements MembershipStore {
   }
 }
 
-function defaultPlan(): PlanId {
+// DEMO_DEFAULT_PLAN applies only to the Fatima demo user — signups always start free.
+function defaultPlan(userKey: string): PlanId {
   const env = process.env.DEMO_DEFAULT_PLAN;
-  return isPlanId(env) ? env : "free";
+  return userKey === DEMO_USER_KEY && isPlanId(env) ? env : "free";
 }
