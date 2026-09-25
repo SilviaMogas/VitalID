@@ -60,7 +60,7 @@ const store = getShareStore(); // SupabaseShareStore if env is set, else MemoryS
 **Methods (`ShareStore` interface):**
 ```ts
 createVitalIdShare({ selectedFields, fullSnapshot, durationMinutes | expiresAt, purpose?, token? })
-  → Promise<VitalIdShareRecord>            // snapshot = ONLY selectedFields keys of fullSnapshot
+  → Promise<VitalIdShareRecord>            // snapshot = ONLY selectedFields keys of fullSnapshot; stored selectedFields = keys actually present (unknown keys dropped, throws if none)
 getVitalIdShareByToken(token)
   → Promise<{ valid: true; share } | { valid: false; reason: 'not_found'|'revoked'|'expired'; share | null }>
 revokeVitalIdShare(tokenOrId) → Promise<boolean>   // accepts token or uuid id

@@ -2,9 +2,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { SharePayload } from './sharing';
+import { isSupabaseConfigured } from '@/lib/supabase/env';
+import * as supabaseStore from './share-store-supabase';
 
 /**
- * Share store with two backends:
+ * Share store with three backends, in priority order:
+ * - If SUPABASE_URL + SUPABASE_SECRET_KEY are set (and SHARE_STORE != 'memory'),
+ *   shares are persisted in the `vital_id_shares` table (see share-store-supabase.ts).
  * - If UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are set, shares are
  *   persisted via Upstash Redis REST (SET with EX = seconds until expiry + 60,
  *   GET, DEL), with an index set `vitalid:shares`.
@@ -19,7 +23,15 @@ const STORE_FILE = process.env.SHARE_STORE_FILE ?? path.join(os.tmpdir(), 'vital
 
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
-const useRedis = Boolean(REDIS_URL && REDIS_TOKEN);
+const useSupabase = process.env.SHARE_STORE?.toLowerCase() !== 'memory' && isSupabaseConfigured();
+const useRedis = !useSupabase && Boolean(REDIS_URL && REDIS_TOKEN);
+
+/** Active backend name, e.g. for health/debug endpoints. */
+export const SHARE_BACKEND: 'supabase' | 'redis' | 'memory' = useSupabase
+  ? 'supabase'
+  : useRedis
+    ? 'redis'
+    : 'memory';
 
 interface MemoryGlobal {
   __vitalidShares?: Map<string, SharePayload>;
@@ -61,6 +73,7 @@ async function redis(command: (string | number)[]): Promise<unknown> {
 }
 
 export async function createShare(p: SharePayload): Promise<void> {
+  if (useSupabase) return supabaseStore.createShare(p);
   if (useRedis) {
     const ex = Math.max(1, Math.floor((new Date(p.expiresAt).getTime() - Date.now()) / 1000) + 60);
     await redis(['SET', KEY_PREFIX + p.id, JSON.stringify(p), 'EX', ex]);
@@ -72,6 +85,7 @@ export async function createShare(p: SharePayload): Promise<void> {
 }
 
 export async function getShare(id: string): Promise<SharePayload | null> {
+  if (useSupabase) return supabaseStore.getShare(id);
   if (useRedis) {
     const raw = (await redis(['GET', KEY_PREFIX + id])) as string | null;
     return raw ? (JSON.parse(raw) as SharePayload) : null;
@@ -80,6 +94,7 @@ export async function getShare(id: string): Promise<SharePayload | null> {
 }
 
 export async function revokeShare(id: string): Promise<boolean> {
+  if (useSupabase) return supabaseStore.revokeShare(id);
   const p = await getShare(id);
   if (!p) return false;
   const updated = { ...p, revoked: true };
@@ -94,6 +109,7 @@ export async function revokeShare(id: string): Promise<boolean> {
 }
 
 export async function listShares(): Promise<SharePayload[]> {
+  if (useSupabase) return supabaseStore.listShares();
   if (useRedis) {
     const ids = (await redis(['SMEMBERS', INDEX_KEY])) as string[];
     const out: SharePayload[] = [];
@@ -107,6 +123,7 @@ export async function listShares(): Promise<SharePayload[]> {
 }
 
 export async function clearAll(): Promise<void> {
+  if (useSupabase) return supabaseStore.clearAll();
   if (useRedis) {
     const ids = (await redis(['SMEMBERS', INDEX_KEY])) as string[];
     for (const id of ids ?? []) await redis(['DEL', KEY_PREFIX + id]);

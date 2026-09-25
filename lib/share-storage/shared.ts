@@ -38,7 +38,7 @@ export function pickSelectedFields(
 }
 
 export function resolveExpiresAt(input: CreateVitalIdShareInput, now: Date): Date {
-  if (input.expiresAt) {
+  if (input.expiresAt !== undefined) {
     const d = new Date(input.expiresAt);
     if (Number.isNaN(d.getTime())) throw new Error('createVitalIdShare: invalid expiresAt');
     return d;
@@ -67,6 +67,11 @@ export function buildShareRecord(input: CreateVitalIdShareInput, now = new Date(
     throw new Error('createVitalIdShare: selectedFields must be a non-empty array');
   }
   if (input.token !== undefined) assertValidToken(input.token);
+  const snapshot = pickSelectedFields(input.fullSnapshot, input.selectedFields);
+  const selectedFields = Object.keys(snapshot);
+  if (selectedFields.length === 0) {
+    throw new Error('createVitalIdShare: none of selectedFields exist in fullSnapshot');
+  }
   return {
     id: crypto.randomUUID(),
     token: input.token ?? generateShareToken(),
@@ -74,13 +79,13 @@ export function buildShareRecord(input: CreateVitalIdShareInput, now = new Date(
     expiresAt: resolveExpiresAt(input, now).toISOString(),
     revoked: false,
     purpose: input.purpose ?? null,
-    selectedFields: [...input.selectedFields],
-    snapshot: pickSelectedFields(input.fullSnapshot, input.selectedFields),
+    selectedFields,
+    snapshot,
   };
 }
 
 export function stripSnapshot(r: VitalIdShareRecord): Omit<VitalIdShareRecord, 'snapshot'> {
   const { snapshot: _snapshot, ...rest } = r;
   void _snapshot;
-  return rest;
+  return structuredClone(rest);
 }
