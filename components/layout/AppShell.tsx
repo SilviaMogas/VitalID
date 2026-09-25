@@ -62,6 +62,28 @@ const NAV: { href: string; key: TranslationKey; icon: ReactNode }[] = [
     ),
   },
   {
+    href: "/coach",
+    key: "nav.coach",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+        <path d="M4 6.5h16v9a2 2 0 0 1-2 2H9l-5 4v-13a2 2 0 0 1 2-2z" strokeLinejoin="round" />
+        <path d="M12 9.5l.9 1.8 1.8.9-1.8.9-.9 1.8-.9-1.8-1.8-.9 1.8-.9.9-1.8z" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    href: "/community",
+    key: "nav.community",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+        <circle cx="9" cy="8.5" r="3" />
+        <path d="M3.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5" strokeLinecap="round" />
+        <circle cx="17" cy="9.5" r="2.4" />
+        <path d="M16.2 14.3c2.4.2 4 1.9 4.3 4.2" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/share",
     key: "nav.share",
     icon: (
@@ -245,14 +267,17 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/92 backdrop-blur md:hidden"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          <ul className="mx-auto grid max-w-md grid-cols-5">
+          <ul
+            className="mx-auto grid max-w-md"
+            style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}
+          >
             {NAV.map((item) => {
               const active = isActive(item.href);
               return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className={`press flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition ${
+                    className={`press flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition ${
                       active ? "text-brand" : "text-muted"
                     }`}
                     aria-current={active ? "page" : undefined}
