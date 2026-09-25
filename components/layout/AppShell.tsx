@@ -175,6 +175,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <header className="flex items-center justify-between px-5 pt-5">
             <Brand compact />
             <div className="flex items-center gap-2">
+              {pathname.startsWith("/onboarding") && <PlanBadge />}
               <LangButton />
               {status === "member" && pathname.startsWith("/onboarding") && (
                 <button

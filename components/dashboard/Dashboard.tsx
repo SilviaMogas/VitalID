@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { PlanBadge } from "@/components/membership/PlanBadge";
+import { UpgradeBanner } from "@/components/membership/UpgradeBanner";
 import type { TranslationKey } from "@/lib/i18n";
 import type { HealthMetric, Identity, Insight, MetricKey } from "@/types";
 import { InsightCard } from "./InsightCard";
@@ -151,6 +152,8 @@ export function Dashboard({
       <WhoopConnectorCard status={whoop} />
 
       <MemberSetupPanel setup={setup} editable={editable} />
+
+      <UpgradeBanner />
 
       <Link
         href="/vital-id"

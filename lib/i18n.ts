@@ -92,6 +92,9 @@ const pricingStrings = {
   "pricing.cta.continueFree": ["Continue with Free", "المتابعة بالخطة المجانية"],
   "pricing.upgrade": ["Upgrade", "ترقية"],
   "pricing.upgradeTo": ["Upgrade to {plan}", "الترقية إلى {plan}"],
+  "membership.banner.eyebrow": ["Membership", "العضوية"],
+  "membership.banner.title": ["Upgrade your membership", "قم بترقية عضويتك"],
+  "membership.banner.body": ["Unlock more connectors, advanced trends and insights.", "افتح المزيد من الموصلات والاتجاهات والرؤى المتقدمة."],
   "pricing.stripeNotConfigured": ["Payments are not configured yet — Stripe keys are missing.", "المدفوعات غير مهيأة بعد — مفاتيح Stripe غير موجودة."],
   "pricing.smallPrint": [
     "Hackathon launch offer: Plus and Pro are displayed at their intended monthly pricing. During this demo, a one-time $1 payment is charged. No recurring subscription is created.",
