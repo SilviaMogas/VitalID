@@ -486,6 +486,7 @@ function StepConnectors({ setup, update }: StepProps) {
     if (PROVIDERS[provider].announcedOnly) return;
     const exists = setup.connectors.find((c) => c.provider === provider && c.category === category);
     if (exists?.status === "connected") return;
+    if (!exists && atLimit && !selectedProviders.has(provider)) return;
     const next: UserConnector[] = exists
       ? setup.connectors.filter((c) => c !== exists)
       : [...setup.connectors, { provider, category, status: initialStatusFor(provider), connectedAt: null }];
