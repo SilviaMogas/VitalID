@@ -68,6 +68,14 @@ export function sanitizePatch(input: unknown): UserSetupPatch {
       city: str(p.city, 80),
       heightCm: num(p.heightCm, 50, 260),
       weightKg: num(p.weightKg, 20, 400),
+      photoUrl:
+        typeof p.photoUrl === 'string' &&
+        p.photoUrl.length <= 200_000 &&
+        (p.photoUrl === '' ||
+          /^data:image\/(jpeg|png|webp);base64,/.test(p.photoUrl) ||
+          /^https:\/\//.test(p.photoUrl))
+          ? p.photoUrl
+          : undefined,
     });
     out.profile = profile;
   }
@@ -178,6 +186,7 @@ interface ProfileRow {
   city: string | null;
   height_cm: number | string | null;
   weight_kg: number | string | null;
+  photo_url: string | null;
   plan_selected: boolean;
   onboarding_step: number;
   onboarding_completed: boolean;
@@ -244,6 +253,7 @@ class SupabaseOnboardingStore implements OnboardingStore {
         city: pr.city ?? '',
         heightCm: toNum(pr.height_cm),
         weightKg: toNum(pr.weight_kg),
+        photoUrl: pr.photo_url ?? '',
       },
       goals: (gr.goals ?? []).filter(isGoalId),
       health: {
@@ -294,6 +304,7 @@ class SupabaseOnboardingStore implements OnboardingStore {
       city: next.profile.city || null,
       height_cm: next.profile.heightCm,
       weight_kg: next.profile.weightKg,
+      photo_url: next.profile.photoUrl || null,
       plan_selected: next.planSelected,
       onboarding_step: next.onboardingStep,
       onboarding_completed: next.onboardingCompleted,

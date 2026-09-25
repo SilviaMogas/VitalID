@@ -29,6 +29,7 @@ export interface AccountSnapshot {
   onboardingStep: number;
   onboardingCompleted: boolean;
   firstName: string;
+  photoUrl: string | null;
   next: NextRoute;
 }
 
@@ -63,6 +64,7 @@ async function probe(): Promise<AccountSnapshot | null> {
       onboardingStep: data.onboardingStep ?? 1,
       onboardingCompleted: Boolean(data.onboardingCompleted),
       firstName: data.firstName ?? "",
+      photoUrl: data.photoUrl ?? null,
       next: data.next ?? "/pricing",
     };
   } catch {

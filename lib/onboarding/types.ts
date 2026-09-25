@@ -33,6 +33,8 @@ export interface UserProfile {
   city: string;
   heightCm: number | null;
   weightKg: number | null;
+  /** Profile photo: small data URL or https URL; '' = none. */
+  photoUrl: string;
 }
 
 export interface HealthProfileData {
@@ -93,6 +95,7 @@ export function emptySetup(): UserSetup {
       city: "",
       heightCm: null,
       weightKg: null,
+      photoUrl: "",
     },
     goals: [],
     health: {

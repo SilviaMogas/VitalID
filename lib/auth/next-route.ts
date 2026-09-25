@@ -9,6 +9,7 @@ export interface AccountState {
   onboardingStep: number;
   onboardingCompleted: boolean;
   firstName: string;
+  photoUrl: string | null;
   /** Where the client should send this user right now. */
   next: '/pricing' | '/onboarding' | '/';
 }
@@ -33,6 +34,7 @@ export async function getAccountState(userId: string): Promise<AccountState> {
     onboardingStep: setup?.onboardingStep ?? 1,
     onboardingCompleted,
     firstName: setup?.profile.firstName ?? '',
+    photoUrl: setup?.profile.photoUrl || null,
     next,
   };
 }
