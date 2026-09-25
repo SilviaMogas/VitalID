@@ -43,7 +43,8 @@ via Stripe Checkout (`mode: "payment"`). No subscriptions are ever created.
 Checked in order: `mode === "payment"` (`bad_mode`) → `payment_status === "paid"`
 (`not_paid`) → `amount_total === 100` (`bad_amount`) → `currency === "usd"`
 (`bad_currency`) → `metadata.plan ∈ {plus,pro}` (`bad_plan`) → exactly one line item
-with the env-configured Price ID and quantity 1 (`bad_price`) → `metadata.userKey`
+of quantity 1 that is a $1 one-time USD price and either equals the configured
+`price_…` id or belongs to the configured `prod_…` product (`bad_price`) → `metadata.userKey`
 present, and `user_mismatch` if it differs from the cookie user. `not_found` when the
 session cannot be retrieved.
 
