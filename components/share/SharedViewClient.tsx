@@ -1,42 +1,52 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { isShareActive, type SharePayload } from '@/lib/sharing';
-import { t, dir, type Lang } from '@/lib/share-i18n';
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useLocale } from "@/components/providers/LocaleProvider";
+import { StatusBadge } from "@/components/dashboard/StatusBadge";
+import { isWorse, statusTone } from "@/components/dashboard/MetricCard";
+import { METRIC_META } from "@/lib/vital-id";
+import type { TranslationKey } from "@/lib/i18n";
+import { isShareActive, type SharePayload } from "@/lib/sharing";
 
-type State = 'loading' | 'unavailable' | 'active';
+type State = "loading" | "unavailable" | "active";
 
-const purposeKeys: Record<string, string> = {
-  emergency: 'purposeEmergency',
-  doctor: 'purposeDoctor',
-  travel: 'purposeTravel',
-  caregiver: 'purposeCaregiver',
-  custom: 'purposeCustom',
-};
+function SectionTitle({ children }: { children: string }) {
+  return (
+    <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted">{children}</h2>
+  );
+}
 
-export default function SharedViewClient({ id, lang }: { id: string; lang: Lang }) {
-  const tr = useCallback((k: string) => t[lang][k] ?? k, [lang]);
-  const [state, setState] = useState<State>('loading');
+function Row({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+      <span className="text-sm text-muted">{label}</span>
+      <span className="text-end text-sm font-medium">{children}</span>
+    </div>
+  );
+}
+
+export default function SharedViewClient({ id }: { id: string }) {
+  const { t, n, d, locale } = useLocale();
+  const [state, setState] = useState<State>("loading");
   const [payload, setPayload] = useState<SharePayload | null>(null);
 
   const poll = useCallback(async () => {
     try {
-      const res = await fetch(`/api/share/${id}`, { cache: 'no-store' });
+      const res = await fetch(`/api/share/${id}`, { cache: "no-store" });
       if (res.status === 410) {
-        setState('unavailable');
+        setState("unavailable");
         setPayload(null);
         return;
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const p = (await res.json()) as SharePayload;
       if (!isShareActive(p)) {
-        setState('unavailable');
+        setState("unavailable");
         setPayload(null);
         return;
       }
       setPayload(p);
-      setState('active');
+      setState("active");
     } catch {
       /* transient error — keep current state */
     }
@@ -48,7 +58,7 @@ export default function SharedViewClient({ id, lang }: { id: string; lang: Lang 
       // Reflect client-side expiry without waiting for the next fetch.
       setPayload((p) => {
         if (p && !isShareActive(p)) {
-          setState('unavailable');
+          setState("unavailable");
           return null;
         }
         return p;
@@ -61,166 +71,185 @@ export default function SharedViewClient({ id, lang }: { id: string; lang: Lang 
     };
   }, [poll]);
 
-  const other: Lang = lang === 'en' ? 'ar' : 'en';
-
-  if (state === 'loading') {
-    return (
-      <div dir={dir(lang)} className="flex min-h-screen items-center justify-center">
-        <p className="text-gray-400">{tr('loading')}</p>
-      </div>
-    );
+  if (state === "loading") {
+    return <p className="py-16 text-center text-muted">{t("common.loading")}</p>;
   }
 
-  if (state === 'unavailable' || !payload) {
+  if (state === "unavailable" || !payload) {
     return (
-      <div dir={dir(lang)} className="flex min-h-screen items-center justify-center px-4">
-        <div className="max-w-sm rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-          <p className="text-lg font-semibold text-gray-800">{tr('unavailable')}</p>
-        </div>
+      <div className="card mx-auto mt-16 max-w-sm p-8 text-center">
+        <p className="text-lg font-semibold">{t("share.unavailable")}</p>
       </div>
     );
   }
 
   const s = payload.snapshot;
-  const locale = lang === 'ar' ? 'ar' : 'en';
+  const listSep = locale === "ar" ? "، " : ", ";
+  const sharedBy = payload.sharedByLocalized?.[locale] ?? payload.sharedBy;
 
   return (
-    <div dir={dir(lang)} className="mx-auto min-h-screen max-w-2xl px-4 py-8">
-      <div className="mb-6 flex items-center justify-end">
-        <Link href={`/shared/${id}?lang=${other}`} className="text-sm font-medium text-blue-600 hover:underline">
-          {tr('langToggle')}
-        </Link>
+    <div className="space-y-5">
+      <div className="card p-5">
+        <SectionTitle>{t("share.recipientTitle")}</SectionTitle>
+        <div className="mt-3 divide-y divide-line">
+          <Row label={t("share.sharedBy")}>{sharedBy}</Row>
+          <Row label={t("share.purposeLabel")}>
+            {t(`share.purpose.${payload.purpose}` as TranslationKey)}
+          </Row>
+          <Row label={t("share.validUntil")}>
+            {d(payload.expiresAt, { dateStyle: "medium", timeStyle: "short" })}
+          </Row>
+        </div>
       </div>
 
-      <header className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h1 className="text-xl font-bold">{tr('recipientTitle')}</h1>
-        <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
-          <div>
-            <dt className="text-gray-400">{tr('sharedBy')}</dt>
-            <dd className="font-medium">{payload.sharedBy}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-400">{tr('purpose')}</dt>
-            <dd className="font-medium">{tr(purposeKeys[payload.purpose] ?? payload.purpose)}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-400">{tr('validUntil')}</dt>
-            <dd className="font-medium">{new Date(payload.expiresAt).toLocaleString(locale)}</dd>
-          </div>
-        </dl>
-      </header>
-
       {s.identity && (
-        <Section title={tr('sectionIdentity')}>
-          <Row k={tr('name')} v={s.identity.name} />
-          <Row k={tr('dob')} v={s.identity.dateOfBirth} />
-          <Row k={tr('bloodType')} v={s.identity.bloodType} />
-          <Row k={tr('vitalId')} v={s.identity.vitalId} />
-        </Section>
-      )}
-
-      {s.emergency && (
-        <Section title={tr('sectionEmergency')}>
-          <Row
-            k={tr('emergencyContact')}
-            v={`${s.emergency.emergencyContact.name} (${s.emergency.emergencyContact.relation}) — ${s.emergency.emergencyContact.phone}`}
-          />
-          <Row k={tr('allergies')} v={s.emergency.allergies.join(', ') || '—'} />
-          <Row k={tr('conditions')} v={s.emergency.conditions.join(', ') || '—'} />
-          <Row k={tr('medications')} v={s.emergency.medications.join(', ') || '—'} />
-        </Section>
-      )}
-
-      {s.signals && (
-        <Section title={tr('sectionSignals')}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-start text-xs text-gray-400">
-                  <th className="pb-1 text-start font-medium">{tr('metric')}</th>
-                  <th className="pb-1 text-start font-medium">{tr('value')}</th>
-                  <th className="pb-1 text-start font-medium">{tr('status')}</th>
-                  <th className="pb-1 text-start font-medium">{tr('timestamp')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {s.signals.map((m) => (
-                  <tr key={m.metric} className="border-t border-gray-100">
-                    <td className="py-2">{m.metric}</td>
-                    <td className="py-2 font-medium">
-                      {m.value} {m.unit}
-                    </td>
-                    <td className="py-2">
-                      <StatusBadge status={m.status} />
-                    </td>
-                    <td className="py-2 text-gray-500">{new Date(m.timestamp).toLocaleString(locale)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="card p-5">
+          <SectionTitle>{t("share.field.identity")}</SectionTitle>
+          <div className="mt-3 divide-y divide-line">
+            <Row label={t("vitalId.holder")}>{s.identity.fullName}</Row>
+            <Row label={t("vitalId.dob")}>
+              <span dir="ltr">{d(s.identity.dateOfBirth, { year: "numeric" })}</span>
+            </Row>
+            <Row label={t("vitalId.sex")}>
+              {t(`vitalId.sex.${s.identity.sex}` as TranslationKey)}
+            </Row>
+            <Row label={t("vitalId.nationality")}>
+              {t(`vitalId.nationality.${s.identity.nationality}` as TranslationKey)}
+            </Row>
+            <Row label={t("vitalId.idLabel")}>
+              <span className="tabular font-mono" dir="ltr">
+                {s.identity.vitalId}
+              </span>
+            </Row>
           </div>
-          <p className="mt-2 text-xs text-gray-400">
-            {tr('source')}: {s.signals[0]?.source}
-          </p>
-        </Section>
+        </div>
       )}
 
-      {s.trends && (
-        <Section title={tr('sectionTrends')}>
-          <ul className="space-y-2">
-            {s.trends.map((tr_, i) => (
-              <li key={i} className="rounded-lg bg-gray-50 p-3 text-sm">
-                <div className="font-medium">
-                  {tr_.metric} — {tr_.period} — {tr_.direction}
+      {s.emergencyInfo && (
+        <div className="card p-5">
+          <SectionTitle>{t("vitalId.emergency")}</SectionTitle>
+          <div className="mt-3 divide-y divide-line">
+            <Row label={t("vitalId.bloodType")}>
+              <span
+                className="rounded-full bg-bad-soft px-2.5 py-0.5 text-xs font-bold text-bad"
+                dir="ltr"
+              >
+                {s.emergencyInfo.bloodType}
+              </span>
+            </Row>
+            <Row label={t("vitalId.allergies")}>
+              {s.emergencyInfo.allergies.length === 0
+                ? t("vitalId.none")
+                : s.emergencyInfo.allergies
+                    .map((a) => t(`vitalId.allergy.${a}` as TranslationKey))
+                    .join(listSep)}
+            </Row>
+            <Row label={t("vitalId.conditions")}>
+              {s.emergencyInfo.conditions.length === 0
+                ? t("vitalId.none")
+                : s.emergencyInfo.conditions.join(listSep)}
+            </Row>
+            <Row label={t("vitalId.emergencyContact")}>
+              <span>
+                {s.emergencyInfo.emergencyContact.name} ·{" "}
+                {t(`vitalId.relation.${s.emergencyInfo.emergencyContact.relation}` as TranslationKey)}
+                <br />
+                <span className="tabular text-muted" dir="ltr">
+                  {s.emergencyInfo.emergencyContact.phone}
+                </span>
+              </span>
+            </Row>
+          </div>
+        </div>
+      )}
+
+      {s.currentSignals && (
+        <div className="card p-5">
+          <SectionTitle>{t("vitalId.currentSignals")}</SectionTitle>
+          <div className="mt-3 divide-y divide-line">
+            {s.currentSignals.map((m) => {
+              const tone = statusTone(m.status, isWorse(m));
+              const decimals = METRIC_META[m.metric].decimals;
+              return (
+                <div key={m.metric} className="flex items-center justify-between gap-3 py-2.5">
+                  <span className="text-sm font-medium text-ink-2">
+                    {t(`metric.${m.metric}` as TranslationKey)}
+                  </span>
+                  <span className="flex items-center gap-3">
+                    <span className="tabular text-sm font-semibold">
+                      {n(m.value, decimals)}{" "}
+                      <span className="text-xs font-normal text-muted">
+                        {t(`unit.${m.unit}` as TranslationKey)}
+                      </span>
+                    </span>
+                    <StatusBadge status={m.status} tone={tone} />
+                  </span>
                 </div>
-                <p className="mt-1 text-gray-600">{tr_.summary}</p>
-                <p className="mt-1 text-xs text-gray-400">
-                  {tr('source')}: {tr_.source}
-                </p>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {s.recentTrends && (
+        <div className="card p-5">
+          <SectionTitle>{t("vitalId.recentTrends")}</SectionTitle>
+          <ul className="mt-3 space-y-2.5">
+            {s.recentTrends.map((insight) => (
+              <li key={insight.id} className="flex items-start gap-2.5 text-sm leading-snug">
+                <span
+                  aria-hidden
+                  className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
+                    insight.severity === "attention" ? "bg-warn" : "bg-brand"
+                  }`}
+                />
+                {t(insight.key as TranslationKey, insight.params)}
               </li>
             ))}
           </ul>
-        </Section>
+        </div>
       )}
 
-      {s.profile && (
-        <Section title={tr('sectionProfile')}>
-          <Row k={tr('height')} v={s.profile.height} />
-          <Row k={tr('weight')} v={s.profile.weight} />
-          <Row k={tr('lifestyle')} v={s.profile.lifestyle.join(', ')} />
-          <Row k={tr('notes')} v={s.profile.notes} />
-        </Section>
+      {s.healthProfile && (
+        <div className="card p-5">
+          <SectionTitle>{t("vitalId.healthProfile")}</SectionTitle>
+          <div className="mt-3 divide-y divide-line">
+            <Row label={t("vitalId.height")}>
+              <span className="tabular">
+                {n(s.healthProfile.heightCm)} {t("vitalId.cm")}
+              </span>
+            </Row>
+            <Row label={t("vitalId.weight")}>
+              <span className="tabular">
+                {n(s.healthProfile.weightKg)} {t("vitalId.kg")}
+              </span>
+            </Row>
+            <Row label={t("vitalId.medications")}>
+              {s.healthProfile.medications.length === 0
+                ? t("vitalId.none")
+                : s.healthProfile.medications.join(listSep)}
+            </Row>
+          </div>
+        </div>
       )}
 
-      <footer className="mt-8 text-center text-xs text-gray-400">{tr('readonlyFooter')}</footer>
+      {s.sources && (
+        <div className="card p-5">
+          <SectionTitle>{t("vitalId.dataSources")}</SectionTitle>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {s.sources.map((src) => (
+              <span
+                key={src}
+                className="rounded-full bg-brand-soft px-3 py-1 text-xs font-medium text-brand"
+              >
+                {t(`source.${src}` as TranslationKey)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <footer className="text-center text-xs text-muted">{t("share.readonlyFooter")}</footer>
     </div>
   );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <h2 className="font-semibold">{title}</h2>
-      <div className="mt-3">{children}</div>
-    </section>
-  );
-}
-
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex justify-between gap-4 border-b border-gray-50 py-1.5 text-sm last:border-0">
-      <span className="text-gray-400">{k}</span>
-      <span className="text-end font-medium">{v}</span>
-    </div>
-  );
-}
-
-function StatusBadge({ status }: { status: 'normal' | 'watch' | 'attention' }) {
-  const cls =
-    status === 'normal'
-      ? 'bg-green-100 text-green-700'
-      : status === 'watch'
-        ? 'bg-amber-100 text-amber-700'
-        : 'bg-red-100 text-red-700';
-  return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>{status}</span>;
 }
