@@ -8,9 +8,12 @@ export default async function HomePage() {
   return (
     <Dashboard
       metrics={data.metrics}
+      missingMetrics={data.missingMetrics}
       insight={data.insights[0]}
       identity={data.identity}
       setup={data.setup}
+      editable={data.owner === "member"}
+      whoop={data.whoop}
     />
   );
 }

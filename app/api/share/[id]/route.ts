@@ -14,5 +14,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       { status: 410, headers: { 'Cache-Control': 'no-store' } },
     );
   }
-  return NextResponse.json(payload, { headers: { 'Cache-Control': 'no-store' } });
+  const publicPayload: Partial<typeof payload> = { ...payload };
+  delete publicPayload.ownerKey;
+  return NextResponse.json(publicPayload, { headers: { 'Cache-Control': 'no-store' } });
 }

@@ -2,6 +2,7 @@ import 'server-only';
 import type { Json } from '@/lib/share-storage/types';
 import { SupabaseShareStore } from '@/lib/supabase/shares';
 import { isShareActive, type SharePayload, type SharePurpose, type ShareField, type ShareRecipient } from './sharing';
+import { DEMO_USER_KEY } from '@/lib/membership/constants';
 
 /**
  * Adapter that persists Chat B's `SharePayload` in `vital_id_shares` via
@@ -32,9 +33,19 @@ function toPayload(share: {
   selectedFields: string[];
   snapshot?: Record<string, Json>;
   sentTo?: Json;
+  ownerKey?: string;
+  sharedBy?: string;
 }): SharePayload {
-  const { sharedBy, sharedByLocalized, ownerKey, sentTo: snapshotSentTo, ...rest } = share.snapshot ?? {};
+  const {
+    sharedBy: snapshotSharedBy,
+    sharedByLocalized,
+    ownerKey: snapshotOwnerKey,
+    sentTo: snapshotSentTo,
+    ...rest
+  } = share.snapshot ?? {};
   const sentTo = share.sentTo ?? snapshotSentTo;
+  const ownerKey = share.ownerKey ?? snapshotOwnerKey;
+  const sharedBy = share.sharedBy ?? snapshotSharedBy;
   return {
     id: share.token,
     createdAt: share.createdAt,
@@ -98,6 +109,11 @@ export async function listShares(): Promise<SharePayload[]> {
   return rows.map(toPayload);
 }
 
-export async function clearAll(): Promise<void> {
-  await store().clearVitalIdShares();
+/**
+ * Deletes only the caller's shares. Ownership rides inside the stored snapshot
+ * (`snapshot->>ownerKey`); legacy rows written before owner tracking have a
+ * null key and belong to the demo user.
+ */
+export async function clearForOwner(ownerKey: string): Promise<void> {
+  await store().clearVitalIdSharesForOwner(ownerKey, ownerKey === DEMO_USER_KEY);
 }

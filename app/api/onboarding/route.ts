@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { getOnboardingStore, sanitizePatch } from '@/lib/onboarding/store';
+import { getMembershipStore } from '@/lib/membership/store';
+import { applyPlanToConnectors } from '@/lib/connectors';
 import { isProfileComplete } from '@/lib/onboarding/types';
 import { emptySetup } from '@/lib/onboarding/types';
 
@@ -12,8 +14,13 @@ const NO_STORE = { headers: { 'Cache-Control': 'no-store' } };
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
-  const setup = (await getOnboardingStore().get(user.id)) ?? emptySetup();
-  return NextResponse.json(setup, NO_STORE);
+  const [setup, membership] = await Promise.all([
+    getOnboardingStore().get(user.id),
+    getMembershipStore().get(user.id),
+  ]);
+  const resolved = setup ?? emptySetup();
+  resolved.connectors = applyPlanToConnectors(resolved.connectors, membership?.plan ?? 'free');
+  return NextResponse.json(resolved, NO_STORE);
 }
 
 export async function PUT(req: Request) {
@@ -27,6 +34,10 @@ export async function PUT(req: Request) {
   }
   const store = getOnboardingStore();
   const patch = sanitizePatch(body);
+  if (patch.connectors) {
+    const membership = await getMembershipStore().get(user.id);
+    patch.connectors = applyPlanToConnectors(patch.connectors, membership?.plan ?? 'free');
+  }
   if (patch.onboardingCompleted) {
     const current = await store.get(user.id);
     if (!current?.planSelected || !isProfileComplete({ ...current.profile, ...patch.profile })) {

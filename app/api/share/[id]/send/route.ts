@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { INSURER_IDS, type InsurerId } from '@/lib/insurers';
 import { isShareActive, type ShareRecipient } from '@/lib/sharing';
 import { getShare, setShareRecipients } from '@/lib/share-store';
+import { DEMO_USER_KEY, getCurrentUserKey } from '@/lib/membership/session';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -24,8 +25,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: 'invalid insurers' }, { status: 400 });
   }
 
-  const share = await getShare(id);
-  if (!share) return NextResponse.json({ error: 'not found' }, { status: 404 });
+  const [share, ownerKey] = await Promise.all([getShare(id), getCurrentUserKey()]);
+  if (!share || (share.ownerKey ?? DEMO_USER_KEY) !== ownerKey) {
+    return NextResponse.json({ error: 'not found' }, { status: 404 });
+  }
   if (!isShareActive(share)) return NextResponse.json({ error: 'share is not active' }, { status: 410 });
 
   const sentAt = new Date().toISOString();

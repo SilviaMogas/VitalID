@@ -20,7 +20,11 @@ export interface VitalIdShareRecord {
   snapshot: Record<string, Json>;
 }
 
-export type VitalIdShareSummary = Omit<VitalIdShareRecord, 'snapshot'> & { sentTo?: Json };
+export type VitalIdShareSummary = Omit<VitalIdShareRecord, 'snapshot'> & {
+  sentTo?: Json;
+  ownerKey?: string;
+  sharedBy?: string;
+};
 
 export interface CreateVitalIdShareInput {
   /** Top-level keys of `fullSnapshot` the user chose to disclose. */

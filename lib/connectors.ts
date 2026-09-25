@@ -15,7 +15,7 @@
  * the provider, and have the OAuth callback upsert `status: "connected"` via
  * the onboarding store — no UI redesign needed.
  */
-import type { PlanId } from "@/lib/plans";
+import { getConnectorLimit, planRank, type PlanId } from "@/lib/plans";
 
 export type ConnectorStatus =
   | "connected"
@@ -98,7 +98,7 @@ export interface ProviderDef {
 }
 
 export const PROVIDERS: Record<ProviderId, ProviderDef> = {
-  whoop: { id: "whoop", name: "WHOOP", mark: "W", tint: "#111111", integration: "none", data: ["sleep", "recovery", "hrv", "restingHeartRate", "activity"], requiredPlan: "free", website: "https://www.whoop.com" },
+  whoop: { id: "whoop", name: "WHOOP", mark: "W", tint: "#111111", integration: "oauth", data: ["sleep", "recovery", "hrv", "restingHeartRate", "activity"], requiredPlan: "free", website: "https://www.whoop.com" },
   oura: { id: "oura", name: "Oura", mark: "O", tint: "#2b2b2b", integration: "none", data: ["sleep", "readiness", "hrv", "restingHeartRate", "activity"], requiredPlan: "free", website: "https://ouraring.com" },
   circular_ring: { id: "circular_ring", name: "Circular Ring", mark: "C", tint: "#1f8a70", integration: "none", data: ["sleep", "hrv", "restingHeartRate", "recovery"], requiredPlan: "free", sampleData: true, website: "https://www.circular.xyz" },
   fitbit: { id: "fitbit", name: "Fitbit", mark: "fb", tint: "#00B0B9", integration: "none", data: ["sleep", "steps", "activity", "restingHeartRate"], requiredPlan: "free", website: "https://www.fitbit.com" },
@@ -164,4 +164,21 @@ export function isConnectorStatus(v: unknown): v is ConnectorStatus {
     v === "coming_soon" ||
     v === "disconnected"
   );
+}
+
+/**
+ * Server-side plan enforcement for a user's connector list.
+ * Drops providers whose `requiredPlan` exceeds `plan` and caps the list at the
+ * plan's connector limit. `connected` rows are never dropped (a real OAuth
+ * link must stay visible so it can be disconnected) and sort first.
+ */
+export function applyPlanToConnectors(connectors: UserConnector[], plan: PlanId): UserConnector[] {
+  const eligible = connectors.filter(
+    (c) => c.status === "connected" || planRank(PROVIDERS[c.provider].requiredPlan) <= planRank(plan),
+  );
+  const limit = getConnectorLimit(plan);
+  if (limit === null) return eligible;
+  const connected = eligible.filter((c) => c.status === "connected");
+  const rest = eligible.filter((c) => c.status !== "connected");
+  return [...connected, ...rest.slice(0, Math.max(0, limit - connected.length))];
 }

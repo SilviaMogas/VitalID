@@ -134,7 +134,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     status === "member"
       ? account?.firstName || t("profile.you")
       : DEMO_IDENTITY.localizedName?.[locale] ?? DEMO_IDENTITY.fullName;
-  const avatarPhoto = status === "member" ? account?.photoUrl : undefined;
+  const avatarPhoto = status === "member" ? account?.photoUrl : DEMO_IDENTITY.photoUrl;
 
   if (isBare) {
     return (

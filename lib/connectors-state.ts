@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMembership } from "@/components/providers/MembershipProvider";
+import { useAuth } from "@/components/providers/AuthProvider";
 import {
   PROVIDERS,
   categoriesOf,
@@ -55,6 +56,8 @@ function writeDemoSelection(connectors: UserConnector[]) {
 
 export function useConnectorSelection() {
   const { isDemoUser, connectorLimit, loading } = useMembership();
+  const { account } = useAuth();
+  const memberId = isDemoUser ? null : account?.userId ?? null;
   const [connectors, setConnectors] = useState<UserConnector[]>([]);
   const [ready, setReady] = useState(false);
 
@@ -79,8 +82,9 @@ export function useConnectorSelection() {
   useEffect(() => {
     if (loading) return;
     setReady(false);
+    setConnectors([]);
     void load();
-  }, [loading, load]);
+  }, [loading, load, memberId]);
 
   // Keep in sync when another component writes the demo selection.
   useEffect(() => {

@@ -9,7 +9,7 @@ import type { UserSetup } from "@/lib/onboarding/types";
 import type { TranslationKey } from "@/lib/i18n";
 
 /** Member-only dashboard blocks driven by the onboarding setup (manual baseline, goals, tools). */
-export function MemberSetupPanel({ setup }: { setup: UserSetup }) {
+export function MemberSetupPanel({ setup, editable = true }: { setup: UserSetup; editable?: boolean }) {
   const { t, n } = useLocale();
   const b = setup.baseline;
   const all: { key: TranslationKey; value: number | null; unit: string }[] = [
@@ -52,9 +52,11 @@ export function MemberSetupPanel({ setup }: { setup: UserSetup }) {
         <section className="card rise p-4" style={{ ["--i" as string]: 4 }}>
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-ink-2">{t("dashboard.yourGoals")}</h2>
-            <Link href="/onboarding?step=2" className="text-xs font-medium text-brand">
-              {t("dashboard.manageTools")}
-            </Link>
+            {editable && (
+              <Link href="/onboarding?step=2" className="text-xs font-medium text-brand">
+                {t("dashboard.manageTools")}
+              </Link>
+            )}
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {setup.goals.length === 0 && <span className="text-sm text-muted">—</span>}
@@ -69,7 +71,7 @@ export function MemberSetupPanel({ setup }: { setup: UserSetup }) {
         <section className="card rise p-4" style={{ ["--i" as string]: 5 }}>
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-ink-2">{t("dashboard.yourTools")}</h2>
-            <Link href="/onboarding?step=5" className="text-xs font-medium text-brand">
+            <Link href={editable ? "/onboarding?step=5" : "/connectors"} className="text-xs font-medium text-brand">
               {t("dashboard.manageTools")}
             </Link>
           </div>

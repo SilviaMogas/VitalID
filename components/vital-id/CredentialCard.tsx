@@ -2,7 +2,7 @@
 
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { LogoMark } from "@/components/layout/Logo";
-import type { TranslationKey } from "@/lib/i18n";
+import { nationalityLabel, type TranslationKey } from "@/lib/i18n";
 import type { EmergencyInfo, Identity } from "@/types";
 
 function Field({ label, value, ltr = false }: { label: string; value: string; ltr?: boolean }) {
@@ -91,7 +91,7 @@ export function CredentialCard({
           <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3 border-t border-white/15 pt-4">
             <Field label={t("vitalId.dob")} value={d(identity.dateOfBirth, { year: "numeric" })} ltr />
             <Field label={t("vitalId.sex")} value={t(`vitalId.sex.${identity.sex}` as TranslationKey)} />
-            <Field label={t("vitalId.nationality")} value={t(`vitalId.nationality.${identity.nationality}` as TranslationKey)} />
+            <Field label={t("vitalId.nationality")} value={nationalityLabel(identity.nationality, t)} />
           </div>
         )}
 

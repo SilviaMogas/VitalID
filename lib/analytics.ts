@@ -9,6 +9,7 @@ import {
 import {
   METRIC_KEYS,
   type DailyRecord,
+  type DataSource,
   type HealthMetric,
   type Insight,
   type MetricKey,
@@ -84,27 +85,48 @@ export function getConsecutiveDaysBelowBaseline(
   return count;
 }
 
-export function buildHealthMetric(records: DailyRecord[], metric: MetricKey): HealthMetric {
+export type SeriesPoint = { date: string; value: number };
+
+/**
+ * Builds a metric from an arbitrary (oldest-first) series of one user's own
+ * readings. Baseline = mean of the last 30 available points, so a user with a
+ * single manual entry gets a baseline equal to that entry (status "stable")
+ * rather than a synthetic history. `baselineDays` tells the UI how many days
+ * the baseline really covers.
+ */
+export function buildMetricFromSeries(metric: MetricKey, points: SeriesPoint[], source: DataSource): HealthMetric {
+  if (points.length === 0) throw new Error(`buildMetricFromSeries: empty series for ${metric}`);
   const meta = METRIC_META[metric];
-  const latest = records[records.length - 1];
-  const value = latest[metric];
-  const baseline = get30DayBaseline(records, metric);
-  const sevenDayAverage = get7DayAverage(records, metric);
+  const values = points.map((p) => p.value);
+  const latest = points[points.length - 1];
+  const value = latest.value;
+  const last30 = values.slice(-30);
+  const baseline = roundTo(mean(last30), meta.decimals);
+  const sevenDayAverage = roundTo(mean(values.slice(-7)), meta.decimals);
   const { delta, deltaPercent } = getDelta(value, baseline);
   return {
     metric,
     value,
     unit: meta.unit,
     timestamp: latest.date,
-    source: METRIC_SOURCE[metric],
+    source,
     baseline,
+    baselineDays: last30.length,
     sevenDayAverage,
     delta: roundTo(delta, meta.decimals),
     deltaPercent: Math.round(deltaPercent),
     status: getTrend(value, baseline, meta.polarity),
     polarity: meta.polarity,
-    history: records.map((r) => ({ date: r.date, value: r[metric] })),
+    history: points,
   };
+}
+
+export function buildHealthMetric(records: DailyRecord[], metric: MetricKey): HealthMetric {
+  return buildMetricFromSeries(
+    metric,
+    records.map((r) => ({ date: r.date, value: r[metric] })),
+    METRIC_SOURCE[metric],
+  );
 }
 
 export function buildHealthMetrics(records: DailyRecord[] = getDailyRecords()): HealthMetric[] {
@@ -116,11 +138,39 @@ export function buildHealthMetrics(records: DailyRecord[] = getDailyRecords()): 
  * can render them in any locale. Ordered by priority; the first is "today's insight".
  */
 export function generateInsights(records: DailyRecord[] = getDailyRecords()): Insight[] {
-  const insights: Insight[] = [];
-  const metrics = buildHealthMetrics(records);
-  const byKey = Object.fromEntries(metrics.map((m) => [m.metric, m])) as Record<MetricKey, HealthMetric>;
+  return insightsFromMetrics(buildHealthMetrics(records));
+}
 
-  const sleepStreak = getConsecutiveDaysBelowBaseline(records, "sleep");
+/** Consecutive most-recent points on the "worse" side of the metric's own baseline. */
+function streakBelowBaseline(m: HealthMetric): number {
+  let count = 0;
+  for (let i = m.history.length - 1; i >= 0; i--) {
+    const v = m.history[i].value;
+    const worse = m.polarity === "higherIsBetter" ? v < m.baseline : v > m.baseline;
+    if (!worse) break;
+    count++;
+  }
+  return count;
+}
+
+/**
+ * Same rules as `generateInsights`, but driven only by the metrics a user
+ * actually has. Metrics that are missing simply produce no insight; a metric
+ * with a single reading (manual entry) has no history to compare against.
+ */
+export function insightsFromMetrics(metrics: HealthMetric[]): Insight[] {
+  const insights: Insight[] = [];
+  const withHistory = metrics.filter((m) => m.history.length >= 2);
+  const byKey = Object.fromEntries(withHistory.map((m) => [m.metric, m])) as Partial<Record<MetricKey, HealthMetric>>;
+
+  if (metrics.length === 0) {
+    return [{ id: "no-data", key: "insight.noData", params: {}, metric: "recovery", severity: "info" }];
+  }
+  if (withHistory.length === 0) {
+    return [{ id: "manual-baseline", key: "insight.manualBaseline", params: {}, metric: metrics[0].metric, severity: "info" }];
+  }
+
+  const sleepStreak = byKey.sleep ? streakBelowBaseline(byKey.sleep) : 0;
   if (sleepStreak >= 2) {
     insights.push({
       id: "sleep-streak",
@@ -132,7 +182,7 @@ export function generateInsights(records: DailyRecord[] = getDailyRecords()): In
   }
 
   const rec = byKey.recovery;
-  if (rec.status === "declining" || rec.status === "unusual") {
+  if (rec && rec.deltaPercent < 0 && (rec.status === "declining" || rec.status === "unusual")) {
     insights.push({
       id: "recovery-down",
       key: "insight.recoveryBelowBaseline",
@@ -144,7 +194,7 @@ export function generateInsights(records: DailyRecord[] = getDailyRecords()): In
 
   const hrv = byKey.hrv;
   const rhr = byKey.restingHeartRate;
-  if (hrv.deltaPercent < 0 && rhr.deltaPercent > 0) {
+  if (hrv && rhr && hrv.deltaPercent < 0 && rhr.deltaPercent > 0) {
     insights.push({
       id: "hrv-rhr-shift",
       key: "insight.hrvDownRhrUp",
@@ -155,7 +205,7 @@ export function generateInsights(records: DailyRecord[] = getDailyRecords()): In
   }
 
   const act = byKey.activity;
-  if (act.status === "stable") {
+  if (act && act.status === "stable") {
     insights.push({
       id: "activity-stable",
       key: "insight.activityStable",
@@ -170,7 +220,7 @@ export function generateInsights(records: DailyRecord[] = getDailyRecords()): In
       id: "all-stable",
       key: "insight.allStable",
       params: {},
-      metric: "recovery",
+      metric: withHistory[0].metric,
       severity: "info",
     });
   }

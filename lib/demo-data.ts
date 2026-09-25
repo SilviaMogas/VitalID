@@ -8,6 +8,7 @@ import type {
   MetricPolarity,
 } from "@/types";
 import { CIRCULAR_RING_DAILY } from "@/lib/circular-ring-data";
+import type { UserSetup } from "@/lib/onboarding/types";
 
 /**
  * Circular Ring supplies the 24-day demo signals; resting heart rate is aligned
@@ -107,6 +108,7 @@ export const METRIC_SOURCE: Record<MetricKey, DataSource> = {
 export const DEMO_IDENTITY: Identity = {
   fullName: "Fatima Al Mansoori",
   localizedName: { ar: "فاطمة المنصوري" },
+  photoUrl: "/demo/fatima.svg",
   vitalId: "VID-AE-10284",
   dateOfBirth: "1991-03-14",
   sex: "female",
@@ -129,4 +131,44 @@ export const DEMO_PROFILE: HealthProfile = {
   heightCm: 165,
   weightKg: 58,
   medications: [],
+};
+
+/** Fatima's onboarding answers — drives goals / baseline tiles / tools on the demo dashboard. */
+export const DEMO_SETUP: UserSetup = {
+  profile: {
+    firstName: "Fatima",
+    lastName: "Al Mansoori",
+    dob: DEMO_IDENTITY.dateOfBirth,
+    gender: "female",
+    nationality: "AE",
+    country: "AE",
+    city: "Dubai",
+    heightCm: DEMO_PROFILE.heightCm,
+    weightKg: DEMO_PROFILE.weightKg,
+    photoUrl: DEMO_IDENTITY.photoUrl ?? "",
+  },
+  goals: ["sleep", "recovery", "fitness"],
+  health: {
+    allergies: DEMO_EMERGENCY.allergies.join(", "),
+    medications: "",
+    conditions: "",
+    bloodType: DEMO_EMERGENCY.bloodType,
+    emergencyContactName: DEMO_EMERGENCY.emergencyContact.name,
+    emergencyContactPhone: DEMO_EMERGENCY.emergencyContact.phone,
+    notes: "",
+  },
+  baseline: {
+    sleepHours: null,
+    restingHr: null,
+    steps: 8500,
+    workoutsPerWeek: 4,
+    activityLevel: "active",
+    hydrationGoalMl: 2500,
+    calorieTarget: null,
+    proteinTargetG: null,
+  },
+  connectors: [{ provider: "circular_ring", category: "wearables", status: "sample_data", connectedAt: null }],
+  planSelected: true,
+  onboardingStep: 6,
+  onboardingCompleted: true,
 };

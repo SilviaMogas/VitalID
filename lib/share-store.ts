@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { SharePayload, ShareRecipient } from './sharing';
 import { isShareActive } from './sharing';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
+import { DEMO_USER_KEY } from '@/lib/membership/constants';
 import * as supabaseStore from './share-store-supabase';
 
 /**
@@ -144,14 +145,22 @@ export async function listShares(): Promise<SharePayload[]> {
   return Array.from(memoryMap().values());
 }
 
-export async function clearAll(): Promise<void> {
-  if (useSupabase) return supabaseStore.clearAll();
+/** Deletes only the shares owned by `ownerKey` (legacy rows without one belong to the demo user). */
+export async function clearForOwner(ownerKey: string): Promise<void> {
+  if (useSupabase) return supabaseStore.clearForOwner(ownerKey);
   if (useRedis) {
     const ids = (await redis(['SMEMBERS', INDEX_KEY])) as string[];
-    for (const id of ids ?? []) await redis(['DEL', KEY_PREFIX + id]);
-    await redis(['DEL', INDEX_KEY]);
+    for (const id of ids ?? []) {
+      const s = await getShare(id);
+      if (s && (s.ownerKey ?? DEMO_USER_KEY) === ownerKey) {
+        await redis(['DEL', KEY_PREFIX + id]);
+        await redis(['SREM', INDEX_KEY, id]);
+      }
+    }
     return;
   }
-  memoryMap().clear();
+  for (const [id, p] of memoryMap()) {
+    if ((p.ownerKey ?? DEMO_USER_KEY) === ownerKey) memoryMap().delete(id);
+  }
   persistMirror();
 }
