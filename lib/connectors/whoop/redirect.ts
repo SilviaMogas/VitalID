@@ -19,7 +19,8 @@ export function publicOrigin(req: NextRequest): string {
 
 /** Exact redirect_uri to send to WHOOP — must equal the dashboard registration. */
 export function whoopRedirectUri(req: NextRequest): string {
-  const env = readWhoopEnv();
-  if (env?.redirectUri) return env.redirectUri;
-  return `${publicOrigin(req)}${CALLBACK_PATH}`;
+  const origin = publicOrigin(req);
+  const configured = (readWhoopEnv()?.redirectUri ?? '').split(/[\s,]+/).filter(Boolean);
+  if (configured.length === 0) return `${origin}${CALLBACK_PATH}`;
+  return configured.find((uri) => uri.startsWith(`${origin}/`)) ?? configured[0];
 }
