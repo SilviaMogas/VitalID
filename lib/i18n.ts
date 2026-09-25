@@ -146,6 +146,22 @@ const pricingStrings = {
 
   "membership.gate.qrTitle": ["QR sharing is a Plus feature", "المشاركة عبر QR من ميزات Plus"],
   "membership.gate.qrDesc": ["Upgrade to share via QR code.", "قم بالترقية للمشاركة عبر رمز QR."],
+
+  "checkout.continueOnboarding": ["Set up your Vital ID", "أكمل إعداد Vital ID"],
+
+  "onboarding.signInEmail": ["Email address", "البريد الإلكتروني"],
+  "onboarding.signInCta": ["Sign in", "تسجيل الدخول"],
+  "onboarding.signInNotFound": ["No account found for this email. Sign up instead.", "لا يوجد حساب بهذا البريد. سجّل بدلًا من ذلك."],
+
+  "setup.title": ["Set up your Vital ID", "إعداد معرّفك الحيوي"],
+  "setup.subtitle": ["Three quick ideas before you start.", "ثلاث أفكار سريعة قبل أن تبدأ."],
+  "setup.step.connect.title": ["Connect your data", "اربط بياناتك"],
+  "setup.step.connect.desc": ["Link wearables and health sources to build your baseline.", "اربط الأجهزة القابلة للارتداء والمصادر الصحية لبناء خط أساسك."],
+  "setup.step.share.title": ["Choose what to share", "اختر ما تشاركه"],
+  "setup.step.share.desc": ["Share only the fields you pick, for as long as you allow.", "شارك الحقول التي تختارها فقط، وللمدة التي تسمح بها."],
+  "setup.step.control.title": ["You're in control", "أنت المتحكم"],
+  "setup.step.control.desc": ["Revoke any share at any time. Your data stays yours.", "ألغِ أي مشاركة في أي وقت. تبقى بياناتك ملكك."],
+  "setup.finish": ["Finish", "إنهاء"],
 } as const satisfies Record<string, readonly [string, string]>;
 
 function pickLocale<T extends Record<string, readonly [string, string]>>(table: T, index: 0 | 1): { [K in keyof T]: string } {

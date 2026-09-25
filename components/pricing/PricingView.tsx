@@ -18,7 +18,7 @@ function CheckIcon() {
 export function PricingView() {
   const { t } = useLocale();
   const router = useRouter();
-  const { plan: currentPlan, loading } = useMembership();
+  const { plan: currentPlan, loading, refresh } = useMembership();
   const [busyPlan, setBusyPlan] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +38,21 @@ export function PricingView() {
       }
       if (!res.ok || !data.url) throw new Error(`HTTP ${res.status}`);
       window.location.assign(data.url);
+    } catch {
+      setError(t("common.error"));
+    } finally {
+      setBusyPlan(null);
+    }
+  }
+
+  async function continueFree() {
+    setError(null);
+    setBusyPlan("free");
+    try {
+      const res = await fetch("/api/membership/choose-free", { method: "POST" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await refresh();
+      router.push("/onboarding");
     } catch {
       setError(t("common.error"));
     } finally {
@@ -133,8 +148,9 @@ export function PricingView() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => router.push("/")}
-                    className="w-full rounded-2xl border border-line bg-white py-3 text-sm font-semibold text-ink-2 transition hover:bg-canvas"
+                    disabled={busyPlan !== null}
+                    onClick={continueFree}
+                    className="w-full rounded-2xl border border-line bg-white py-3 text-sm font-semibold text-ink-2 transition hover:bg-canvas disabled:opacity-50"
                   >
                     {t("pricing.cta.continueFree")}
                   </button>
