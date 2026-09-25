@@ -141,6 +141,12 @@ export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   return toAuthUser(data.user);
 });
 
+/** True when any member session cookie is present, even if the access token has expired. */
+export async function hasMemberCookies(): Promise<boolean> {
+  const store = await cookies();
+  return Boolean(store.get(ACCESS_COOKIE)?.value || store.get(REFRESH_COOKIE)?.value);
+}
+
 /**
  * Route-handler only (sets cookies): returns the user, refreshing the session
  * when the access token has expired and a refresh token is available.

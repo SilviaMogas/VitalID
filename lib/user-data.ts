@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getCurrentUser, hasMemberCookies } from "@/lib/auth/server";
 import { buildHealthMetrics, generateInsights, buildVitalIdSnapshot } from "@/lib/analytics";
 import { DEMO_DAYS, DEMO_IDENTITY, METRIC_META, getDailyRecords } from "@/lib/demo-data";
 import { getOnboardingStore } from "@/lib/onboarding/store";
@@ -163,9 +163,12 @@ function fatimaData(): ResolvedUserData {
 function memberData(userId: string, setup: UserSetup): ResolvedUserData {
   const metrics = memberMetrics(setup);
   const identity = memberIdentity(userId, setup);
-  const insights: Insight[] = metrics.every((m) => m.source !== "demo")
-    ? [{ id: "manual-baseline", key: "insight.manualBaseline", params: {}, metric: "sleep", severity: "info" }]
-    : generateInsights(getDailyRecords());
+  const manualKeys = new Set(metrics.filter((m) => m.source !== "demo").map((m) => m.metric));
+  const demoInsights = generateInsights(getDailyRecords()).filter((i) => !manualKeys.has(i.metric));
+  const insights: Insight[] =
+    manualKeys.size > 0
+      ? [{ id: "manual-baseline", key: "insight.manualBaseline", params: {}, metric: "sleep", severity: "info" }, ...demoInsights]
+      : demoInsights;
   return {
     owner: "member",
     identity,
@@ -187,7 +190,11 @@ function memberData(userId: string, setup: UserSetup): ResolvedUserData {
 /** Resolves the data set for the current request: member (Supabase session) or Fatima demo. */
 export const resolveUserData = cache(async (): Promise<ResolvedUserData> => {
   const user = await getCurrentUser();
-  if (!user) return fatimaData();
-  const setup = (await getOnboardingStore().get(user.id)) ?? emptySetup();
-  return memberData(user.id, setup);
+  if (user) {
+    const setup = (await getOnboardingStore().get(user.id)) ?? emptySetup();
+    return memberData(user.id, setup);
+  }
+  // A member whose access token expired must never be shown (or share) Fatima's data.
+  if (await hasMemberCookies()) return memberData("expired", emptySetup());
+  return fatimaData();
 });

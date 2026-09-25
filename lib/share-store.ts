@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { SharePayload } from './sharing';
+import type { SharePayload, ShareRecipient } from './sharing';
+import { isShareActive } from './sharing';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import * as supabaseStore from './share-store-supabase';
 
@@ -106,6 +107,27 @@ export async function revokeShare(id: string): Promise<boolean> {
   memoryMap().set(id, updated);
   persistMirror();
   return true;
+}
+
+export async function setShareRecipients(
+  id: string,
+  sentTo: ShareRecipient[],
+): Promise<SharePayload | null> {
+  if (useSupabase) return supabaseStore.setShareRecipients(id, sentTo);
+  const p = await getShare(id);
+  if (!p || !isShareActive(p)) return null;
+  const recipients = new Map<ShareRecipient['insurerId'], ShareRecipient>();
+  for (const recipient of p.sentTo ?? []) recipients.set(recipient.insurerId, recipient);
+  for (const recipient of sentTo) recipients.set(recipient.insurerId, recipient);
+  const updated = { ...p, sentTo: Array.from(recipients.values()) };
+  if (useRedis) {
+    const ttl = Math.max(1, Math.floor((new Date(p.expiresAt).getTime() - Date.now()) / 1000) + 60);
+    await redis(['SET', KEY_PREFIX + id, JSON.stringify(updated), 'EX', ttl]);
+    return updated;
+  }
+  memoryMap().set(id, updated);
+  persistMirror();
+  return updated;
 }
 
 export async function listShares(): Promise<SharePayload[]> {

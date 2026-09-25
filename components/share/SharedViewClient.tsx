@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import { isShareActive, type SharePayload } from "@/lib/sharing";
+import { getInsurer } from "@/lib/insurers";
 import { LogoMark } from "@/components/layout/Logo";
 import { Broccoli } from "@/components/mascot/Broccoli";
 import { Companion } from "@/components/companions/Companion";
@@ -104,6 +105,27 @@ export default function SharedViewClient({ id }: { id: string }) {
           <Row label={t("share.purposeLabel")}>
             {t(`share.purpose.${payload.purpose}` as TranslationKey)}
           </Row>
+          {!!payload.sentTo?.length && (
+            <Row label={t("share.sentTo")}>
+              <span className="flex flex-wrap justify-end gap-x-2 gap-y-1">
+                {payload.sentTo.map((recipient) => {
+                  const insurer = getInsurer(recipient.insurerId);
+                  if (!insurer) return null;
+                  return (
+                    <span key={recipient.insurerId} className="inline-flex items-center gap-1">
+                      <span
+                        className="grid h-5 w-5 place-items-center rounded-full text-[9px] font-bold text-white"
+                        style={{ backgroundColor: insurer.color }}
+                      >
+                        {insurer.monogram}
+                      </span>
+                      {locale === "ar" ? insurer.nameAr : insurer.name}
+                    </span>
+                  );
+                })}
+              </span>
+            </Row>
+          )}
           <Row label={t("share.validUntil")}>
             {d(payload.expiresAt, { year: "numeric", hour: "2-digit", minute: "2-digit" })}
           </Row>

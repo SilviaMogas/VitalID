@@ -19,7 +19,9 @@ import {
   type ShareField,
   type SharePayload,
   type SharePurpose,
+  type ShareRecipient,
 } from "@/lib/sharing";
+import { getInsurer, INSURERS, type InsurerId } from "@/lib/insurers";
 
 interface ShareSummary {
   id: string;
@@ -28,6 +30,7 @@ interface ShareSummary {
   expiresAt: string;
   revoked: boolean;
   selectedFields: ShareField[];
+  sentTo?: ShareRecipient[];
 }
 
 function statusOf(s: ShareSummary): "active" | "expired" | "revoked" {
@@ -42,7 +45,7 @@ const STATUS_BADGE: Record<ReturnType<typeof statusOf>, string> = {
 };
 
 export default function ShareClient() {
-  const { t, d } = useLocale();
+  const { t, d, locale } = useLocale();
   const { hasFeature } = useMembership();
   const canPickExpiry = hasFeature("configurableExpiry");
   const [purpose, setPurpose] = useState<SharePurpose | null>(null);
@@ -53,6 +56,10 @@ export default function ShareClient() {
   const [result, setResult] = useState<SharePayload | null>(null);
   const [copied, setCopied] = useState(false);
   const [shares, setShares] = useState<ShareSummary[]>([]);
+  const [selectedInsurers, setSelectedInsurers] = useState<Set<InsurerId>>(new Set());
+  const [sending, setSending] = useState(false);
+  const [sendFeedback, setSendFeedback] = useState<string | null>(null);
+  const [sendFailed, setSendFailed] = useState(false);
 
   const link = useMemo(
     () =>
@@ -109,6 +116,9 @@ export default function ShareClient() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setResult(await res.json());
+      setSelectedInsurers(new Set());
+      setSendFeedback(null);
+      setSendFailed(false);
       refreshShares();
     } catch {
       setError(t("common.error"));
@@ -133,6 +143,50 @@ export default function ShareClient() {
     }
   }
 
+  function toggleInsurer(id: InsurerId) {
+    setSelectedInsurers((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setSendFeedback(null);
+    setSendFailed(false);
+  }
+
+  async function sendToInsurers() {
+    if (!result || selectedInsurers.size === 0) return;
+    const selected = Array.from(selectedInsurers);
+    setSending(true);
+    setSendFeedback(null);
+    setSendFailed(false);
+    try {
+      const res = await fetch(`/api/share/${result.id}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ insurers: selected }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const response = (await res.json()) as { id: string; sentTo: ShareRecipient[] };
+      setResult((current) =>
+        current?.id === response.id ? { ...current, sentTo: response.sentTo } : current,
+      );
+      setSelectedInsurers(new Set());
+      const names = selected
+        .map((id) => getInsurer(id))
+        .filter((insurer): insurer is NonNullable<typeof insurer> => Boolean(insurer))
+        .map((insurer) => (locale === "ar" ? insurer.nameAr : insurer.name))
+        .join(locale === "ar" ? "، " : ", ");
+      setSendFeedback(t("share.sentSuccess", { names }));
+      refreshShares();
+    } catch {
+      setSendFeedback(t("common.error"));
+      setSendFailed(true);
+    } finally {
+      setSending(false);
+    }
+  }
+
   async function resetDemo() {
     if (!window.confirm(t("share.resetConfirm"))) return;
     await fetch("/api/share/reset", { method: "POST" });
@@ -140,6 +194,9 @@ export default function ShareClient() {
     setShares([]);
     setFields(new Set());
     setPurpose(null);
+    setSelectedInsurers(new Set());
+    setSendFeedback(null);
+    setSendFailed(false);
     refreshShares();
   }
 
@@ -282,6 +339,72 @@ export default function ShareClient() {
                   {copied ? t("share.copied") : t("share.copy")}
                 </button>
               </div>
+              <section className="mt-5 border-t border-line pt-4">
+                <SectionTitle>{t("share.sendToInsurer")}</SectionTitle>
+                <p className="mt-1 text-xs text-muted">{t("share.sendToInsurerHint")}</p>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {INSURERS.map((insurer) => {
+                    const sent = (result.sentTo ?? []).some(
+                      (recipient) => recipient.insurerId === insurer.id,
+                    );
+                    const selected = selectedInsurers.has(insurer.id);
+                    return (
+                      <button
+                        key={insurer.id}
+                        type="button"
+                        disabled={sent}
+                        aria-pressed={selected}
+                        onClick={() => toggleInsurer(insurer.id)}
+                        className={`press relative flex min-h-20 items-center gap-2 rounded-2xl bg-white p-2.5 text-start ring-1 transition ${
+                          sent
+                            ? "cursor-default bg-good-soft ring-good/30"
+                            : selected
+                              ? "ring-2 ring-brand"
+                              : "ring-line hover:ring-brand"
+                        }`}
+                      >
+                        <span
+                          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-bold text-white"
+                          style={{ backgroundColor: insurer.color }}
+                        >
+                          {insurer.monogram}
+                        </span>
+                        <span className="min-w-0 text-xs font-semibold leading-tight">
+                          {locale === "ar" ? insurer.nameAr : insurer.name}
+                          {sent && (
+                            <span className="mt-1 block text-[10px] font-medium text-good">
+                              {t("share.sentLabel")} ✓
+                            </span>
+                          )}
+                        </span>
+                        {selected && (
+                          <span
+                            aria-hidden
+                            className="absolute end-2 top-2 grid h-4 w-4 place-items-center rounded-full bg-brand text-[10px] font-bold text-white"
+                          >
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={sendToInsurers}
+                  disabled={selectedInsurers.size === 0 || sending}
+                  className="press mt-3 w-full rounded-2xl bg-brand py-3 text-sm font-semibold text-white shadow-card transition hover:bg-brand-deep disabled:opacity-50"
+                >
+                  {sending
+                    ? t("share.sending")
+                    : t("share.sendReport", { count: selectedInsurers.size })}
+                </button>
+                {sendFeedback && (
+                  <p className={`mt-2 text-center text-sm ${sendFailed ? "text-bad" : "text-good"}`}>
+                    {sendFeedback}
+                  </p>
+                )}
+              </section>
               <div className="mt-4 flex justify-center">
                 <LockedFeature
                   variant="overlay"
@@ -341,6 +464,24 @@ export default function ShareClient() {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">
                     {t(`share.purpose.${s.purpose}` as TranslationKey)}
+                    {!!s.sentTo?.length && (
+                      <span className="ms-2 inline-flex -space-x-1 align-middle">
+                        {s.sentTo.map((recipient) => {
+                          const insurer = getInsurer(recipient.insurerId);
+                          if (!insurer) return null;
+                          return (
+                            <span
+                              key={recipient.insurerId}
+                              title={locale === "ar" ? insurer.nameAr : insurer.name}
+                              className="grid h-5 w-5 place-items-center rounded-full text-[9px] font-bold text-white ring-2 ring-white"
+                              style={{ backgroundColor: insurer.color }}
+                            >
+                              {insurer.monogram}
+                            </span>
+                          );
+                        })}
+                      </span>
+                    )}
                     <span className="ms-2 font-mono text-xs text-muted" dir="ltr">
                       {s.id}
                     </span>

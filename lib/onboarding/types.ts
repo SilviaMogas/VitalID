@@ -124,3 +124,15 @@ export function emptySetup(): UserSetup {
 export function isGoalId(v: unknown): v is GoalId {
   return typeof v === "string" && (GOAL_IDS as readonly string[]).includes(v);
 }
+
+/** Step 1 fields that must be present before onboarding can be marked complete. */
+export function isProfileComplete(profile: UserProfile): boolean {
+  return (
+    profile.firstName.trim() !== '' &&
+    profile.lastName.trim() !== '' &&
+    profile.dob !== '' &&
+    profile.gender !== '' &&
+    profile.country.trim() !== '' &&
+    profile.city.trim() !== ''
+  );
+}

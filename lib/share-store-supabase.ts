@@ -1,7 +1,7 @@
 import 'server-only';
 import type { Json } from '@/lib/share-storage/types';
 import { SupabaseShareStore } from '@/lib/supabase/shares';
-import type { SharePayload, SharePurpose, ShareField } from './sharing';
+import { isShareActive, type SharePayload, type SharePurpose, type ShareField, type ShareRecipient } from './sharing';
 
 /**
  * Adapter that persists Chat B's `SharePayload` in `vital_id_shares` via
@@ -11,7 +11,7 @@ import type { SharePayload, SharePurpose, ShareField } from './sharing';
  * metadata that `buildSnapshot` always includes for the recipient view.
  */
 
-const META_KEYS = ['sharedBy', 'sharedByLocalized', 'sources', 'lastUpdated'] as const;
+const META_KEYS = ['sharedBy', 'sharedByLocalized', 'ownerKey', 'sentTo', 'sources', 'lastUpdated'] as const;
 
 interface StoreGlobal {
   __vitalIdSupabaseAdapter?: SupabaseShareStore;
@@ -31,8 +31,10 @@ function toPayload(share: {
   purpose: string | null;
   selectedFields: string[];
   snapshot?: Record<string, Json>;
+  sentTo?: Json;
 }): SharePayload {
-  const { sharedBy, sharedByLocalized, ...rest } = share.snapshot ?? {};
+  const { sharedBy, sharedByLocalized, ownerKey, sentTo: snapshotSentTo, ...rest } = share.snapshot ?? {};
+  const sentTo = share.sentTo ?? snapshotSentTo;
   return {
     id: share.token,
     createdAt: share.createdAt,
@@ -43,7 +45,9 @@ function toPayload(share: {
       (f) => !(META_KEYS as readonly string[]).includes(f),
     ) as ShareField[],
     sharedBy: typeof sharedBy === 'string' ? sharedBy : '',
+    ownerKey: typeof ownerKey === 'string' ? ownerKey : undefined,
     sharedByLocalized: (sharedByLocalized ?? undefined) as SharePayload['sharedByLocalized'],
+    sentTo: Array.isArray(sentTo) ? (sentTo as unknown as ShareRecipient[]) : [],
     snapshot: rest as SharePayload['snapshot'],
   };
 }
@@ -52,7 +56,9 @@ export async function createShare(p: SharePayload): Promise<void> {
   const fullSnapshot = {
     ...(p.snapshot as Record<string, Json>),
     sharedBy: p.sharedBy,
+    ownerKey: p.ownerKey ?? null,
     sharedByLocalized: (p.sharedByLocalized ?? null) as Json,
+    sentTo: (p.sentTo ?? []) as unknown as Json,
   };
   await store().createVitalIdShare({
     token: p.id,
@@ -71,6 +77,20 @@ export async function getShare(id: string): Promise<SharePayload | null> {
 
 export async function revokeShare(id: string): Promise<boolean> {
   return store().revokeVitalIdShare(id);
+}
+
+export async function setShareRecipients(
+  id: string,
+  sentTo: ShareRecipient[],
+): Promise<SharePayload | null> {
+  const payload = await getShare(id);
+  if (!payload || !isShareActive(payload)) return null;
+  const recipients = new Map<ShareRecipient['insurerId'], ShareRecipient>();
+  for (const recipient of payload.sentTo ?? []) recipients.set(recipient.insurerId, recipient);
+  for (const recipient of sentTo) recipients.set(recipient.insurerId, recipient);
+  const updated = Array.from(recipients.values());
+  const stored = await store().setVitalIdShareSnapshotKey(id, 'sentTo', updated as unknown as Json);
+  return stored ? { ...payload, sentTo: updated } : null;
 }
 
 export async function listShares(): Promise<SharePayload[]> {
