@@ -392,6 +392,7 @@ const coachStrings = {
   "coach.area.lifestyle": ["Preferences & Lifestyle", "التفضيلات ونمط الحياة"],
   "coach.yourGoals": ["Your goals", "أهدافك"],
   "coach.addGoals": ["Add your goals", "أضف أهدافك"],
+  "coach.demoGoals": ["Demo profile — goals appear here for members", "ملف تجريبي — تظهر الأهداف هنا للأعضاء"],
   "coach.recommendations": ["Personalized recommendations", "توصيات مخصصة لك"],
   "coach.rec.sleepBelow": ["Aim for a consistent bedtime tonight — your sleep is {percent}% under your baseline.", "التزم بموعد نوم ثابت الليلة — نومك أقل بنسبة {percent}% من خط أساسك."],
   "coach.rec.recoveryLow": ["Recovery is {percent}% below your usual — consider a lighter session and an earlier night.", "التعافي أقل بنسبة {percent}% من المعتاد — جرّب تمرينًا أخف ونومًا أبكر."],

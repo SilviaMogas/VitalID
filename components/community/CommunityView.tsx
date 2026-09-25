@@ -90,8 +90,10 @@ export function CommunityView({ city, goals }: { city: string; goals: GoalId[] }
                 type="button"
                 onClick={() => toggleHobby(hobby)}
                 aria-pressed={selected}
-                className={`press card flex flex-col items-start gap-2 p-4 text-start transition ${
-                  selected ? "bg-brand text-white ring-2 ring-brand" : ""
+                className={`press flex flex-col items-start gap-2 p-4 text-start transition ${
+                  selected
+                    ? "rounded-[1.25rem] border border-brand bg-brand text-white shadow-sm ring-2 ring-brand"
+                    : "card"
                 }`}
               >
                 <span

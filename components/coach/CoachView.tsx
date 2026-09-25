@@ -8,6 +8,7 @@ import { MascotNote } from "@/components/mascot/MascotNote";
 import { COACH_AREAS, type CoachArea, type Recommendation } from "@/lib/coach";
 import type { TranslationKey } from "@/lib/i18n";
 import type { GoalId } from "@/lib/onboarding/types";
+import type { DataOwner } from "@/lib/user-data";
 import type { HealthMetric, Identity } from "@/types";
 
 const AREA_STYLE: Record<CoachArea, { chip: string }> = {
@@ -80,11 +81,13 @@ export function CoachView({
   recommendations,
   goals,
   identity,
+  owner,
 }: {
   recommendations: Recommendation[];
   metrics: HealthMetric[];
   goals: GoalId[];
   identity: Identity;
+  owner: DataOwner;
 }) {
   const { t, locale } = useLocale();
   const firstName = (identity.localizedName?.[locale] ?? identity.fullName).split(" ")[0];
@@ -119,7 +122,7 @@ export function CoachView({
           <div className="relative w-[45%] max-w-[180px] shrink-0 self-end md:max-w-[260px]">
             <Image
               src="/coach/doctor.png"
-              width={289}
+              width={234}
               height={360}
               alt={t("coach.doctorAlt")}
               priority
@@ -154,12 +157,18 @@ export function CoachView({
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-ink-2">{t("coach.yourGoals")}</span>
           {goals.length === 0 ? (
-            <Link
-              href="/onboarding?step=2"
-              className="press rounded-full bg-brand px-3.5 py-1.5 text-xs font-semibold text-white"
-            >
-              {t("coach.addGoals")}
-            </Link>
+            owner === "fatima" ? (
+              <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand-deep">
+                {t("coach.demoGoals")}
+              </span>
+            ) : (
+              <Link
+                href="/onboarding?step=2"
+                className="press rounded-full bg-brand px-3.5 py-1.5 text-xs font-semibold text-white"
+              >
+                {t("coach.addGoals")}
+              </Link>
+            )
           ) : (
             goals.map((g) => (
               <span
