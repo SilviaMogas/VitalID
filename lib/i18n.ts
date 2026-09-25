@@ -496,6 +496,7 @@ const brandStrings = {
   "onboarding.signIn": ["Sign in", "تسجيل الدخول"],
   "onboarding.signUp": ["Sign up", "إنشاء حساب"],
   "onboarding.demoCta": ["Login as Fatima", "الدخول كفاطمة"],
+  "onboarding.continueAs": ["Continue as {name}", "المتابعة كـ {name}"],
   "onboarding.dataProvidedBy": ["Data provided by Circular Ring", "البيانات مقدمة من Circular Ring"],
   "onboarding.demoHint": ["Explore the demo instantly as Fatima", "استكشف النسخة التجريبية فورًا كفاطمة"],
   "onboarding.demoOnly": ["Accounts are not part of this demo — continue as Fatima.", "الحسابات ليست جزءًا من هذه النسخة التجريبية — تابع كفاطمة."],

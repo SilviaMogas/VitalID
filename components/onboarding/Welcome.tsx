@@ -8,7 +8,17 @@ import { Apple, Avocado, Banana } from "@/components/mascot/Crew";
 import { CredentialCard } from "@/components/vital-id/CredentialCard";
 import { DEMO_EMERGENCY, DEMO_IDENTITY } from "@/lib/demo-data";
 
-export function Welcome({ onEnter }: { onEnter: () => void }) {
+export function Welcome({
+  onEnter,
+  onContinue,
+  continueName,
+  onAuthLink,
+}: {
+  onEnter: () => void;
+  onContinue?: () => void;
+  continueName?: string;
+  onAuthLink?: () => void;
+}) {
   const { t, toggleLocale, locale } = useLocale();
 
   const Arrow = () => <span className="inline-block rtl:-scale-x-100">→</span>;
@@ -45,8 +55,19 @@ export function Welcome({ onEnter }: { onEnter: () => void }) {
           </p>
 
           <div className="mt-8 space-y-3">
+            {onContinue && (
+              <button
+                type="button"
+                onClick={onContinue}
+                className="rise press flex w-full items-center justify-between rounded-2xl bg-brand-deep px-5 py-3.5 text-sm font-semibold text-white shadow-hero hover:bg-brand"
+                style={{ ["--i" as string]: 2.5 }}
+              >
+                {t("onboarding.continueAs", { name: continueName ?? "" })} <Arrow />
+              </button>
+            )}
             <Link
               href="/signup"
+              onClick={onAuthLink}
               className="rise press flex w-full items-center justify-between rounded-2xl bg-brand px-5 py-3.5 text-sm font-semibold text-white shadow-hero hover:bg-brand-deep"
               style={{ ["--i" as string]: 3 }}
             >
@@ -54,6 +75,7 @@ export function Welcome({ onEnter }: { onEnter: () => void }) {
             </Link>
             <Link
               href="/signin"
+              onClick={onAuthLink}
               className="rise press flex w-full items-center justify-between rounded-2xl border border-brand/40 bg-white px-5 py-3.5 text-sm font-semibold text-brand hover:bg-sage"
               style={{ ["--i" as string]: 4 }}
             >
