@@ -28,6 +28,7 @@ Migrations live in `supabase/migrations/`:
 
 1. `20260925_vital_id_shares.sql` — **required**: `vital_id_shares` + indexes + RLS.
 2. `20260925_vital_id_optional_tables.sql` — optional: `vital_id_profiles`, `vital_id_metrics`, `vital_id_events`.
+3. `20260925_vital_id_profile_photo.sql` — `vital_id_user_profiles.photo_url` (member profile photo data/https URL).
 
 Apply via Supabase Dashboard → SQL editor (paste file) or `supabase db push`.
 

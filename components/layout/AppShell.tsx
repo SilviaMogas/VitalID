@@ -11,7 +11,9 @@ import type { TranslationKey } from "@/lib/i18n";
 import { LogoMark } from "@/components/layout/Logo";
 import { Broccoli } from "@/components/mascot/Broccoli";
 import { Onboarding } from "@/components/onboarding/Onboarding";
+import { UserAvatar } from "@/components/layout/UserAvatar";
 import { CONNECTORS_STORAGE_KEY } from "@/lib/connectors-state";
+import { DEMO_IDENTITY } from "@/lib/demo-data";
 
 /** Routes rendered without the app navigation (auth + setup journey, public share view). */
 const BARE_PREFIXES = ["/shared", "/signup", "/signin", "/checkout", "/pricing", "/onboarding"];
@@ -106,6 +108,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
+  const avatarName =
+    status === "member"
+      ? account?.firstName || t("profile.you")
+      : DEMO_IDENTITY.localizedName?.[locale] ?? DEMO_IDENTITY.fullName;
+  const avatarPhoto = status === "member" ? account?.photoUrl : undefined;
+
   if (isBare) {
     return (
       <div
@@ -179,6 +187,18 @@ export function AppShell({ children }: { children: ReactNode }) {
               {t("mascot.vitalId")}
             </p>
           </div>
+          <Link
+            href="/vital-id"
+            className={`press surface flex items-center gap-3 rounded-2xl px-3 py-2.5 ${
+              pathname.startsWith("/vital-id") ? "ring-2 ring-brand/40" : ""
+            }`}
+          >
+            <UserAvatar name={avatarName} photoUrl={avatarPhoto} size={40} />
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-sm font-semibold">{avatarName}</span>
+              <span className="block text-xs text-muted">{t("profile.viewData")}</span>
+            </span>
+          </Link>
           <div className="flex items-center gap-2">
             <PlanBadge />
             <LangButton />
@@ -198,6 +218,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="flex items-center justify-between px-5 pt-5 md:hidden">
           <Brand compact />
           <div className="flex items-center gap-1.5">
+            <Link href="/vital-id" aria-label={t("profile.viewData")}>
+              <UserAvatar name={avatarName} photoUrl={avatarPhoto} size={36} />
+            </Link>
             <PlanBadge />
             <LangButton />
             <button

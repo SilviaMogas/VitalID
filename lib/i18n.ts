@@ -404,6 +404,17 @@ const brandStrings = {
   "mascot.vitalId": ["Your identity travels with you.", "هويتك تسافر معك."],
 } as const satisfies Record<string, readonly [string, string]>;
 
+const profileStrings = {
+  "profile.you": ["You", "أنت"],
+  "profile.viewData": ["View my Vital ID", "عرض معرّفي الحيوي"],
+  "profile.photo.title": ["Profile photo", "صورة الملف الشخصي"],
+  "profile.photo.hint": ["Shown on your card and in the menu. Stored privately.", "تظهر على بطاقتك وفي القائمة. تُحفظ بشكل خاص."],
+  "profile.photo.add": ["Add photo", "إضافة صورة"],
+  "profile.photo.change": ["Change photo", "تغيير الصورة"],
+  "profile.photo.remove": ["Remove", "إزالة"],
+  "profile.photo.error": ["Could not save the photo. Try a smaller image.", "تعذّر حفظ الصورة. جرّب صورة أصغر."],
+} as const satisfies Record<string, readonly [string, string]>;
+
 const en = {
   "app.name": "Vital ID",
   "app.tagline": "Your portable health identity",
@@ -534,6 +545,7 @@ const en = {
   ...pickLocale(pricingStrings, 0),
   ...pickLocale(setupStrings, 0),
   ...pickLocale(connectorStrings, 0),
+  ...pickLocale(profileStrings, 0),
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -668,6 +680,7 @@ const ar: Record<TranslationKey, string> = {
   ...pickLocale(pricingStrings, 1),
   ...pickLocale(setupStrings, 1),
   ...pickLocale(connectorStrings, 1),
+  ...pickLocale(profileStrings, 1),
 };
 
 export const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, ar };

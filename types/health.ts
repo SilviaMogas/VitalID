@@ -92,6 +92,7 @@ export interface Identity {
   dateOfBirth: string; // ISO date
   sex: "female" | "male" | "other";
   nationality: string;
+  photoUrl?: string;
 }
 
 export interface EmergencyInfo {

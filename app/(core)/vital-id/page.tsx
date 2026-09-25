@@ -5,5 +5,5 @@ export const dynamic = "force-dynamic";
 
 export default async function VitalIdPage() {
   const data = await resolveUserData();
-  return <VitalIdView snapshot={data.snapshot} />;
+  return <VitalIdView snapshot={data.snapshot} canEditPhoto={data.owner === "member"} />;
 }
