@@ -81,7 +81,7 @@ export function VitalIdView({ snapshot }: { snapshot: VitalIdSnapshot }) {
           </div>
 
           <p className="mt-6 text-[10px] uppercase tracking-widest text-white/50">{t("vitalId.holder")}</p>
-          <p className="mt-0.5 text-2xl font-semibold tracking-tight md:text-3xl">{identity.fullName}</p>
+          <p className="mt-0.5 text-2xl font-semibold tracking-tight md:text-3xl">{identity.localizedName?.[locale] ?? identity.fullName}</p>
           <p className="tabular mt-2 font-mono text-sm tracking-widest text-brand-soft" dir="ltr">
             {identity.vitalId}
           </p>
@@ -121,7 +121,7 @@ export function VitalIdView({ snapshot }: { snapshot: VitalIdSnapshot }) {
           </Row>
           <Row label={t("vitalId.emergencyContact")}>
             <span>
-              {emergencyInfo.emergencyContact.name} ·{" "}
+              {emergencyInfo.emergencyContact.localizedName?.[locale] ?? emergencyInfo.emergencyContact.name} ·{" "}
               {t(`vitalId.relation.${emergencyInfo.emergencyContact.relation}` as TranslationKey)}
               <br />
               <span className="tabular text-muted" dir="ltr">

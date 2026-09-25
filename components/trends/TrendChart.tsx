@@ -4,6 +4,7 @@ import { useId } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { METRIC_META } from "@/lib/demo-data";
 import type { HealthMetric } from "@/types";
+import type { TranslationKey } from "@/lib/i18n";
 import { isWorse, statusTone } from "@/components/dashboard/MetricCard";
 
 const TONE_COLOR = {
@@ -64,7 +65,7 @@ export function TrendChart({ metric, days }: { metric: HealthMetric; days: 7 | 3
           {t("trends.baselineLine")}
         </span>
         <span className="tabular">
-          {n(min, decimals)} – {n(max, decimals)} {metric.unit}
+          {n(min, decimals)} – {n(max, decimals)} {t(`unit.${metric.unit}` as TranslationKey)}
         </span>
       </div>
 

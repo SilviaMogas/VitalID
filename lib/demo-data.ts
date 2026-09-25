@@ -103,6 +103,7 @@ export const DEMO_EMERGENCY: EmergencyInfo = {
   conditions: [],
   emergencyContact: {
     name: "Khalid Al Mansoori",
+    localizedName: { ar: "خالد المنصوري" },
     relation: "brother",
     phone: "+971 50 000 0000",
   },

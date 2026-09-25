@@ -76,7 +76,12 @@ export interface EmergencyInfo {
   bloodType: string;
   allergies: string[];
   conditions: string[];
-  emergencyContact: { name: string; relation: string; phone: string };
+  emergencyContact: {
+    name: string;
+    localizedName?: Partial<Record<Locale, string>>;
+    relation: string;
+    phone: string;
+  };
 }
 
 export interface HealthProfile {
