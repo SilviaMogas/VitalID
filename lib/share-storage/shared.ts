@@ -8,14 +8,31 @@ export function generateShareToken(): string {
   return crypto.randomBytes(16).toString('base64url');
 }
 
-/** Copies ONLY the selected top-level keys. Nothing else ever reaches storage. */
+const MIN_TOKEN_LENGTH = 16;
+const TOKEN_RE = /^[A-Za-z0-9_-]+$/;
+
+function assertValidToken(token: string): void {
+  if (token.length < MIN_TOKEN_LENGTH || !TOKEN_RE.test(token)) {
+    throw new Error(
+      `createVitalIdShare: token must be >= ${MIN_TOKEN_LENGTH} URL-safe chars (use generateShareToken())`,
+    );
+  }
+}
+
+/**
+ * Deep-copies ONLY the selected own top-level keys. Nothing else ever reaches
+ * storage, and later mutation of the source cannot alter the stored snapshot.
+ */
 export function pickSelectedFields(
   full: Record<string, Json>,
   selectedFields: string[],
 ): Record<string, Json> {
   const out: Record<string, Json> = {};
   for (const key of selectedFields) {
-    if (key in full) out[key] = full[key];
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+    if (Object.prototype.hasOwnProperty.call(full, key)) {
+      out[key] = JSON.parse(JSON.stringify(full[key])) as Json;
+    }
   }
   return out;
 }
@@ -49,6 +66,7 @@ export function buildShareRecord(input: CreateVitalIdShareInput, now = new Date(
   if (!Array.isArray(input.selectedFields) || input.selectedFields.length === 0) {
     throw new Error('createVitalIdShare: selectedFields must be a non-empty array');
   }
+  if (input.token !== undefined) assertValidToken(input.token);
   return {
     id: crypto.randomUUID(),
     token: input.token ?? generateShareToken(),

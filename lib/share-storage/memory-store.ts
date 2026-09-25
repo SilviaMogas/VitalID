@@ -30,8 +30,9 @@ export class MemoryShareStore implements ShareStore {
 
   async createVitalIdShare(input: CreateVitalIdShareInput): Promise<VitalIdShareRecord> {
     const record = buildShareRecord(input);
+    if (this.map.has(record.token)) throw new Error('createVitalIdShare failed: duplicate token');
     this.map.set(record.token, record);
-    return { ...record };
+    return structuredClone(record);
   }
 
   async getVitalIdShareByToken(token: string): Promise<GetVitalIdShareResult> {
@@ -39,7 +40,7 @@ export class MemoryShareStore implements ShareStore {
     if (!share) return { valid: false, reason: 'not_found', share: null };
     const reason = invalidReason(share);
     if (reason) return { valid: false, reason, share: stripSnapshot(share) };
-    return { valid: true, share: { ...share } };
+    return { valid: true, share: structuredClone(share) };
   }
 
   async revokeVitalIdShare(tokenOrId: string): Promise<boolean> {

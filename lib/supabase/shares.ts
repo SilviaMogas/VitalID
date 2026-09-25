@@ -29,6 +29,7 @@ interface VitalIdShareRow {
   snapshot: Record<string, Json>;
 }
 
+const LIST_PAGE_SIZE = 500;
 const SUMMARY_COLUMNS = 'id, token, created_at, expires_at, revoked, purpose, selected_fields';
 
 function fromRow(row: VitalIdShareRow): VitalIdShareRecord {
@@ -97,11 +98,17 @@ export class SupabaseShareStore implements ShareStore {
   }
 
   async revokeVitalIdShare(tokenOrId: string): Promise<boolean> {
-    const column = UUID_RE.test(tokenOrId) ? 'id' : 'token';
+    const byToken = await this.revokeWhere('token', tokenOrId);
+    if (byToken) return true;
+    if (!UUID_RE.test(tokenOrId)) return false;
+    return this.revokeWhere('id', tokenOrId);
+  }
+
+  private async revokeWhere(column: 'token' | 'id', value: string): Promise<boolean> {
     const { data, error } = await this.client
       .from(VITAL_ID_SHARES_TABLE)
       .update({ revoked: true })
-      .eq(column, tokenOrId)
+      .eq(column, value)
       .select('id');
     if (error) throw new Error(`revokeVitalIdShare failed: ${error.message}`);
     return (data?.length ?? 0) > 0;
@@ -112,13 +119,20 @@ export class SupabaseShareStore implements ShareStore {
   }
 
   async listVitalIdShares() {
-    const { data, error } = await this.client
-      .from(VITAL_ID_SHARES_TABLE)
-      .select(SUMMARY_COLUMNS)
-      .order('created_at', { ascending: false })
-      .returns<Omit<VitalIdShareRow, 'snapshot'>[]>();
-    if (error) throw new Error(`listVitalIdShares failed: ${error.message}`);
-    return (data ?? []).map((row) => ({
+    const rows: Omit<VitalIdShareRow, 'snapshot'>[] = [];
+    for (let from = 0; ; from += LIST_PAGE_SIZE) {
+      const { data, error } = await this.client
+        .from(VITAL_ID_SHARES_TABLE)
+        .select(SUMMARY_COLUMNS)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, from + LIST_PAGE_SIZE - 1)
+        .returns<Omit<VitalIdShareRow, 'snapshot'>[]>();
+      if (error) throw new Error(`listVitalIdShares failed: ${error.message}`);
+      rows.push(...(data ?? []));
+      if (!data || data.length < LIST_PAGE_SIZE) break;
+    }
+    return rows.map((row) => ({
       id: row.id,
       token: row.token,
       createdAt: row.created_at,

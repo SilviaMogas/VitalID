@@ -12,8 +12,9 @@ if (!url || !key) {
 
 const db = createClient(url, key, { auth: { persistSession: false } });
 const token = crypto.randomBytes(16).toString('base64url');
-const fail = (step, error) => {
+const fail = async (step, error) => {
   console.error(`FAIL ${step}:`, error.message);
+  await db.from('vital_id_shares').delete().eq('token', token);
   process.exit(1);
 };
 
@@ -28,19 +29,19 @@ let r = await db
   })
   .select('id')
   .single();
-if (r.error) fail('insert', r.error);
+if (r.error) await fail('insert', r.error);
 console.log('insert   ok', r.data.id);
 
 r = await db.from('vital_id_shares').select('revoked').eq('token', token).single();
-if (r.error) fail('select', r.error);
+if (r.error) await fail('select', r.error);
 console.log('select   ok revoked=%s', r.data.revoked);
 
 r = await db.from('vital_id_shares').update({ revoked: true }).eq('token', token).select('revoked').single();
-if (r.error) fail('revoke', r.error);
+if (r.error) await fail('revoke', r.error);
 console.log('revoke   ok revoked=%s', r.data.revoked);
 
 r = await db.from('vital_id_shares').delete().eq('token', token);
-if (r.error) fail('cleanup', r.error);
+if (r.error) await fail('cleanup', r.error);
 console.log('cleanup  ok');
 
 const anon = await fetch(`${url}/rest/v1/vital_id_shares?select=id`, { headers: { apikey: 'invalid' } });
