@@ -78,6 +78,8 @@ Helpers: `generateShareToken()`, `pickSelectedFields(full, fields)`, `isVitalIdS
 - `lib/share-storage/shared.ts` — token gen, field picking, expiry logic
 - `lib/supabase/env.ts` / `server.ts` — env reading + secret-key client (`server-only`)
 - `lib/supabase/shares.ts` — `SupabaseShareStore`
+- `lib/supabase/health.ts` — `checkSupabaseConnection()` → `{ ok, backend, table | error }` (for a `/api/health` route if wanted)
+- `scripts/supabase-smoke.mjs` — `node scripts/supabase-smoke.mjs` insert/select/revoke/delete against the live table
 
 **Integration caveats:**
 1. `store.ts`, `lib/supabase/server.ts` and `lib/supabase/shares.ts` are `server-only`.
