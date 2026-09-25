@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { useMembership } from "@/components/providers/MembershipProvider";
+import { LockedFeature } from "@/components/membership/LockedFeature";
+import { LockIcon, UpgradeChip } from "@/components/membership/UpgradeChip";
 import type { TranslationKey } from "@/lib/i18n";
 import { SectionTitle } from "@/components/vital-id/VitalIdSections";
 import {
@@ -38,6 +41,8 @@ const STATUS_BADGE: Record<ReturnType<typeof statusOf>, string> = {
 
 export default function ShareClient() {
   const { t, d } = useLocale();
+  const { hasFeature } = useMembership();
+  const canPickExpiry = hasFeature("configurableExpiry");
   const [purpose, setPurpose] = useState<SharePurpose | null>(null);
   const [fields, setFields] = useState<Set<ShareField>>(new Set());
   const [duration, setDuration] = useState<ShareDuration>(60);
@@ -190,12 +195,27 @@ export default function ShareClient() {
       <div className="card p-5">
         <SectionTitle>{t("share.stepExpiry")}</SectionTitle>
         <div className="mt-3 flex flex-wrap gap-2">
-          {SHARE_DURATIONS.map((dur) => (
-            <button key={dur} type="button" onClick={() => setDuration(dur)} className={pill(duration === dur)}>
-              {t(`share.duration.${dur}` as TranslationKey)}
-            </button>
-          ))}
+          {SHARE_DURATIONS.map((dur) => {
+            const locked = !canPickExpiry && dur !== 60;
+            return (
+              <button
+                key={dur}
+                type="button"
+                disabled={locked}
+                onClick={() => setDuration(locked ? 60 : dur)}
+                className={`${pill(duration === dur)} ${locked ? "inline-flex items-center gap-1 opacity-60" : ""}`}
+              >
+                {t(`share.duration.${dur}` as TranslationKey)}
+                {locked && <LockIcon className="h-3 w-3" />}
+              </button>
+            );
+          })}
         </div>
+        {!canPickExpiry && (
+          <div className="mt-3">
+            <UpgradeChip plan="plus" />
+          </div>
+        )}
       </div>
 
       {error && <p className="text-sm text-bad">{error}</p>}
@@ -234,7 +254,14 @@ export default function ShareClient() {
                 </button>
               </div>
               <div className="mt-4 flex justify-center">
-                <QRCodeSVG value={link} size={220} />
+                <LockedFeature
+                  variant="overlay"
+                  feature="qrSharing"
+                  title={t("membership.gate.qrTitle")}
+                  description={t("membership.gate.qrDesc")}
+                >
+                  <QRCodeSVG value={link} size={220} />
+                </LockedFeature>
               </div>
               <p className="mt-2 text-center text-xs text-muted">{t("share.qrNote")}</p>
               <p className="mt-3 text-sm text-ink-2">

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { PlanBadge } from "@/components/membership/PlanBadge";
 import { InsightCard } from "@/components/dashboard/InsightCard";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import type { HealthMetric, Identity, Insight } from "@/types";
@@ -34,6 +35,9 @@ export function Dashboard({
           {t(greetingKey(), { name: firstName })}
         </h1>
         <p className="mt-1 text-sm text-muted">{t("home.subtitle")}</p>
+        <div className="mt-3">
+          <PlanBadge />
+        </div>
       </section>
 
       <InsightCard insight={insight} />

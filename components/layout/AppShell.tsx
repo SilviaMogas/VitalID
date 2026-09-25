@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { PlanBadge } from "@/components/membership/PlanBadge";
 import type { TranslationKey } from "@/lib/i18n";
 
 const NAV: { href: string; key: TranslationKey; icon: ReactNode }[] = [
@@ -59,13 +60,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  if (pathname.startsWith("/shared")) {
+  if (["/shared", "/signup", "/checkout"].some((p) => pathname.startsWith(p))) {
     return (
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-2xl">
-        <header className="flex items-center justify-between px-5 pt-5">
-          <Brand compact />
-          <LangButton />
-        </header>
+        {pathname.startsWith("/shared") && (
+          <header className="flex items-center justify-between px-5 pt-5">
+            <Brand compact />
+            <LangButton />
+          </header>
+        )}
         <main className="flex-1 px-5 pb-12 pt-4" key={locale}>{children}</main>
       </div>
     );
@@ -92,7 +95,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="mt-auto">
+        <div className="mt-auto flex items-center gap-2">
+          <PlanBadge />
           <LangButton />
         </div>
       </aside>
@@ -101,7 +105,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Top bar (mobile) */}
         <header className="flex items-center justify-between px-5 pt-5 md:hidden">
           <Brand compact />
-          <LangButton />
+          <span className="flex items-center gap-2">
+            <PlanBadge />
+            <LangButton />
+          </span>
         </header>
 
         <main className="flex-1 px-5 pb-28 pt-4 md:px-0 md:pb-12 md:pt-8" key={locale}>

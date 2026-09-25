@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { PremiumShowcase } from "@/components/membership/PremiumShowcase";
 import type { TranslationKey } from "@/lib/i18n";
 import type { VitalIdSnapshot } from "@/types";
 import {
@@ -99,6 +100,9 @@ export function VitalIdView({ snapshot }: { snapshot: VitalIdSnapshot }) {
 
       {/* Health profile */}
       <HealthProfileSection profile={healthProfile} />
+
+      {/* Membership plan showcase */}
+      <PremiumShowcase sources={snapshot.sources} />
 
       {/* Data sources + last updated */}
       <div className="card p-5">
