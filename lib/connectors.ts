@@ -82,6 +82,8 @@ export interface ProviderDef {
   mark: string;
   /** Brand tint for the mark badge. */
   tint: string;
+  /** Optional i18n key overriding `name` for generic (non-brand) providers. */
+  nameKey?: string;
   /** "none" = no integration built yet → selecting it yields waiting_implementation. */
   integration: "none" | "oauth" | "api";
   /** Data kinds this provider can supply once integrated. */
@@ -107,11 +109,11 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
   macrofactor: { id: "macrofactor", name: "MacroFactor", mark: "MF", tint: "#6C4BF4", integration: "none", data: ["calories", "macros", "protein"], requiredPlan: "free", website: "https://macrofactorapp.com" },
   lifesum: { id: "lifesum", name: "Lifesum", mark: "L", tint: "#E94E3D", integration: "none", data: ["calories", "macros", "hydration", "habits"], requiredPlan: "free", website: "https://lifesum.com" },
   strava: { id: "strava", name: "Strava", mark: "S", tint: "#FC4C02", integration: "none", data: ["workouts", "distance", "activity"], requiredPlan: "free", website: "https://www.strava.com" },
-  medical_records: { id: "medical_records", name: "Generic Medical Records", mark: "MR", tint: "#3B7A57", integration: "none", data: ["medicalRecords", "labResults"], requiredPlan: "pro" },
-  uae_health: { id: "uae_health", name: "UAE health integrations", mark: "UAE", tint: "#00732F", integration: "none", data: ["medicalRecords"], requiredPlan: "pro", announcedOnly: true },
+  medical_records: { id: "medical_records", name: "Generic Medical Records", nameKey: "connectors.provider.medicalRecords", mark: "MR", tint: "#3B7A57", integration: "none", data: ["medicalRecords", "labResults"], requiredPlan: "pro" },
+  uae_health: { id: "uae_health", name: "UAE health integrations", nameKey: "connectors.provider.uaeHealth", mark: "UAE", tint: "#00732F", integration: "none", data: ["medicalRecords"], requiredPlan: "pro", announcedOnly: true },
   calm: { id: "calm", name: "Calm", mark: "C", tint: "#3E7CB1", integration: "none", data: ["meditation", "mindfulness"], requiredPlan: "free", website: "https://www.calm.com" },
   headspace: { id: "headspace", name: "Headspace", mark: "H", tint: "#F47D31", integration: "none", data: ["meditation", "stress"], requiredPlan: "free", website: "https://www.headspace.com" },
-  wellbeing_future: { id: "wellbeing_future", name: "Wellbeing integrations", mark: "W", tint: "#7C6FCF", integration: "none", data: ["mindfulness", "stress"], requiredPlan: "pro", announcedOnly: true },
+  wellbeing_future: { id: "wellbeing_future", name: "Wellbeing integrations", nameKey: "connectors.provider.wellbeingFuture", mark: "W", tint: "#7C6FCF", integration: "none", data: ["mindfulness", "stress"], requiredPlan: "pro", announcedOnly: true },
 };
 
 export const PROVIDER_LIST: ProviderDef[] = Object.values(PROVIDERS);
