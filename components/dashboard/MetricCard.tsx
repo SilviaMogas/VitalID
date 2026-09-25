@@ -60,7 +60,7 @@ export function MetricCard({ metric, href, index = 0 }: { metric: HealthMetric; 
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <StatusBadge status={metric.status} tone={tone} />
+          {metric.history.length >= 2 && <StatusBadge status={metric.status} tone={tone} />}
           <Companion name={COMPANION_FOR_METRIC[metric.metric]} mood={companionMood(metric)} size={44} />
         </div>
       </div>
