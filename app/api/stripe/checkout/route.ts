@@ -16,6 +16,18 @@ function requestOrigin(req: Request): string {
   return new URL(req.url).origin;
 }
 
+type Stage = 'membership_store' | 'price_config' | 'stripe_session';
+
+/** Stripe error code/type only — never the message, which may echo config values. */
+function safeDetail(err: unknown): string | undefined {
+  if (typeof err !== 'object' || err === null) return undefined;
+  const e = err as { code?: unknown; type?: unknown; statusCode?: unknown };
+  const parts = [e.type, e.code, e.statusCode].filter(
+    (v): v is string | number => typeof v === 'string' || typeof v === 'number',
+  );
+  return parts.length ? parts.join(':') : undefined;
+}
+
 export async function POST(req: Request) {
   let body: unknown;
   try {
@@ -31,11 +43,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'stripe_not_configured' }, { status: 503 });
   }
 
+  let stage: Stage = 'membership_store';
   try {
     const userKey = await getCurrentUserKey();
     const membership = await getMembershipStore().upsert({ userKey });
+    stage = 'price_config';
     const priceId = await resolveDemoPriceId(plan as 'plus' | 'pro');
     await assertDemoPrice(priceId, plan as 'plus' | 'pro');
+    stage = 'stripe_session';
 
     const origin = requestOrigin(req);
     const session = await getStripe().checkout.sessions.create({
@@ -52,7 +67,10 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ url: session.url }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (err) {
-    console.error('[stripe checkout] failed:', err);
-    return NextResponse.json({ error: 'checkout_failed' }, { status: 500 });
+    console.error(`[stripe checkout] failed at ${stage}:`, err);
+    return NextResponse.json(
+      { error: 'checkout_failed', stage, detail: safeDetail(err) },
+      { status: 500 },
+    );
   }
 }
