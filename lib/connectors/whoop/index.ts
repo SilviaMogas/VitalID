@@ -45,6 +45,7 @@ export {
 export { isWhoopConfigured, readWhoopEnv, WHOOP_SCOPES } from './env';
 export { getWhoopStore } from './store';
 export { issueState, consumeState } from './state';
+export { publicOrigin, whoopRedirectUri } from './redirect';
 export { mapWhoopToDaily } from './mapping';
 export { syncWhoop } from './sync';
 export { whoopGet, whoopGetAll } from './client';
