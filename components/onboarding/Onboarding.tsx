@@ -7,7 +7,7 @@ import { Welcome } from "@/components/onboarding/Welcome";
 export const SESSION_KEY = "vitalid.session";
 
 export function hasSession(): boolean {
-  return typeof window !== "undefined" && window.localStorage.getItem(SESSION_KEY) === "fatima";
+  return typeof window !== "undefined" && Boolean(window.localStorage.getItem(SESSION_KEY));
 }
 
 type Step = "splash" | "leaving" | "welcome";

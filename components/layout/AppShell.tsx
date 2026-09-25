@@ -75,6 +75,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const signOut = () => {
     window.localStorage.removeItem(SESSION_KEY);
     setSession(false);
+    // Clear the membership cookie too (fire-and-forget).
+    void fetch("/api/membership/signout", { method: "POST" }).catch(() => {});
     router.push("/welcome");
   };
 
