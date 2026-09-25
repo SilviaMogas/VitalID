@@ -81,7 +81,7 @@ export function SignalsSection({ signals }: { signals: HealthMetric[] }) {
                     {t(`unit.${m.unit}` as TranslationKey)}
                   </span>
                 </span>
-                <StatusBadge status={m.status} tone={tone} />
+                {m.baselineDays >= 2 && <StatusBadge status={m.status} tone={tone} />}
               </span>
             </div>
           );
