@@ -169,7 +169,8 @@ function json(res, code, body) {
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
-  console.log(`${req.method} ${url.pathname}${url.search}`);
+  const logLine = `${req.method} ${url.pathname}${url.search}`.replace(/[^\x20-\x7e]/g, '').slice(0, 200);
+  console.log(logLine);
 
   if (url.pathname === '/oauth/oauth2/auth') {
     const redirect = url.searchParams.get('redirect_uri') ?? '';
