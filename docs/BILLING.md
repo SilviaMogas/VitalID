@@ -55,8 +55,10 @@ session cannot be retrieved.
 - `STRIPE_PLUS_DEMO_PRICE_ID` / `STRIPE_PRO_DEMO_PRICE_ID` — one-time $1 prices.
   Each value may be a `price_…` id **or** a `prod_…` product id; a `prod_…`
   value is resolved at request time via the product's `default_price`
-  (`resolveDemoPriceId`, cached per process). Known live ids:
+  (`resolveDemoPriceId`, fetched per call — never cached). Known live ids:
   Plus `prod_VKDczLrBC2JdYD`, Pro `prod_VKDdoPnKPmF18a`.
+  Verification accepts any $1 one-time USD price belonging to the configured
+  product, so rotating the default price doesn't orphan in-flight sessions.
 - `NEXT_PUBLIC_APP_URL` — optional public origin for Checkout return URLs
   (defaults to the request origin).
 - `MEMBERSHIP_STORE` — `"supabase" | "memory"` (empty = auto).
