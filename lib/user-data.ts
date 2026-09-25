@@ -80,13 +80,20 @@ function applyWhoop(
   }
 
   const byDate = new Map(whoopDaily.map((w) => [w.date, w]));
+  // For WHOOP-supplied metrics, gaps carry the latest WHOOP value forward so
+  // the current reading is never a fallback number labelled "whoop".
+  const lastSeen = new Map<MetricKey, number>();
   const overlay = (base: DailyRecord, date: string): DailyRecord => {
     const w = byDate.get(date);
     const rec: DailyRecord = { ...base, date };
-    if (!w) return rec;
     for (const [metric, field] of WHOOP_METRIC_FIELD) {
-      const v = w[field];
-      if (typeof v === "number") rec[metric] = roundFor(metric, v);
+      const v = w?.[field];
+      if (typeof v === "number") {
+        rec[metric] = roundFor(metric, v);
+        lastSeen.set(metric, rec[metric]);
+      } else if (whoopMetrics.has(metric) && lastSeen.has(metric)) {
+        rec[metric] = lastSeen.get(metric)!;
+      }
     }
     return rec;
   };
@@ -105,6 +112,7 @@ function applyWhoop(
   for (const w of whoopDaily) {
     if (w.date > lastDate && w.date <= today) records.push(overlay(seed, w.date));
   }
+  records.sort((a, b) => (a.date < b.date ? -1 : 1));
   return { records, whoopMetrics };
 }
 

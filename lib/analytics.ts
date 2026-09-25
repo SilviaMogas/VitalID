@@ -132,7 +132,7 @@ export function generateInsights(records: DailyRecord[] = getDailyRecords()): In
   }
 
   const rec = byKey.recovery;
-  if (rec.status === "declining" || rec.status === "unusual") {
+  if (rec.deltaPercent < 0 && (rec.status === "declining" || rec.status === "unusual")) {
     insights.push({
       id: "recovery-down",
       key: "insight.recoveryBelowBaseline",
