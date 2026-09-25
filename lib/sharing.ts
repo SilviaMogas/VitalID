@@ -1,4 +1,5 @@
 import type { VitalIdSnapshot } from "@/types";
+import type { InsurerId } from "@/lib/insurers";
 
 export type ShareField =
   | "identity"
@@ -8,6 +9,10 @@ export type ShareField =
   | "healthProfile";
 export type SharePurpose = "emergency" | "doctor" | "travel" | "caregiver" | "custom";
 export type ShareDuration = 15 | 60 | 1440; // minutes
+export interface ShareRecipient {
+  insurerId: InsurerId;
+  sentAt: string;
+}
 
 export interface SharePayload {
   id: string;
@@ -21,6 +26,7 @@ export interface SharePayload {
   ownerKey?: string;
   /** Localized display names from identity.localizedName, keyed by locale. */
   sharedByLocalized?: VitalIdSnapshot["identity"]["localizedName"];
+  sentTo?: ShareRecipient[];
   snapshot: Partial<VitalIdSnapshot>;
 }
 

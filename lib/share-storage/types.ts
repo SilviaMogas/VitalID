@@ -20,7 +20,7 @@ export interface VitalIdShareRecord {
   snapshot: Record<string, Json>;
 }
 
-export type VitalIdShareSummary = Omit<VitalIdShareRecord, 'snapshot'>;
+export type VitalIdShareSummary = Omit<VitalIdShareRecord, 'snapshot'> & { sentTo?: Json };
 
 export interface CreateVitalIdShareInput {
   /** Top-level keys of `fullSnapshot` the user chose to disclose. */
@@ -51,6 +51,7 @@ export interface ShareStore {
   getVitalIdShareByToken(token: string): Promise<GetVitalIdShareResult>;
   /** Accepts a token or a row id. Returns false when nothing matched. */
   revokeVitalIdShare(tokenOrId: string): Promise<boolean>;
+  setVitalIdShareSnapshotKey?(token: string, key: string, value: Json): Promise<boolean>;
   isVitalIdShareValid(record: VitalIdShareRecord, now?: Date): boolean;
   /** Owner-side listing (no snapshots). Handy for dashboards / demo reset. */
   listVitalIdShares(): Promise<VitalIdShareSummary[]>;
