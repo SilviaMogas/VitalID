@@ -1,21 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import type { TranslationKey } from "@/lib/i18n";
-import { METRIC_META } from "@/lib/demo-data";
 import type { VitalIdSnapshot } from "@/types";
-import { StatusBadge } from "@/components/dashboard/StatusBadge";
-import { isWorse, statusTone } from "@/components/dashboard/MetricCard";
+import {
+  EmergencySection,
+  HealthProfileSection,
+  SectionTitle,
+  SignalsSection,
+  SourcePills,
+  TrendsSection,
+} from "@/components/vital-id/VitalIdSections";
 
 const SIGNAL_KEYS = ["recovery", "hrv", "sleep"] as const;
-
-function SectionTitle({ children }: { children: string }) {
-  return (
-    <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted">{children}</h2>
-  );
-}
 
 function Field({ label, value, ltr = false }: { label: string; value: string; ltr?: boolean }) {
   return (
@@ -28,18 +26,8 @@ function Field({ label, value, ltr = false }: { label: string; value: string; lt
   );
 }
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
-      <span className="text-sm text-muted">{label}</span>
-      <span className="text-end text-sm font-medium">{children}</span>
-    </div>
-  );
-}
-
 export function VitalIdView({ snapshot }: { snapshot: VitalIdSnapshot }) {
-  const { t, n, d, locale } = useLocale();
-  const listSep = locale === "ar" ? "، " : ", ";
+  const { t, d, locale } = useLocale();
   const { identity, emergencyInfo, healthProfile } = snapshot;
   const signals = snapshot.currentSignals.filter((m) =>
     (SIGNAL_KEYS as readonly string[]).includes(m.metric),
@@ -101,101 +89,16 @@ export function VitalIdView({ snapshot }: { snapshot: VitalIdSnapshot }) {
       </div>
 
       {/* Emergency information */}
-      <div className="card p-5">
-        <SectionTitle>{t("vitalId.emergency")}</SectionTitle>
-        <div className="mt-3 divide-y divide-line">
-          <Row label={t("vitalId.bloodType")}>
-            <span className="rounded-full bg-bad-soft px-2.5 py-0.5 text-xs font-bold text-bad" dir="ltr">
-              {emergencyInfo.bloodType}
-            </span>
-          </Row>
-          <Row label={t("vitalId.allergies")}>
-            {emergencyInfo.allergies.length === 0
-              ? t("vitalId.none")
-              : emergencyInfo.allergies
-                  .map((a) => t(`vitalId.allergy.${a}` as TranslationKey))
-                  .join(listSep)}
-          </Row>
-          <Row label={t("vitalId.conditions")}>
-            {emergencyInfo.conditions.length === 0 ? t("vitalId.none") : emergencyInfo.conditions.join(listSep)}
-          </Row>
-          <Row label={t("vitalId.emergencyContact")}>
-            <span>
-              {emergencyInfo.emergencyContact.localizedName?.[locale] ?? emergencyInfo.emergencyContact.name} ·{" "}
-              {t(`vitalId.relation.${emergencyInfo.emergencyContact.relation}` as TranslationKey)}
-              <br />
-              <span className="tabular text-muted" dir="ltr">
-                {emergencyInfo.emergencyContact.phone}
-              </span>
-            </span>
-          </Row>
-        </div>
-      </div>
+      <EmergencySection info={emergencyInfo} />
 
       {/* Current signals */}
-      <div className="card p-5">
-        <SectionTitle>{t("vitalId.currentSignals")}</SectionTitle>
-        <div className="mt-3 divide-y divide-line">
-          {signals.map((m) => {
-            const tone = statusTone(m.status, isWorse(m));
-            const decimals = METRIC_META[m.metric].decimals;
-            return (
-              <div key={m.metric} className="flex items-center justify-between gap-3 py-2.5">
-                <span className="text-sm font-medium text-ink-2">
-                  {t(`metric.${m.metric}` as TranslationKey)}
-                </span>
-                <span className="flex items-center gap-3">
-                  <span className="tabular text-sm font-semibold">
-                    {n(m.value, decimals)}{" "}
-                    <span className="text-xs font-normal text-muted">
-                      {t(`unit.${m.unit}` as TranslationKey)}
-                    </span>
-                  </span>
-                  <StatusBadge status={m.status} tone={tone} />
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <SignalsSection signals={signals} />
 
       {/* Recent trends */}
-      <div className="card p-5">
-        <SectionTitle>{t("vitalId.recentTrends")}</SectionTitle>
-        <ul className="mt-3 space-y-2.5">
-          {snapshot.recentTrends.map((insight) => (
-            <li key={insight.id} className="flex items-start gap-2.5 text-sm leading-snug">
-              <span
-                aria-hidden
-                className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
-                  insight.severity === "attention" ? "bg-warn" : "bg-brand"
-                }`}
-              />
-              {t(insight.key as TranslationKey, insight.params)}
-            </li>
-          ))}
-        </ul>
-      </div>
+      <TrendsSection insights={snapshot.recentTrends} />
 
       {/* Health profile */}
-      <div className="card p-5">
-        <SectionTitle>{t("vitalId.healthProfile")}</SectionTitle>
-        <div className="mt-3 divide-y divide-line">
-          <Row label={t("vitalId.height")}>
-            <span className="tabular">
-              {n(healthProfile.heightCm)} {t("vitalId.cm")}
-            </span>
-          </Row>
-          <Row label={t("vitalId.weight")}>
-            <span className="tabular">
-              {n(healthProfile.weightKg)} {t("vitalId.kg")}
-            </span>
-          </Row>
-          <Row label={t("vitalId.medications")}>
-            {healthProfile.medications.length === 0 ? t("vitalId.none") : healthProfile.medications.join(listSep)}
-          </Row>
-        </div>
-      </div>
+      <HealthProfileSection profile={healthProfile} />
 
       {/* Data sources + last updated */}
       <div className="card p-5">
@@ -205,16 +108,7 @@ export function VitalIdView({ snapshot }: { snapshot: VitalIdSnapshot }) {
             {t("vitalId.lastUpdated")}: {t("vitalId.today")}
           </span>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {snapshot.sources.map((s) => (
-            <span
-              key={s}
-              className="rounded-full bg-brand-soft px-3 py-1 text-xs font-medium text-brand"
-            >
-              {t(`source.${s}` as TranslationKey)}
-            </span>
-          ))}
-        </div>
+        <SourcePills sources={snapshot.sources} />
       </div>
 
       {/* Share CTA */}

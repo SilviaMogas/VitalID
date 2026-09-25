@@ -59,6 +59,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
+  if (pathname.startsWith("/shared")) {
+    return (
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-2xl">
+        <header className="flex items-center justify-between px-5 pt-5">
+          <Brand compact />
+          <LangButton />
+        </header>
+        <main className="flex-1 px-5 pb-12 pt-4" key={locale}>{children}</main>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-6xl md:flex-row md:gap-8 md:px-8">
       {/* Sidebar (desktop) */}
