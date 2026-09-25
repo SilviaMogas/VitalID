@@ -84,7 +84,8 @@ export function SetupWizard() {
         if (cancelled) return;
         setSetup(data);
         const requested = Number(params.get("step"));
-        setStep(clampStep(requested || data.onboardingStep));
+        const maxStep = data.onboardingCompleted ? ONBOARDING_STEPS : data.onboardingStep;
+        setStep(clampStep(Math.min(requested || data.onboardingStep, maxStep)));
       } catch {
         if (!cancelled) {
           setSetup(emptySetup());

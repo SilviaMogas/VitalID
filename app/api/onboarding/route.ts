@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { getOnboardingStore, sanitizePatch } from '@/lib/onboarding/store';
+import { isProfileComplete } from '@/lib/onboarding/types';
 import { emptySetup } from '@/lib/onboarding/types';
 
 export const dynamic = 'force-dynamic';
@@ -24,6 +25,14 @@ export async function PUT(req: Request) {
   } catch {
     return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
   }
-  const setup = await getOnboardingStore().patch(user.id, sanitizePatch(body));
+  const store = getOnboardingStore();
+  const patch = sanitizePatch(body);
+  if (patch.onboardingCompleted) {
+    const current = await store.get(user.id);
+    if (!current?.planSelected || !isProfileComplete({ ...current.profile, ...patch.profile })) {
+      return NextResponse.json({ error: 'incomplete' }, { status: 409 });
+    }
+  }
+  const setup = await store.patch(user.id, patch);
   return NextResponse.json(setup, NO_STORE);
 }

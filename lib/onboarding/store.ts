@@ -117,7 +117,6 @@ export function sanitizePatch(input: unknown): UserSetupPatch {
     }
     out.connectors = list;
   }
-  if (typeof raw.planSelected === 'boolean') out.planSelected = raw.planSelected;
   if (typeof raw.onboardingStep === 'number' && Number.isInteger(raw.onboardingStep)) {
     out.onboardingStep = Math.min(ONBOARDING_STEPS, Math.max(1, raw.onboardingStep));
   }

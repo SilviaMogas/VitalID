@@ -11,7 +11,7 @@ import type { SharePayload, SharePurpose, ShareField } from './sharing';
  * metadata that `buildSnapshot` always includes for the recipient view.
  */
 
-const META_KEYS = ['sharedBy', 'sharedByLocalized', 'sources', 'lastUpdated'] as const;
+const META_KEYS = ['sharedBy', 'sharedByLocalized', 'ownerKey', 'sources', 'lastUpdated'] as const;
 
 interface StoreGlobal {
   __vitalIdSupabaseAdapter?: SupabaseShareStore;
@@ -32,7 +32,7 @@ function toPayload(share: {
   selectedFields: string[];
   snapshot?: Record<string, Json>;
 }): SharePayload {
-  const { sharedBy, sharedByLocalized, ...rest } = share.snapshot ?? {};
+  const { sharedBy, sharedByLocalized, ownerKey, ...rest } = share.snapshot ?? {};
   return {
     id: share.token,
     createdAt: share.createdAt,
@@ -43,6 +43,7 @@ function toPayload(share: {
       (f) => !(META_KEYS as readonly string[]).includes(f),
     ) as ShareField[],
     sharedBy: typeof sharedBy === 'string' ? sharedBy : '',
+    ownerKey: typeof ownerKey === 'string' ? ownerKey : undefined,
     sharedByLocalized: (sharedByLocalized ?? undefined) as SharePayload['sharedByLocalized'],
     snapshot: rest as SharePayload['snapshot'],
   };
@@ -52,6 +53,7 @@ export async function createShare(p: SharePayload): Promise<void> {
   const fullSnapshot = {
     ...(p.snapshot as Record<string, Json>),
     sharedBy: p.sharedBy,
+    ownerKey: p.ownerKey ?? null,
     sharedByLocalized: (p.sharedByLocalized ?? null) as Json,
   };
   await store().createVitalIdShare({
