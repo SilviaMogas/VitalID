@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PAID_PLANS } from '@/lib/plans';
-import { getDemoPriceId, getStripe, isStripeConfigured } from '@/lib/stripe/server';
+import { getStripe, isStripeConfigured, resolveDemoPriceId } from '@/lib/stripe/server';
 import { assertDemoPrice } from '@/lib/stripe/verify';
 import { getCurrentUserKey } from '@/lib/membership/session';
 import { getMembershipStore } from '@/lib/membership/store';
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   try {
     const userKey = await getCurrentUserKey();
     const membership = await getMembershipStore().upsert({ userKey });
-    const priceId = getDemoPriceId(plan as 'plus' | 'pro');
+    const priceId = await resolveDemoPriceId(plan as 'plus' | 'pro');
     await assertDemoPrice(priceId, plan as 'plus' | 'pro');
 
     const origin = requestOrigin(req);

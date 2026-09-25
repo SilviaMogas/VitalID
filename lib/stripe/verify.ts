@@ -3,7 +3,7 @@ import type Stripe from 'stripe';
 import { DEMO_CHARGE_CENTS, DEMO_CURRENCY, type PlanId } from '@/lib/plans';
 import { getMembershipStore } from '@/lib/membership/store';
 import type { MembershipRecord } from '@/lib/membership/types';
-import { getDemoPriceId, getStripe } from './server';
+import { getStripe, resolveDemoPriceId } from './server';
 
 export type VerifyResult =
   | { ok: true; plan: 'plus' | 'pro'; userKey: string; session: Stripe.Checkout.Session }
@@ -46,11 +46,15 @@ export async function verifyCheckoutSession(
   if (plan !== 'plus' && plan !== 'pro') return { ok: false, reason: 'bad_plan' };
 
   const items = session.line_items?.data ?? [];
-  const expectedPriceId = getDemoPriceId(plan);
+  const expectedPriceId = await resolveDemoPriceId(plan);
+  const price = items[0]?.price;
   if (
     items.length !== 1 ||
-    items[0].price?.id !== expectedPriceId ||
-    items[0].quantity !== 1
+    price?.id !== expectedPriceId ||
+    items[0].quantity !== 1 ||
+    price.unit_amount !== DEMO_CHARGE_CENTS ||
+    price.currency !== DEMO_CURRENCY ||
+    price.type !== 'one_time'
   ) {
     return { ok: false, reason: 'bad_price' };
   }
