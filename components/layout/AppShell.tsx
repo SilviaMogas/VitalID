@@ -43,6 +43,17 @@ const NAV: { href: string; key: TranslationKey; icon: ReactNode }[] = [
     ),
   },
   {
+    href: "/connectors",
+    key: "nav.connectors",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+        <path d="M9 7V3.5M15 7V3.5" strokeLinecap="round" />
+        <path d="M7 7h10v4a5 5 0 0 1-10 0V7z" strokeLinejoin="round" />
+        <path d="M12 16v4.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/share",
     key: "nav.share",
     icon: (
@@ -83,7 +94,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  if (["/shared", "/signup", "/checkout"].some((p) => pathname.startsWith(p))) {
+  if (["/shared", "/signup", "/checkout", "/onboarding"].some((p) => pathname.startsWith(p))) {
     return (
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-2xl">
         {pathname.startsWith("/shared") && (
@@ -180,7 +191,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/92 backdrop-blur md:hidden"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          <ul className="mx-auto grid max-w-md grid-cols-4">
+          <ul className="mx-auto grid max-w-md grid-cols-5">
             {NAV.map((item) => {
               const active = isActive(item.href);
               return (

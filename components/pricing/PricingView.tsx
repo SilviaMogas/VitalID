@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
@@ -20,6 +20,8 @@ export function PricingView() {
   const router = useRouter();
   const { plan: currentPlan, loading } = useMembership();
   const [busyPlan, setBusyPlan] = useState<PlanId | null>(null);
+  const onboarding = useSearchParams().get("onboarding") === "1";
+  const continueTarget = onboarding ? "/onboarding/connectors" : "/";
   const [error, setError] = useState<string | null>(null);
 
   async function startCheckout(plan: PlanId) {
@@ -133,7 +135,7 @@ export function PricingView() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => router.push("/")}
+                    onClick={() => router.push(continueTarget)}
                     className="w-full rounded-2xl border border-line bg-white py-3 text-sm font-semibold text-ink-2 transition hover:bg-canvas"
                   >
                     {t("pricing.cta.continueFree")}
