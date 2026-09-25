@@ -32,6 +32,10 @@ export function CredentialCard({
 }) {
   const { t, d, locale } = useLocale();
   const name = identity.localizedName?.[locale] ?? identity.fullName;
+  const nationalityKey = `vitalId.nationality.${identity.nationality}` as TranslationKey;
+  const translatedNationality = t(nationalityKey);
+  const nationalityLabel =
+    translatedNationality === nationalityKey ? identity.nationality || "—" : translatedNationality;
   const initials = identity.fullName
     .split(" ")
     .map((p) => p[0])
@@ -93,7 +97,7 @@ export function CredentialCard({
           <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3 border-t border-white/15 pt-4">
             <Field label={t("vitalId.dob")} value={d(identity.dateOfBirth, { year: "numeric" })} ltr />
             <Field label={t("vitalId.sex")} value={t(`vitalId.sex.${identity.sex}` as TranslationKey)} />
-            <Field label={t("vitalId.nationality")} value={t(`vitalId.nationality.${identity.nationality}` as TranslationKey)} />
+            <Field label={t("vitalId.nationality")} value={nationalityLabel} />
           </div>
         )}
 

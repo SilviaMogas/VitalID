@@ -45,8 +45,9 @@ export function EmergencySection({ info }: { info: EmergencyInfo }) {
         </Row>
         <Row label={t("vitalId.emergencyContact")}>
           <span>
-            {info.emergencyContact.localizedName?.[locale] ?? info.emergencyContact.name} ·{" "}
-            {t(`vitalId.relation.${info.emergencyContact.relation}` as TranslationKey)}
+            {info.emergencyContact.localizedName?.[locale] ?? info.emergencyContact.name}
+            {info.emergencyContact.relation &&
+              ` · ${t(`vitalId.relation.${info.emergencyContact.relation}` as TranslationKey)}`}
             <br />
             <span className="tabular text-muted" dir="ltr">
               {info.emergencyContact.phone}
@@ -121,12 +122,12 @@ export function HealthProfileSection({ profile }: { profile: HealthProfile }) {
       <div className="mt-3 divide-y divide-line">
         <Row label={t("vitalId.height")}>
           <span className="tabular">
-            {n(profile.heightCm)} {t("vitalId.cm")}
+            {profile.heightCm > 0 ? `${n(profile.heightCm)} ${t("vitalId.cm")}` : t("vitalId.none")}
           </span>
         </Row>
         <Row label={t("vitalId.weight")}>
           <span className="tabular">
-            {n(profile.weightKg)} {t("vitalId.kg")}
+            {profile.weightKg > 0 ? `${n(profile.weightKg)} ${t("vitalId.kg")}` : t("vitalId.none")}
           </span>
         </Row>
         <Row label={t("vitalId.medications")}>
