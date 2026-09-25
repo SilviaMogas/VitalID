@@ -57,10 +57,10 @@ function clampStep(n: number): number {
 }
 
 export function SetupWizard() {
-  const { t, locale, toggleLocale } = useLocale();
+  const { t, locale } = useLocale();
   const router = useRouter();
   const params = useSearchParams();
-  const { status, account, refresh: refreshAuth, signOut } = useAuth();
+  const { status, account, refresh: refreshAuth } = useAuth();
   const { plan } = useMembership();
 
   const [setup, setSetup] = useState<UserSetup | null>(null);
@@ -84,7 +84,8 @@ export function SetupWizard() {
         if (cancelled) return;
         setSetup(data);
         const requested = Number(params.get("step"));
-        setStep(clampStep(requested || data.onboardingStep));
+        const maxStep = data.onboardingCompleted ? ONBOARDING_STEPS : data.onboardingStep;
+        setStep(clampStep(Math.min(requested || data.onboardingStep, maxStep)));
       } catch {
         if (!cancelled) {
           setSetup(emptySetup());
@@ -205,28 +206,6 @@ export function SetupWizard() {
 
   return (
     <div className="space-y-6 pb-8">
-      <header className="flex items-center justify-between">
-        <span className="text-base font-semibold tracking-tight text-brand">{t("app.name")}</span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={toggleLocale}
-            aria-label={t("lang.label")}
-            lang={locale === "en" ? "ar" : "en"}
-            className="press rounded-full border border-line bg-white/80 px-3.5 py-1.5 text-sm font-medium text-ink-2"
-          >
-            {t("lang.switch")}
-          </button>
-          <button
-            type="button"
-            onClick={() => void signOut().then(() => router.push("/welcome"))}
-            className="press rounded-full border border-line bg-white/80 px-3.5 py-1.5 text-sm font-medium text-ink-2"
-          >
-            {t("auth.signOut")}
-          </button>
-        </div>
-      </header>
-
       {/* progress */}
       <div>
         <div className="flex items-center justify-between text-xs font-medium text-muted">

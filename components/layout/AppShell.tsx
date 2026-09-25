@@ -86,10 +86,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   const signOut = () => {
-    void authSignOut().then(() => {
-      void refreshMembership();
-      router.push("/welcome");
-    });
+    router.push("/welcome");
+    void authSignOut().then(() => void refreshMembership());
   };
 
   const isActive = (href: string) =>
@@ -105,7 +103,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         {["/shared", "/pricing", "/onboarding"].some((p) => pathname.startsWith(p)) && (
           <header className="flex items-center justify-between px-5 pt-5">
             <Brand compact />
-            <LangButton />
+            <div className="flex items-center gap-2">
+              <LangButton />
+              {status === "member" && pathname.startsWith("/onboarding") && (
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="press rounded-full border border-line bg-white/80 px-3.5 py-1.5 text-sm font-medium text-ink-2"
+                >
+                  {t("auth.signOut")}
+                </button>
+              )}
+            </div>
           </header>
         )}
         <main className="flex-1 px-5 pb-12 pt-4" key={locale}>{children}</main>

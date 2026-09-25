@@ -22,6 +22,8 @@ export interface SharePayload {
   purpose: SharePurpose;
   selectedFields: ShareField[];
   sharedBy: string;
+  /** Membership user key of the creator; list/revoke are scoped to it. */
+  ownerKey?: string;
   /** Localized display names from identity.localizedName, keyed by locale. */
   sharedByLocalized?: VitalIdSnapshot["identity"]["localizedName"];
   sentTo?: ShareRecipient[];

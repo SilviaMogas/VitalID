@@ -11,6 +11,7 @@ import {
   type SharePurpose,
 } from '@/lib/sharing';
 import { resolveUserData } from '@/lib/user-data';
+import { DEMO_USER_KEY, getCurrentUserKey } from '@/lib/membership/session';
 import { createShare, listShares } from '@/lib/share-store';
 
 export const dynamic = 'force-dynamic';
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
   }
 
   const now = new Date();
-  const { snapshot: full } = await resolveUserData();
+  const [{ snapshot: full }, ownerKey] = await Promise.all([resolveUserData(), getCurrentUserKey()]);
   const payload: SharePayload = {
     id: randomId(),
     createdAt: now.toISOString(),
@@ -73,6 +74,7 @@ export async function POST(req: Request) {
     purpose,
     selectedFields,
     sharedBy: full.identity.fullName,
+    ownerKey,
     sharedByLocalized: full.identity.localizedName,
     snapshot: buildSnapshot(full, selectedFields),
   };
@@ -81,7 +83,8 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  const shares = await listShares();
+  const ownerKey = await getCurrentUserKey();
+  const shares = (await listShares()).filter((s) => (s.ownerKey ?? DEMO_USER_KEY) === ownerKey);
   shares.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return NextResponse.json(shares.map(summarize), { headers: { 'Cache-Control': 'no-store' } });
 }

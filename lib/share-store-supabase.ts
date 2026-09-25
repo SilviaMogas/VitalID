@@ -11,7 +11,7 @@ import { isShareActive, type SharePayload, type SharePurpose, type ShareField, t
  * metadata that `buildSnapshot` always includes for the recipient view.
  */
 
-const META_KEYS = ['sharedBy', 'sharedByLocalized', 'sentTo', 'sources', 'lastUpdated'] as const;
+const META_KEYS = ['sharedBy', 'sharedByLocalized', 'ownerKey', 'sentTo', 'sources', 'lastUpdated'] as const;
 
 interface StoreGlobal {
   __vitalIdSupabaseAdapter?: SupabaseShareStore;
@@ -33,7 +33,7 @@ function toPayload(share: {
   snapshot?: Record<string, Json>;
   sentTo?: Json;
 }): SharePayload {
-  const { sharedBy, sharedByLocalized, sentTo: snapshotSentTo, ...rest } = share.snapshot ?? {};
+  const { sharedBy, sharedByLocalized, ownerKey, sentTo: snapshotSentTo, ...rest } = share.snapshot ?? {};
   const sentTo = share.sentTo ?? snapshotSentTo;
   return {
     id: share.token,
@@ -45,6 +45,7 @@ function toPayload(share: {
       (f) => !(META_KEYS as readonly string[]).includes(f),
     ) as ShareField[],
     sharedBy: typeof sharedBy === 'string' ? sharedBy : '',
+    ownerKey: typeof ownerKey === 'string' ? ownerKey : undefined,
     sharedByLocalized: (sharedByLocalized ?? undefined) as SharePayload['sharedByLocalized'],
     sentTo: Array.isArray(sentTo) ? (sentTo as unknown as ShareRecipient[]) : [],
     snapshot: rest as SharePayload['snapshot'],
@@ -55,6 +56,7 @@ export async function createShare(p: SharePayload): Promise<void> {
   const fullSnapshot = {
     ...(p.snapshot as Record<string, Json>),
     sharedBy: p.sharedBy,
+    ownerKey: p.ownerKey ?? null,
     sharedByLocalized: (p.sharedByLocalized ?? null) as Json,
     sentTo: (p.sentTo ?? []) as unknown as Json,
   };
