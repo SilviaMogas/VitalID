@@ -219,7 +219,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-6xl md:flex-row md:gap-8 md:px-8">
       {/* Sidebar (desktop) */}
-      <aside className="hidden md:sticky md:top-0 md:flex md:h-dvh md:w-56 md:shrink-0 md:flex-col md:py-8">
+      <aside className="hidden md:sticky md:top-0 md:flex md:h-dvh md:w-56 md:shrink-0 md:flex-col md:overflow-y-auto md:py-8">
         <Brand />
         <nav className="mt-8 flex flex-col gap-1">
           {NAV.map((item) => (
@@ -237,8 +237,19 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="mt-auto space-y-4">
-          <div className="relative ps-1">
+        <div className="mt-auto space-y-4 pt-6">
+          <div className="flex items-center gap-2">
+            <PlanBadge />
+            <LangButton />
+            <button
+              type="button"
+              onClick={signOut}
+              className="press rounded-full px-3 py-1.5 text-sm text-muted hover:text-ink-2"
+            >
+              {t("onboarding.signOut")}
+            </button>
+          </div>
+          <div className="relative hidden ps-1 [@media(min-height:860px)]:block">
             <Broccoli state="encouraging" size={72} className="anim-float" />
             <p className="surface -mt-2 inline-block rounded-2xl px-3 py-1.5 text-xs font-medium text-ink-2">
               {t("mascot.vitalId")}
@@ -256,17 +267,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className="block text-xs text-muted">{t("profile.viewData")}</span>
             </span>
           </Link>
-          <div className="flex items-center gap-2">
-            <PlanBadge />
-            <LangButton />
-            <button
-              type="button"
-              onClick={signOut}
-              className="press rounded-full px-3 py-1.5 text-sm text-muted hover:text-ink-2"
-            >
-              {t("onboarding.signOut")}
-            </button>
-          </div>
         </div>
       </aside>
 

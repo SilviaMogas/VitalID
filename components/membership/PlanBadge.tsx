@@ -18,7 +18,7 @@ export function PlanBadge() {
       href="/pricing"
       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
         plan === "free"
-          ? "border border-line bg-white text-ink-2 hover:bg-canvas"
+          ? "bg-brand text-white shadow-sm hover:bg-ink"
           : "bg-brand-soft text-brand hover:opacity-90"
       }`}
     >
