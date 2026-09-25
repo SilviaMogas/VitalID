@@ -244,7 +244,7 @@ export default function ShareClient() {
               <p className="mt-2 text-center text-xs text-muted">{t("share.qrNote")}</p>
               <p className="mt-3 text-sm text-ink-2">
                 {t("share.validUntil")}:{" "}
-                {d(result.expiresAt, { dateStyle: "medium", timeStyle: "short" })}
+                {d(result.expiresAt, { year: "numeric", hour: "2-digit", minute: "2-digit" })}
               </p>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <a
@@ -286,7 +286,7 @@ export default function ShareClient() {
                   </p>
                   <p className="mt-0.5 text-xs text-muted">
                     {t("share.validUntil")}{" "}
-                    {d(s.expiresAt, { dateStyle: "medium", timeStyle: "short" })}
+                    {d(s.expiresAt, { year: "numeric", hour: "2-digit", minute: "2-digit" })}
                   </p>
                 </div>
                 <span className="flex shrink-0 items-center gap-2">

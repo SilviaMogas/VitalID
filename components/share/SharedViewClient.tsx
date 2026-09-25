@@ -97,7 +97,7 @@ export default function SharedViewClient({ id }: { id: string }) {
             {t(`share.purpose.${payload.purpose}` as TranslationKey)}
           </Row>
           <Row label={t("share.validUntil")}>
-            {d(payload.expiresAt, { dateStyle: "medium", timeStyle: "short" })}
+            {d(payload.expiresAt, { year: "numeric", hour: "2-digit", minute: "2-digit" })}
           </Row>
         </div>
       </div>
