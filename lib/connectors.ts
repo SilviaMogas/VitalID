@@ -53,7 +53,7 @@ export interface ProviderDef {
 }
 
 export const PROVIDERS: Record<ProviderId, ProviderDef> = {
-  whoop: { id: "whoop", name: "WHOOP", mark: "W", tint: "#111111", integration: "none" },
+  whoop: { id: "whoop", name: "WHOOP", mark: "W", tint: "#111111", integration: "oauth" },
   oura: { id: "oura", name: "Oura", mark: "O", tint: "#2b2b2b", integration: "none" },
   fitbit: { id: "fitbit", name: "Fitbit", mark: "fb", tint: "#00B0B9", integration: "none" },
   garmin: { id: "garmin", name: "Garmin", mark: "G", tint: "#007CC3", integration: "none" },

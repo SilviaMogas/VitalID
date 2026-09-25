@@ -105,6 +105,8 @@ export interface EmergencyInfo {
 export interface HealthProfile {
   heightCm: number;
   weightKg: number;
+  /** From a connected wearable (WHOOP) when available. */
+  maxHeartRate?: number;
   medications: string[];
   notes?: string;
 }

@@ -523,7 +523,18 @@ function StepConnectors({ setup, update }: StepProps) {
                     <ProviderMark provider={pid} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-ink">{def.name}</span>
-                      <ConnectorBadge status={status} className="mt-1" />
+                      <span className="mt-1 flex items-center gap-2">
+                        <ConnectorBadge status={status} />
+                        {selected && def.integration === "oauth" && status !== "connected" && (
+                          <Link
+                            href={`/api/connectors/${pid}/connect`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[11px] font-semibold text-brand underline"
+                          >
+                            {t("whoop.connect")}
+                          </Link>
+                        )}
+                      </span>
                     </span>
                     <span
                       aria-hidden

@@ -5,6 +5,9 @@ import {
   isConnectorCategory,
   isConnectorStatus,
   isProviderId,
+  type ConnectorCategory,
+  type ConnectorStatus,
+  type ProviderId,
   type UserConnector,
 } from '@/lib/connectors';
 import {
@@ -27,6 +30,18 @@ import {
 export interface OnboardingStore {
   get(userId: string): Promise<UserSetup | null>;
   patch(userId: string, patch: UserSetupPatch): Promise<UserSetup>;
+  /**
+   * Server-side connector status override (used by real integrations such as
+   * the WHOOP OAuth callback). Updates every category row for the provider
+   * and ensures a canonical `category` row exists.
+   */
+  setConnectorStatus(
+    userId: string,
+    provider: ProviderId,
+    status: ConnectorStatus,
+    connectedAt: string | null,
+    category?: ConnectorCategory,
+  ): Promise<void>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -161,6 +176,22 @@ class MemoryOnboardingStore implements OnboardingStore {
     const next = applyPatch(this.rows.get(userId) ?? emptySetup(), patch);
     this.rows.set(userId, next);
     return next;
+  }
+  async setConnectorStatus(
+    userId: string,
+    provider: ProviderId,
+    status: ConnectorStatus,
+    connectedAt: string | null,
+    category: ConnectorCategory = 'wearables',
+  ) {
+    const setup = this.rows.get(userId) ?? emptySetup();
+    const connectors = setup.connectors.map((c) =>
+      c.provider === provider ? { ...c, status, connectedAt } : c,
+    );
+    if (!connectors.some((c) => c.provider === provider && c.category === category)) {
+      connectors.push({ provider, category, status, connectedAt });
+    }
+    this.rows.set(userId, { ...setup, connectors });
   }
 }
 
@@ -360,6 +391,37 @@ class SupabaseOnboardingStore implements OnboardingStore {
       }
     }
     return next;
+  }
+
+  async setConnectorStatus(
+    userId: string,
+    provider: ProviderId,
+    status: ConnectorStatus,
+    connectedAt: string | null,
+    category: ConnectorCategory = 'wearables',
+  ): Promise<void> {
+    const sb = getSupabaseServerClient();
+    const now = new Date().toISOString();
+    // Update every existing row for this provider (all categories)…
+    const { error: updErr } = await sb
+      .from('vital_id_user_connectors')
+      .update({ status, connected_at: connectedAt, updated_at: now })
+      .eq('user_id', userId)
+      .eq('provider', provider);
+    if (updErr) throw new Error(`connector status update failed: ${updErr.message}`);
+    // …and make sure the canonical category row exists.
+    const { error: upsErr } = await sb.from('vital_id_user_connectors').upsert(
+      {
+        user_id: userId,
+        provider,
+        category,
+        status,
+        connected_at: connectedAt,
+        updated_at: now,
+      },
+      { onConflict: 'user_id,provider,category' },
+    );
+    if (upsErr) throw new Error(`connector status upsert failed: ${upsErr.message}`);
   }
 }
 

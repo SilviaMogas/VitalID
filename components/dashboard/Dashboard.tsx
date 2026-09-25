@@ -8,6 +8,8 @@ import { InsightCard } from "./InsightCard";
 import { MetricCard } from "./MetricCard";
 import { LogoMark } from "@/components/layout/Logo";
 import { MemberSetupPanel } from "./MemberSetupPanel";
+import { WhoopConnectorCard } from "@/components/connectors/WhoopConnectorCard";
+import type { WhoopConnectionPublic } from "@/lib/connectors/whoop/types";
 import type { UserSetup } from "@/lib/onboarding/types";
 
 function greetingKey(): "home.greeting.morning" | "home.greeting.afternoon" | "home.greeting.evening" {
@@ -22,12 +24,15 @@ export function Dashboard({
   insight,
   identity,
   setup = null,
+  whoop,
 }: {
   metrics: HealthMetric[];
   insight: Insight;
   identity: Identity;
   /** Onboarding setup for real members; null for the Fatima demo. */
   setup?: UserSetup | null;
+  /** Public WHOOP connection state (never tokens). */
+  whoop: WhoopConnectionPublic;
 }) {
   const { t, d, locale } = useLocale();
   const firstName = (identity.localizedName?.[locale] ?? identity.fullName).split(" ")[0];
@@ -82,6 +87,8 @@ export function Dashboard({
           ))}
         </div>
       </section>
+
+      <WhoopConnectorCard status={whoop} />
 
       {setup && <MemberSetupPanel setup={setup} />}
 
