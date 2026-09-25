@@ -11,6 +11,7 @@ import {
   type ConnectorCategory,
 } from "@/lib/connectors";
 import { useConnectorSelection } from "@/lib/connectors-state";
+import { providerName } from "@/lib/connectors-i18n";
 import type { TranslationKey } from "@/lib/i18n";
 import { PLANS } from "@/lib/plans";
 import { ConnectorCard } from "@/components/connectors/ConnectorCard";
@@ -50,7 +51,7 @@ export function ConnectorsView() {
     if (query) {
       list = list.filter((p) => {
         const haystack = [
-          p.name,
+          providerName(p, t),
           ...categoriesOf(p.id).map((cat) => t(catLabel(cat))),
           ...p.data.map((kind) => t(`connectors.data.${kind}` as TranslationKey)),
         ]
