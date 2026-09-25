@@ -3,7 +3,7 @@ import type Stripe from 'stripe';
 import { DEMO_CHARGE_CENTS, DEMO_CURRENCY, type PlanId } from '@/lib/plans';
 import { getMembershipStore } from '@/lib/membership/store';
 import type { MembershipRecord } from '@/lib/membership/types';
-import { getStripe, resolveDemoPriceId } from './server';
+import { getDemoPriceId, getStripe } from './server';
 
 export type VerifyResult =
   | { ok: true; plan: 'plus' | 'pro'; userKey: string; session: Stripe.Checkout.Session }
@@ -46,15 +46,22 @@ export async function verifyCheckoutSession(
   if (plan !== 'plus' && plan !== 'pro') return { ok: false, reason: 'bad_plan' };
 
   const items = session.line_items?.data ?? [];
-  const expectedPriceId = await resolveDemoPriceId(plan);
+  const configured = getDemoPriceId(plan);
   const price = items[0]?.price;
+  // The line item belongs to the plan when it IS the configured price, or when
+  // the configured value is a product and the price belongs to that product —
+  // so rotating a product's default_price never orphans in-flight sessions.
+  const belongsToPlan =
+    price?.id === configured ||
+    (configured.startsWith('prod_') &&
+      (typeof price?.product === 'string' ? price.product : price?.product?.id) === configured);
   if (
     items.length !== 1 ||
-    price?.id !== expectedPriceId ||
+    !belongsToPlan ||
     items[0].quantity !== 1 ||
-    price.unit_amount !== DEMO_CHARGE_CENTS ||
-    price.currency !== DEMO_CURRENCY ||
-    price.type !== 'one_time'
+    price?.unit_amount !== DEMO_CHARGE_CENTS ||
+    price?.currency !== DEMO_CURRENCY ||
+    price?.type !== 'one_time'
   ) {
     return { ok: false, reason: 'bad_price' };
   }

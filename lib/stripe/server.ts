@@ -38,18 +38,14 @@ export function getDemoPriceId(plan: PlanId): string {
   return priceId;
 }
 
-const resolvedPriceIds = new Map<string, string>();
-
 /**
  * Resolves the configured id to an actual Price ID. A `prod_…` value maps to
  * the product's `default_price`; a `price_…` value is returned as-is.
- * Resolved ids are cached for the process lifetime.
+ * Fetches the product on every call — one call per checkout, never cached.
  */
 export async function resolveDemoPriceId(plan: PlanId): Promise<string> {
   const configured = getDemoPriceId(plan);
   if (!configured.startsWith("prod_")) return configured;
-  const cached = resolvedPriceIds.get(configured);
-  if (cached) return cached;
 
   const product = await getStripe().products.retrieve(configured);
   const defaultPrice = product.default_price;
@@ -59,6 +55,5 @@ export async function resolveDemoPriceId(plan: PlanId): Promise<string> {
       `Configured product "${configured}" for plan "${plan}" is inactive or has no default_price.`,
     );
   }
-  resolvedPriceIds.set(configured, priceId);
   return priceId;
 }
