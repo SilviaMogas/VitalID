@@ -61,6 +61,36 @@ function pickLocale<T extends Record<string, readonly [string, string]>>(table: 
   return Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v[index]])) as { [K in keyof T]: string };
 }
 
+const brandStrings = {
+  "onboarding.splashLine": ["A healthier tomorrow, together", "غدٌ أكثر صحة، معًا"],
+  "onboarding.splashFoot": ["Your signals. Your baseline. Your control.", "مؤشراتك. خط أساسك. أنت المتحكم."],
+  "onboarding.getStarted": ["Get started", "ابدأ الآن"],
+  "onboarding.skip": ["Skip intro", "تخطّي المقدمة"],
+  "onboarding.welcome": ["Welcome to Vital ID", "مرحبًا بك في Vital ID"],
+  "onboarding.welcomeSub": ["Access your health identity securely", "ادخل إلى هويتك الصحية بأمان"],
+  "onboarding.signIn": ["Sign in", "تسجيل الدخول"],
+  "onboarding.signUp": ["Sign up", "إنشاء حساب"],
+  "onboarding.demoCta": ["Login as Fatima", "الدخول كفاطمة"],
+  "onboarding.demoHint": ["Explore the demo instantly as Fatima", "استكشف النسخة التجريبية فورًا كفاطمة"],
+  "onboarding.demoOnly": ["Accounts are not part of this demo — continue as Fatima.", "الحسابات ليست جزءًا من هذه النسخة التجريبية — تابع كفاطمة."],
+  "onboarding.previewTag": ["Health has a new identity", "للصحة هوية جديدة"],
+  "onboarding.pill.verified": ["Verified", "موثّق"],
+  "onboarding.pill.private": ["Private", "خاص"],
+  "onboarding.pill.portable": ["Portable", "محمول"],
+  "onboarding.foot.privacy": ["Your data, your control", "بياناتك، تحت سيطرتك"],
+  "onboarding.foot.demo": ["Synthetic demo data", "بيانات تجريبية اصطناعية"],
+  "onboarding.signOut": ["Sign out", "تسجيل الخروج"],
+  "mascot.insightAttention": ["Worth a look — compared with your own baseline.", "يستحق نظرة — مقارنةً بخط أساسك."],
+  "mascot.insightCalm": ["Looking steady. Nice work.", "الأمور مستقرة. أحسنت."],
+  "mascot.metricUnusual": ["This one moved more than usual.", "هذا المؤشر تحرّك أكثر من المعتاد."],
+  "mascot.metricStable": ["Right in your usual range.", "ضمن نطاقك المعتاد تمامًا."],
+  "mascot.shareIntro": ["Share only what matters — for as long as you choose.", "شارك ما يهم فقط — وللمدة التي تختارها."],
+  "mascot.shareReady": ["Your secure link is ready.", "رابطك الآمن جاهز."],
+  "mascot.shareRevoked": ["Access closed. You are back in control.", "تم إغلاق الوصول. أنت المتحكم من جديد."],
+  "mascot.recipient": ["Shared temporarily by the Vital ID holder.", "تمت المشاركة مؤقتًا من صاحب Vital ID."],
+  "mascot.vitalId": ["Your identity travels with you.", "هويتك تسافر معك."],
+} as const satisfies Record<string, readonly [string, string]>;
+
 const en = {
   "app.name": "Vital ID",
   "app.tagline": "Your portable health identity",
@@ -183,36 +213,8 @@ const en = {
   "common.notFound": "This page does not exist.",
   "common.goHome": "Go to Home",
 
-  "onboarding.splashLine": "A healthier tomorrow, together",
-  "onboarding.splashFoot": "Your signals. Your baseline. Your control.",
-  "onboarding.getStarted": "Get started",
-  "onboarding.skip": "Skip intro",
-  "onboarding.welcome": "Welcome to Vital ID",
-  "onboarding.welcomeSub": "Access your health identity securely",
-  "onboarding.signIn": "Sign in",
-  "onboarding.signUp": "Sign up",
-  "onboarding.demoCta": "Login as Fatima",
-  "onboarding.demoHint": "Explore the demo instantly as Fatima",
-  "onboarding.demoOnly": "Accounts are not part of this demo — continue as Fatima.",
-  "onboarding.previewTag": "Health has a new identity",
-  "onboarding.pill.verified": "Verified",
-  "onboarding.pill.private": "Private",
-  "onboarding.pill.portable": "Portable",
-  "onboarding.foot.privacy": "Your data, your control",
-  "onboarding.foot.demo": "Synthetic demo data",
-  "onboarding.signOut": "Sign out",
-
-  "mascot.insightAttention": "Worth a look — compared with your own baseline.",
-  "mascot.insightCalm": "Looking steady. Nice work.",
-  "mascot.metricUnusual": "This one moved more than usual.",
-  "mascot.metricStable": "Right in your usual range.",
-  "mascot.shareIntro": "Share only what matters — for as long as you choose.",
-  "mascot.shareReady": "Your secure link is ready.",
-  "mascot.shareRevoked": "Access closed. You are back in control.",
-  "mascot.recipient": "Shared temporarily by the Vital ID holder.",
-  "mascot.vitalId": "Your identity travels with you.",
-
   ...pickLocale(shareStrings, 0),
+  ...pickLocale(brandStrings, 0),
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -339,36 +341,8 @@ const ar: Record<TranslationKey, string> = {
   "common.notFound": "هذه الصفحة غير موجودة.",
   "common.goHome": "الانتقال إلى الرئيسية",
 
-  "onboarding.splashLine": "غدٌ أكثر صحة، معًا",
-  "onboarding.splashFoot": "مؤشراتك. خط أساسك. أنت المتحكم.",
-  "onboarding.getStarted": "ابدأ الآن",
-  "onboarding.skip": "تخطّي المقدمة",
-  "onboarding.welcome": "مرحبًا بك في Vital ID",
-  "onboarding.welcomeSub": "ادخل إلى هويتك الصحية بأمان",
-  "onboarding.signIn": "تسجيل الدخول",
-  "onboarding.signUp": "إنشاء حساب",
-  "onboarding.demoCta": "الدخول كفاطمة",
-  "onboarding.demoHint": "استكشف النسخة التجريبية فورًا كفاطمة",
-  "onboarding.demoOnly": "الحسابات ليست جزءًا من هذه النسخة التجريبية — تابع كفاطمة.",
-  "onboarding.previewTag": "للصحة هوية جديدة",
-  "onboarding.pill.verified": "موثّق",
-  "onboarding.pill.private": "خاص",
-  "onboarding.pill.portable": "محمول",
-  "onboarding.foot.privacy": "بياناتك، تحت سيطرتك",
-  "onboarding.foot.demo": "بيانات تجريبية اصطناعية",
-  "onboarding.signOut": "تسجيل الخروج",
-
-  "mascot.insightAttention": "يستحق نظرة — مقارنةً بخط أساسك.",
-  "mascot.insightCalm": "الأمور مستقرة. أحسنت.",
-  "mascot.metricUnusual": "هذا المؤشر تحرّك أكثر من المعتاد.",
-  "mascot.metricStable": "ضمن نطاقك المعتاد تمامًا.",
-  "mascot.shareIntro": "شارك ما يهم فقط — وللمدة التي تختارها.",
-  "mascot.shareReady": "رابطك الآمن جاهز.",
-  "mascot.shareRevoked": "تم إغلاق الوصول. أنت المتحكم من جديد.",
-  "mascot.recipient": "تمت المشاركة مؤقتًا من صاحب Vital ID.",
-  "mascot.vitalId": "هويتك تسافر معك.",
-
   ...pickLocale(shareStrings, 1),
+  ...pickLocale(brandStrings, 1),
 };
 
 export const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, ar };
