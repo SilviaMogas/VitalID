@@ -1,6 +1,7 @@
 // Central plan/feature config for Vital ID membership.
 // Client-safe: no server imports — everything plan-related lives here only.
 import type { TranslationKey } from "@/lib/i18n";
+import type { CompanionName } from "@/lib/companions";
 
 export type PlanId = "free" | "plus" | "pro";
 
@@ -25,6 +26,8 @@ export type Feature =
 export interface PlanDefinition {
   id: PlanId;
   nameKey: TranslationKey;
+  /** Avatar shown for this plan across the membership UI. */
+  companion: CompanionName;
   /** Price shown on the pricing card. */
   displayPrice: string;
   billingLabelKey: TranslationKey;
@@ -62,6 +65,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   free: {
     id: "free",
     nameKey: "pricing.plan.free.name",
+    companion: "shield",
     displayPrice: "$0",
     billingLabelKey: "pricing.billing.free",
     demoChargeCents: null,
@@ -80,6 +84,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   plus: {
     id: "plus",
     nameKey: "pricing.plan.plus.name",
+    companion: "heart",
     displayPrice: "$10",
     billingLabelKey: "pricing.billing.monthly",
     demoChargeCents: 100,
@@ -100,6 +105,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   pro: {
     id: "pro",
     nameKey: "pricing.plan.pro.name",
+    companion: "muscle",
     displayPrice: "$25",
     billingLabelKey: "pricing.billing.monthly",
     demoChargeCents: 100,

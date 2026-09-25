@@ -6,6 +6,7 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
 import { PLANS } from "@/lib/plans";
+import { Companion } from "@/components/companions/Companion";
 import { HackathonSmallPrint } from "@/components/pricing/HackathonSmallPrint";
 
 export type CheckoutStatus = "activated" | "failed" | "cancelled";
@@ -39,11 +40,7 @@ export function CheckoutResult({
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center px-5 py-12 text-center">
       {status === "activated" && (
         <>
-          <span className="grid h-16 w-16 place-items-center rounded-full bg-brand-soft text-brand">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-8 w-8">
-              <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
+          <Companion name={plan ? PLANS[plan].companion : "heart"} mood="cheer" size={140} />
           <h1 className="mt-5 text-2xl font-semibold tracking-tight">
             {t("checkout.welcome", { plan: plan ? t(PLANS[plan].nameKey) : "" })}
           </h1>
@@ -53,11 +50,7 @@ export function CheckoutResult({
 
       {status === "failed" && (
         <>
-          <span className="grid h-16 w-16 place-items-center rounded-full bg-bad-soft text-bad">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-8 w-8">
-              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
-            </svg>
-          </span>
+          <Companion name="shield" mood="alert" size={120} />
           <h1 className="mt-5 text-2xl font-semibold tracking-tight">{t("checkout.failedTitle")}</h1>
           <p className="mt-2 text-sm text-muted">
             {t("checkout.failedBody")}
@@ -68,12 +61,7 @@ export function CheckoutResult({
 
       {status === "cancelled" && (
         <>
-          <span className="grid h-16 w-16 place-items-center rounded-full bg-canvas text-muted">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-8 w-8">
-              <path d="M12 8v5m0 3h.01" strokeLinecap="round" />
-              <circle cx="12" cy="12" r="9" />
-            </svg>
-          </span>
+          <Companion name="moon" mood="calm" size={120} />
           <h1 className="mt-5 text-2xl font-semibold tracking-tight">{t("checkout.cancelledTitle")}</h1>
           <p className="mt-2 text-sm text-muted">{t("checkout.cancelledBody")}</p>
         </>
