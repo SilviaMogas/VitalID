@@ -1,0 +1,135 @@
+"use client";
+
+import { useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useLocale } from "@/components/providers/LocaleProvider";
+import type { TranslationKey } from "@/lib/i18n";
+import { METRIC_KEYS, type HealthMetric, type Insight, type MetricKey } from "@/types";
+import { METRIC_META } from "@/lib/demo-data";
+import { isWorse, rangeKey, statusTone } from "@/components/dashboard/MetricCard";
+import { StatusBadge } from "@/components/dashboard/StatusBadge";
+import { InsightCard } from "@/components/dashboard/InsightCard";
+import { TrendChart } from "@/components/trends/TrendChart";
+
+export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; insights: Insight[] }) {
+  const { t, n } = useLocale();
+  const params = useSearchParams();
+  const initial = params.get("metric") as MetricKey | null;
+  const [selected, setSelected] = useState<MetricKey>(
+    initial && METRIC_KEYS.includes(initial) ? initial : "recovery",
+  );
+  const [range, setRange] = useState<7 | 30>(7);
+  const metric = metrics.find((m) => m.metric === selected) ?? metrics[0];
+  const tone = statusTone(metric.status, isWorse(metric));
+  const arrow = metric.deltaPercent === 0 ? "→" : metric.deltaPercent > 0 ? "↑" : "↓";
+  const metricInsights = insights.filter((i) => i.metric === selected);
+
+  return (
+    <div className="space-y-6">
+      <section>
+        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("trends.title")}</h1>
+        <p className="mt-1 text-sm text-muted">{t("trends.subtitle")}</p>
+      </section>
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {metrics.map((m) => (
+          <button
+            key={m.metric}
+            onClick={() => setSelected(m.metric)}
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+              m.metric === selected ? "bg-ink text-white" : "bg-white text-ink-2 border border-line"
+            }`}
+          >
+            {t(`metric.${m.metric}` as TranslationKey)}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        {([7, 30] as const).map((r) => (
+          <button
+            key={r}
+            onClick={() => setRange(r)}
+            className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+              range === r ? "bg-brand-soft text-brand" : "text-muted"
+            }`}
+          >
+            {t(r === 7 ? "trends.range.7d" : "trends.range.30d")}
+          </button>
+        ))}
+      </div>
+
+      <div className="card p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-ink-2">
+              {t(`metric.${metric.metric}` as TranslationKey)}
+            </p>
+            <p className="mt-1 flex items-baseline gap-1">
+              <span className="tabular text-4xl font-semibold tracking-tight">
+                {n(metric.value, METRIC_META[metric.metric].decimals)}
+              </span>
+              <span className="text-sm text-muted">
+                {t(`unit.${metric.unit}` as TranslationKey)}
+              </span>
+            </p>
+          </div>
+          <StatusBadge status={metric.status} tone={tone} />
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-canvas p-3 text-center">
+          {[
+            { label: t("baseline.today"), value: metric.value },
+            { label: t("baseline.7dayAvg"), value: metric.sevenDayAverage },
+            { label: t("baseline.30day"), value: metric.baseline },
+          ].map((s) => (
+            <div key={s.label}>
+              <p className="text-[10px] uppercase tracking-wide text-muted">{s.label}</p>
+              <p className="tabular mt-0.5 text-sm font-semibold">
+                {n(s.value, METRIC_META[metric.metric].decimals)}
+                <span className="ms-0.5 text-[10px] font-normal text-muted">
+                  {t(`unit.${metric.unit}` as TranslationKey)}
+                </span>
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4">
+          <TrendChart metric={metric} days={range} />
+        </div>
+
+        <p className="mt-3 flex items-center gap-1.5 text-xs text-muted">
+          <span
+            className={`tabular font-semibold ${
+              tone === "good"
+                ? "text-good"
+                : tone === "bad"
+                  ? "text-bad"
+                  : tone === "warn"
+                    ? "text-warn"
+                    : "text-ink-2"
+            }`}
+            dir="ltr"
+          >
+            {arrow} {n(Math.abs(metric.deltaPercent))}%
+          </span>
+          <span>{t(rangeKey(metric))}</span>
+        </p>
+      </div>
+
+      <div>
+        <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+          {t("trends.whatItMeans")}
+        </h2>
+        <div className="mt-2 space-y-3">
+          {metricInsights.length === 0 ? (
+            <p className="card p-4 text-sm text-muted">{t("insight.allStable")}</p>
+          ) : (
+            metricInsights.map((i) => <InsightCard key={i.id} insight={i} compact />)
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
