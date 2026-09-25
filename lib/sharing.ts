@@ -75,6 +75,11 @@ export function buildSnapshot(
         delete stripped.history;
         return stripped;
       }) as never;
+    } else if (f === "identity") {
+      // The member's photo is private to their own shell/card — never shared.
+      const identity: Partial<typeof full.identity> = { ...full.identity };
+      delete identity.photoUrl;
+      out.identity = identity as never;
     } else {
       out[f] = full[f] as never;
     }
