@@ -5,5 +5,5 @@ import { Dashboard } from "@/components/dashboard/Dashboard";
 export default function HomePage() {
   const metrics = buildHealthMetrics();
   const insight = generateInsight();
-  return <Dashboard metrics={metrics} insight={insight} name={DEMO_IDENTITY.fullName} />;
+  return <Dashboard metrics={metrics} insight={insight} identity={DEMO_IDENTITY} />;
 }

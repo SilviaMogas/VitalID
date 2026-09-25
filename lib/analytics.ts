@@ -47,20 +47,20 @@ export function getDelta(current: number, baseline: number): { delta: number; de
 }
 
 /**
- * Status rules (relative to 30-day baseline, using the 7-day average):
+ * Status rules (current value relative to the 30-day baseline):
  *  |Δ%| < 5            → stable
- *  5 ≤ |Δ%| < 15       → improving / declining (sign adjusted for polarity)
- *  |Δ%| ≥ 15           → unusual deviation
+ *  5 ≤ |Δ%| < 20       → improving / declining (sign adjusted for polarity)
+ *  |Δ%| ≥ 20           → unusual deviation
  */
 export function getTrend(
-  sevenDayAverage: number,
+  current: number,
   baseline: number,
   polarity: MetricPolarity,
 ): TrendStatus {
-  const { deltaPercent } = getDelta(sevenDayAverage, baseline);
+  const { deltaPercent } = getDelta(current, baseline);
   const abs = Math.abs(deltaPercent);
   if (abs < 5) return "stable";
-  if (abs >= 15) return "unusual";
+  if (abs >= 20) return "unusual";
   const positive = deltaPercent > 0;
   const good = polarity === "higherIsBetter" ? positive : !positive;
   return good ? "improving" : "declining";
@@ -100,7 +100,7 @@ export function buildHealthMetric(records: DailyRecord[], metric: MetricKey): He
     sevenDayAverage,
     delta: roundTo(delta, meta.decimals),
     deltaPercent: Math.round(deltaPercent),
-    status: getTrend(sevenDayAverage, baseline, meta.polarity),
+    status: getTrend(value, baseline, meta.polarity),
     polarity: meta.polarity,
     history: records.map((r) => ({ date: r.date, value: r[metric] })),
   };

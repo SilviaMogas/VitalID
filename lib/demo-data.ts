@@ -54,16 +54,16 @@ export function getDailyRecords(): DailyRecord[] {
       : 7.4 + weekendBoost + noise(i, 1, 0.5);
 
     const recovery = isRecent
-      ? 61 + noise(i, 2, 4) - (2 - daysAgo) * 2
-      : 74 + noise(i, 2, 7);
+      ? 67 + noise(i, 2, 2) - (2 - daysAgo) * 2
+      : 74 + noise(i, 2, 6);
 
-    const hrv = isRecent ? 52 + noise(i, 3, 3) : 62 + noise(i, 3, 5) + (i > 22 ? -2 : 0);
+    const hrv = isRecent ? 56 + noise(i, 3, 2) - (2 - daysAgo) : 62 + noise(i, 3, 4) + (i > 22 ? -2 : 0);
 
     const restingHeartRate = isRecent
-      ? 61 + noise(i, 4, 1.5)
+      ? 60 + noise(i, 4, 1) + (2 - daysAgo) * 0.5
       : 56 + noise(i, 4, 2);
 
-    const activity = 48 + weekendBoost * 40 + noise(i, 5, 14);
+    const activity = 52 + weekendBoost * 20 + noise(i, 5, 4) + (isRecent ? 4 : 0);
 
     records.push({
       date: isoDate(daysAgo),
@@ -90,6 +90,7 @@ export const METRIC_META: Record<
 
 export const DEMO_IDENTITY: Identity = {
   fullName: "Fatima Al Mansoori",
+  localizedName: { ar: "فاطمة المنصوري" },
   vitalId: "VID-AE-10284",
   dateOfBirth: "1991-03-14",
   sex: "female",

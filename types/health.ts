@@ -64,6 +64,8 @@ export interface Insight {
 
 export interface Identity {
   fullName: string;
+  /** Optional localized display names, keyed by locale (falls back to fullName). */
+  localizedName?: Partial<Record<Locale, string>>;
   vitalId: string;
   dateOfBirth: string; // ISO date
   sex: "female" | "male";
