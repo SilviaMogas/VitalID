@@ -307,6 +307,25 @@ const setupStrings = {
   "dashboard.yourGoals": ["Your goals", "أهدافك"],
 } as const satisfies Record<string, readonly [string, string]>;
 
+const whoopStrings = {
+  "whoop.connect": ["Connect WHOOP", "ربط WHOOP"],
+  "whoop.reconnect": ["Reconnect WHOOP", "إعادة ربط WHOOP"],
+  "whoop.sync": ["Sync now", "مزامنة الآن"],
+  "whoop.syncing": ["Syncing…", "جارٍ المزامنة…"],
+  "whoop.disconnect": ["Disconnect", "فصل"],
+  "whoop.lastSynced": ["Last synced", "آخر مزامنة"],
+  "whoop.neverSynced": ["Never synced", "لم تتم المزامنة بعد"],
+  "whoop.notConfigured": ["WHOOP credentials are not configured on the server.", "بيانات اعتماد WHOOP غير مهيأة على الخادم."],
+  "whoop.notice.connected": ["WHOOP connected. Your dashboard now shows live WHOOP data.", "تم ربط WHOOP. تعرض لوحتك الآن بيانات WHOOP المباشرة."],
+  "whoop.notice.denied": ["WHOOP access was denied.", "تم رفض الوصول إلى WHOOP."],
+  "whoop.notice.invalid_state": ["The WHOOP sign-in could not be verified. Please try again.", "تعذر التحقق من تسجيل الدخول إلى WHOOP. حاول مرة أخرى."],
+  "whoop.notice.error": ["Connecting WHOOP failed. Please try again.", "فشل ربط WHOOP. حاول مرة أخرى."],
+  "whoop.notice.reauth": ["WHOOP session expired — reconnect to keep syncing.", "انتهت جلسة WHOOP — أعد الربط لمواصلة المزامنة."],
+  "whoop.notice.unavailable": ["WHOOP is unavailable right now; showing your last synced data.", "WHOOP غير متاح حاليًا؛ تُعرض آخر بيانات تمت مزامنتها."],
+  "whoop.liveData": ["Live data from your WHOOP", "بيانات مباشرة من WHOOP الخاص بك"],
+  "whoop.confirmDisconnect": ["Disconnect WHOOP? Synced data will be removed.", "فصل WHOOP؟ ستتم إزالة البيانات المتزامنة."],
+} as const satisfies Record<string, readonly [string, string]>;
+
 function pickLocale<T extends Record<string, readonly [string, string]>>(table: T, index: 0 | 1): { [K in keyof T]: string } {
   return Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v[index]])) as { [K in keyof T]: string };
 }
@@ -470,6 +489,7 @@ const en = {
   ...pickLocale(companionStrings, 0),
   ...pickLocale(pricingStrings, 0),
   ...pickLocale(setupStrings, 0),
+  ...pickLocale(whoopStrings, 0),
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -602,6 +622,7 @@ const ar: Record<TranslationKey, string> = {
   ...pickLocale(companionStrings, 1),
   ...pickLocale(pricingStrings, 1),
   ...pickLocale(setupStrings, 1),
+  ...pickLocale(whoopStrings, 1),
 };
 
 export const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, ar };

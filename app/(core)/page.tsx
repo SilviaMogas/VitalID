@@ -11,6 +11,7 @@ export default async function HomePage() {
       insight={data.insights[0]}
       identity={data.identity}
       setup={data.setup}
+      whoop={data.whoop}
     />
   );
 }
