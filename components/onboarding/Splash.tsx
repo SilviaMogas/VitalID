@@ -6,7 +6,7 @@ import { LogoMark } from "@/components/layout/Logo";
 import { Broccoli } from "@/components/mascot/Broccoli";
 import { Apple, Avocado, Banana, Carrot, Orange, Strawberry } from "@/components/mascot/Crew";
 
-const AUTO_ADVANCE_MS = 5200;
+const AUTO_ADVANCE_MS = 3600;
 
 export function Splash({ onLeaving, onDone }: { onLeaving: () => void; onDone: () => void }) {
   const { t } = useLocale();
