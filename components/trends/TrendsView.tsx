@@ -124,7 +124,19 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
         </h2>
         <div className="mt-2 space-y-3">
           {metricInsights.length === 0 ? (
-            <p className="card p-4 text-sm text-muted">{t("insight.allStable")}</p>
+            <p className="card p-4 text-sm text-ink-2">
+              {t(
+                metric.status === "stable"
+                  ? "insight.metricStable"
+                  : metric.deltaPercent > 0
+                    ? "insight.metricAbove"
+                    : "insight.metricBelow",
+                {
+                  metric: t(`metric.${metric.metric}` as TranslationKey),
+                  percent: n(Math.abs(metric.deltaPercent)),
+                },
+              )}
+            </p>
           ) : (
             metricInsights.map((i) => <InsightCard key={i.id} insight={i} compact />)
           )}

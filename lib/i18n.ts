@@ -82,6 +82,9 @@ const en = {
   "insight.activityStable":
     "Your activity has stayed steady at around {minutes} active minutes a day.",
   "insight.allStable": "All your signals are within your usual range.",
+  "insight.metricStable": "Your {metric} is within your usual range, close to your 30-day baseline.",
+  "insight.metricAbove": "Your {metric} is {percent}% above your 30-day baseline.",
+  "insight.metricBelow": "Your {metric} is {percent}% below your 30-day baseline.",
 
   "vitalId.title": "Vital ID",
   "vitalId.subtitle": "A portable snapshot of your health identity",
@@ -204,6 +207,9 @@ const ar: Record<TranslationKey, string> = {
   "insight.activityStable":
     "بقي نشاطك ثابتًا عند نحو {minutes} دقيقة نشطة يوميًا.",
   "insight.allStable": "جميع مؤشراتك ضمن نطاقك المعتاد.",
+  "insight.metricStable": "{metric} ضمن نطاقك المعتاد وقريب من خط أساسك لثلاثين يومًا.",
+  "insight.metricAbove": "{metric} أعلى بنسبة {percent}% من خط أساسك لثلاثين يومًا.",
+  "insight.metricBelow": "{metric} أقل بنسبة {percent}% من خط أساسك لثلاثين يومًا.",
 
   "vitalId.title": "Vital ID",
   "vitalId.subtitle": "لقطة محمولة لهويتك الصحية",
