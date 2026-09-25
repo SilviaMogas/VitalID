@@ -26,7 +26,14 @@ export function statusTone(status: TrendStatus, worse: boolean): "good" | "warn"
   return worse ? "bad" : "good";
 }
 
-export function MetricCard({ metric, href }: { metric: HealthMetric; href?: string }) {
+const ACCENT = {
+  good: "bg-good",
+  warn: "bg-warn",
+  bad: "bg-bad",
+  neutral: "bg-mint",
+} as const;
+
+export function MetricCard({ metric, href, index = 0 }: { metric: HealthMetric; href?: string; index?: number }) {
   const { t, n } = useLocale();
   const decimals = METRIC_META[metric.metric].decimals;
   const worse = isWorse(metric);
@@ -35,11 +42,12 @@ export function MetricCard({ metric, href }: { metric: HealthMetric; href?: stri
 
   const body = (
     <>
+      <span aria-hidden className={`absolute inset-y-4 start-0 w-1 rounded-e-full ${ACCENT[tone]} opacity-70`} />
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-ink-2">{t(`metric.${metric.metric}` as TranslationKey)}</p>
           <p className="mt-1 flex items-baseline gap-1">
-            <span className="tabular text-3xl font-semibold tracking-tight">{n(metric.value, decimals)}</span>
+            <span className="tabular text-[2rem] font-semibold leading-none tracking-tight">{n(metric.value, decimals)}</span>
             <span className="text-sm text-muted">{t(`unit.${metric.unit}` as TranslationKey)}</span>
           </p>
         </div>
@@ -69,18 +77,22 @@ export function MetricCard({ metric, href }: { metric: HealthMetric; href?: stri
         <Sparkline values={metric.history.slice(-14).map((h) => h.value)} baseline={metric.baseline} tone={tone} className="h-9 w-20 shrink-0" />
       </div>
 
-      <p className="mt-3 text-[11px] text-muted">
+      <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted">
+        <span className="h-1 w-1 rounded-full bg-muted/60" />
         {t("source.label")}: {t(`source.${metric.source}` as TranslationKey)}
       </p>
     </>
   );
 
-  const cls = "card block p-4 transition hover:-translate-y-0.5 hover:shadow-md";
+  const cls = "card lift rise relative block overflow-hidden p-4 ps-5";
+  const style = { ["--i" as string]: index + 2 };
   return href ? (
-    <Link href={href} className={cls}>
+    <Link href={href} className={cls} style={style}>
       {body}
     </Link>
   ) : (
-    <div className={cls}>{body}</div>
+    <div className={cls} style={style}>
+      {body}
+    </div>
   );
 }

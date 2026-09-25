@@ -11,10 +11,10 @@ const TONE_COLOR = {
   good: "#15803d",
   warn: "#b45309",
   bad: "#b91c1c",
-  neutral: "#3b4658",
+  neutral: "#3d5249",
 } as const;
 
-const BASELINE_COLOR = "#0f766e";
+const BASELINE_COLOR = "#0e7a5f";
 
 export function TrendChart({ metric, days }: { metric: HealthMetric; days: 7 | 30 }) {
   const { t, n, d } = useLocale();

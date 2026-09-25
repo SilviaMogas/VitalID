@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import type { TranslationKey } from "@/lib/i18n";
+import { LogoMark } from "@/components/layout/Logo";
+import { Broccoli } from "@/components/mascot/Broccoli";
+import { Onboarding, SESSION_KEY, hasSession } from "@/components/onboarding/Onboarding";
 
 const NAV: { href: string; key: TranslationKey; icon: ReactNode }[] = [
   {
@@ -54,7 +57,25 @@ const NAV: { href: string; key: TranslationKey; icon: ReactNode }[] = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { t, locale } = useLocale();
+  const [session, setSession] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setSession(hasSession());
+  }, []);
+
+  const enter = () => {
+    window.localStorage.setItem(SESSION_KEY, "fatima");
+    setSession(true);
+    if (pathname === "/welcome") router.push("/");
+  };
+
+  const signOut = () => {
+    window.localStorage.removeItem(SESSION_KEY);
+    setSession(false);
+    router.push("/welcome");
+  };
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -71,6 +92,18 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
+  if (pathname === "/welcome") {
+    return <Onboarding onEnter={enter} />;
+  }
+
+  if (session === null) {
+    return <div className="min-h-dvh" aria-busy />;
+  }
+
+  if (!session) {
+    return <Onboarding onEnter={enter} />;
+  }
+
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-6xl md:flex-row md:gap-8 md:px-8">
       {/* Sidebar (desktop) */}
@@ -81,10 +114,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+              className={`press flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                 isActive(item.href)
-                  ? "bg-ink text-white"
-                  : "text-ink-2 hover:bg-white"
+                  ? "bg-brand text-white shadow-hero"
+                  : "text-ink-2 hover:bg-white/80"
               }`}
             >
               {item.icon}
@@ -92,8 +125,23 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="mt-auto">
-          <LangButton />
+        <div className="mt-auto space-y-4">
+          <div className="relative ps-1">
+            <Broccoli state="encouraging" size={72} className="anim-float" />
+            <p className="surface -mt-2 inline-block rounded-2xl px-3 py-1.5 text-xs font-medium text-ink-2">
+              {t("mascot.vitalId")}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <LangButton />
+            <button
+              type="button"
+              onClick={signOut}
+              className="press rounded-full px-3 py-1.5 text-sm text-muted hover:text-ink-2"
+            >
+              {t("onboarding.signOut")}
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -101,7 +149,19 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Top bar (mobile) */}
         <header className="flex items-center justify-between px-5 pt-5 md:hidden">
           <Brand compact />
-          <LangButton />
+          <div className="flex items-center gap-1.5">
+            <LangButton />
+            <button
+              type="button"
+              onClick={signOut}
+              aria-label={t("onboarding.signOut")}
+              className="press grid h-9 w-9 place-items-center rounded-full border border-line bg-white text-muted"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4 rtl:-scale-x-100">
+                <path d="M10 17l5-5-5-5M15 12H3M13 4h6v16h-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
         </header>
 
         <main className="flex-1 px-5 pb-28 pt-4 md:px-0 md:pb-12 md:pt-8" key={locale}>
@@ -110,7 +170,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {/* Bottom nav (mobile) */}
         <nav
-          className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/90 backdrop-blur md:hidden"
+          className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/92 backdrop-blur md:hidden"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           <ul className="mx-auto grid max-w-md grid-cols-4">
@@ -120,12 +180,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${
+                    className={`press flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition ${
                       active ? "text-brand" : "text-muted"
                     }`}
                     aria-current={active ? "page" : undefined}
                   >
-                    {item.icon}
+                    <span className={`grid h-8 w-12 place-items-center rounded-full transition ${active ? "bg-brand-soft" : ""}`}>
+                      {item.icon}
+                    </span>
                     <span>{t(item.key)}</span>
                   </Link>
                 </li>
@@ -142,13 +204,9 @@ function Brand({ compact = false }: { compact?: boolean }) {
   const { t } = useLocale();
   return (
     <Link href="/" className="flex items-center gap-2.5">
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-ink text-white">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-5 w-5">
-          <path d="M3 12h4l2.5-6 4 12 2.5-6H21" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </span>
+      <LogoMark size={34} />
       <span className="leading-tight">
-        <span className="block text-base font-semibold tracking-tight">{t("app.name")}</span>
+        <span className="block text-base font-semibold tracking-tight text-brand">{t("app.name")}</span>
         {!compact && <span className="block text-xs text-muted">{t("app.tagline")}</span>}
       </span>
     </Link>
@@ -163,7 +221,7 @@ function LangButton() {
       onClick={toggleLocale}
       aria-label={t("lang.label")}
       lang={locale === "en" ? "ar" : "en"}
-      className="rounded-full border border-line bg-white px-3.5 py-1.5 text-sm font-medium text-ink-2 shadow-sm transition hover:bg-canvas"
+      className="press rounded-full border border-line bg-white px-3.5 py-1.5 text-sm font-medium text-ink-2 shadow-sm hover:bg-sage"
     >
       {t("lang.switch")}
     </button>
