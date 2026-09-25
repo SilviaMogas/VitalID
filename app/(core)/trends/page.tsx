@@ -1,13 +1,14 @@
 import { Suspense } from "react";
-import { buildHealthMetrics, generateInsights } from "@/lib/analytics";
+import { resolveUserData } from "@/lib/user-data";
 import { TrendsView } from "@/components/trends/TrendsView";
 
-export default function TrendsPage() {
-  const metrics = buildHealthMetrics();
-  const insights = generateInsights();
+export const dynamic = "force-dynamic";
+
+export default async function TrendsPage() {
+  const data = await resolveUserData();
   return (
     <Suspense>
-      <TrendsView metrics={metrics} insights={insights} />
+      <TrendsView metrics={data.metrics} insights={data.insights} />
     </Suspense>
   );
 }

@@ -7,6 +7,8 @@ import type { HealthMetric, Identity, Insight } from "@/types";
 import { InsightCard } from "./InsightCard";
 import { MetricCard } from "./MetricCard";
 import { LogoMark } from "@/components/layout/Logo";
+import { MemberSetupPanel } from "./MemberSetupPanel";
+import type { UserSetup } from "@/lib/onboarding/types";
 
 function greetingKey(): "home.greeting.morning" | "home.greeting.afternoon" | "home.greeting.evening" {
   const h = new Date().getHours();
@@ -19,10 +21,13 @@ export function Dashboard({
   metrics,
   insight,
   identity,
+  setup = null,
 }: {
   metrics: HealthMetric[];
   insight: Insight;
   identity: Identity;
+  /** Onboarding setup for real members; null for the Fatima demo. */
+  setup?: UserSetup | null;
 }) {
   const { t, d, locale } = useLocale();
   const firstName = (identity.localizedName?.[locale] ?? identity.fullName).split(" ")[0];
@@ -77,6 +82,8 @@ export function Dashboard({
           ))}
         </div>
       </section>
+
+      {setup && <MemberSetupPanel setup={setup} />}
 
       <Link
         href="/vital-id"

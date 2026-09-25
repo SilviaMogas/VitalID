@@ -1,8 +1,10 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
 import { PLAN_ORDER, PLANS, planRank, type PlanId } from "@/lib/plans";
 import { HackathonSmallPrint } from "./HackathonSmallPrint";
@@ -18,11 +20,31 @@ function CheckIcon() {
 export function PricingView() {
   const { t } = useLocale();
   const router = useRouter();
-  const params = useSearchParams();
-  const onboarding = params.get("onboarding") === "1";
+  const { status, account, refresh: refreshAuth } = useAuth();
   const { plan: currentPlan, loading, refresh } = useMembership();
   const [busyPlan, setBusyPlan] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const inJourney = status === "member" && account !== null && !account.onboardingCompleted;
+
+  async function continueFree() {
+    setError(null);
+    setBusyPlan("free");
+    try {
+      if (inJourney) {
+        const res = await fetch("/api/membership/choose-free", { method: "POST" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const snap = await refreshAuth();
+        router.push(snap?.next ?? "/onboarding");
+        return;
+      }
+      await refresh();
+      router.push("/");
+    } catch {
+      setError(t("common.error"));
+    } finally {
+      setBusyPlan(null);
+    }
+  }
 
   async function startCheckout(plan: PlanId) {
     setError(null);
@@ -50,14 +72,20 @@ export function PricingView() {
   return (
     <div className="space-y-6">
       <section>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("pricing.title")}</h1>
+        {inJourney && <p className="eyebrow">{t("journey.stepPlan")}</p>}
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">{t("pricing.title")}</h1>
         <p className="mt-1 text-sm text-muted">{t("pricing.subtitle")}</p>
+        {!inJourney && status !== "guest" && (
+          <Link href="/" className="mt-2 inline-block text-sm font-medium text-brand">
+            <span className="inline-block rtl:-scale-x-100">←</span> {t("common.goHome")}
+          </Link>
+        )}
       </section>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {PLAN_ORDER.map((planId) => {
           const plan = PLANS[planId];
-          const isCurrent = !loading && currentPlan === planId;
+          const isCurrent = !loading && currentPlan === planId && !(inJourney && planId === "free");
           const isIncluded = !loading && planRank(currentPlan) > planRank(planId);
           const isPaid = planId !== "free";
           return (
@@ -98,7 +126,15 @@ export function PricingView() {
               </ul>
 
               <div className="mt-5">
-                {isCurrent ? (
+                {isCurrent && inJourney ? (
+                  <button
+                    type="button"
+                    onClick={() => router.push("/onboarding")}
+                    className="w-full rounded-2xl bg-brand py-3 text-sm font-semibold text-white shadow-md transition hover:bg-ink"
+                  >
+                    {t("checkout.continueOnboarding")}
+                  </button>
+                ) : isCurrent ? (
                   <button
                     type="button"
                     disabled
@@ -135,13 +171,11 @@ export function PricingView() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => {
-                      if (onboarding) router.push("/");
-                      else void refresh();
-                    }}
-                    className="w-full rounded-2xl border border-line bg-white py-3 text-sm font-semibold text-ink-2 transition hover:bg-canvas"
+                    onClick={continueFree}
+                    disabled={busyPlan !== null}
+                    className="w-full rounded-2xl border border-line bg-white py-3 text-sm font-semibold text-ink-2 transition hover:bg-canvas disabled:opacity-50"
                   >
-                    {t("pricing.continueFree")}
+                    {busyPlan === "free" ? t("common.loading") : t("pricing.continueFree")}
                   </button>
                 )}
               </div>

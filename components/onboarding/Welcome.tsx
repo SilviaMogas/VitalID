@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { LogoMark } from "@/components/layout/Logo";
 import { Broccoli } from "@/components/mascot/Broccoli";
@@ -10,7 +10,6 @@ import { DEMO_EMERGENCY, DEMO_IDENTITY } from "@/lib/demo-data";
 
 export function Welcome({ onEnter }: { onEnter: () => void }) {
   const { t, toggleLocale, locale } = useLocale();
-  const [note, setNote] = useState(false);
 
   const Arrow = () => <span className="inline-block rtl:-scale-x-100">→</span>;
 
@@ -46,22 +45,20 @@ export function Welcome({ onEnter }: { onEnter: () => void }) {
           </p>
 
           <div className="mt-8 space-y-3">
-            <button
-              type="button"
-              onClick={() => setNote(true)}
+            <Link
+              href="/signup"
               className="rise press flex w-full items-center justify-between rounded-2xl bg-brand px-5 py-3.5 text-sm font-semibold text-white shadow-hero hover:bg-brand-deep"
               style={{ ["--i" as string]: 3 }}
             >
-              {t("onboarding.signIn")} <Arrow />
-            </button>
-            <button
-              type="button"
-              onClick={() => setNote(true)}
+              {t("onboarding.signUp")} <Arrow />
+            </Link>
+            <Link
+              href="/signin"
               className="rise press flex w-full items-center justify-between rounded-2xl border border-brand/40 bg-white px-5 py-3.5 text-sm font-semibold text-brand hover:bg-sage"
               style={{ ["--i" as string]: 4 }}
             >
-              {t("onboarding.signUp")} <Arrow />
-            </button>
+              {t("onboarding.signIn")} <Arrow />
+            </Link>
             <button
               type="button"
               onClick={onEnter}
@@ -80,12 +77,6 @@ export function Welcome({ onEnter }: { onEnter: () => void }) {
           <p className="rise mt-3 text-sm text-muted" style={{ ["--i" as string]: 6 }}>
             {t("onboarding.demoHint")}
           </p>
-          {note && (
-            <div className="pop mt-4 flex items-center gap-3 rounded-2xl bg-sand px-3.5 py-2.5 text-sm text-ink-2 ring-1 ring-line">
-              <Broccoli state="encouraging" size={40} />
-              {t("onboarding.demoOnly")}
-            </div>
-          )}
         </div>
 
         <footer className="rise flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted" style={{ ["--i" as string]: 7 }}>

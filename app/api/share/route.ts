@@ -10,7 +10,7 @@ import {
   type SharePayload,
   type SharePurpose,
 } from '@/lib/sharing';
-import { buildVitalIdSnapshot } from '@/lib/vital-id';
+import { resolveUserData } from '@/lib/user-data';
 import { createShare, listShares } from '@/lib/share-store';
 
 export const dynamic = 'force-dynamic';
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   }
 
   const now = new Date();
-  const full = buildVitalIdSnapshot();
+  const { snapshot: full } = await resolveUserData();
   const payload: SharePayload = {
     id: randomId(),
     createdAt: now.toISOString(),
