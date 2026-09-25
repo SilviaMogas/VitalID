@@ -29,22 +29,30 @@ export class MemoryMembershipStore implements MembershipStore {
     return record ? structuredClone(record) : null;
   }
 
+  private blank(userKey: string, now: string): MembershipRecord {
+    return {
+      userKey,
+      displayName: null,
+      email: null,
+      plan: "free",
+      stripeCustomerId: null,
+      stripeCheckoutSessionId: null,
+      stripePaymentIntentId: null,
+      activatedAt: null,
+      planChosenAt: null,
+      onboardingCompletedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
   async upsert(input: { userKey: string; displayName?: string; email?: string }) {
     const existing = this.map.get(input.userKey);
     const now = new Date().toISOString();
     if (!existing) {
-      const record: MembershipRecord = {
-        userKey: input.userKey,
-        displayName: input.displayName ?? null,
-        email: input.email ?? null,
-        plan: defaultPlan(input.userKey),
-        stripeCustomerId: null,
-        stripeCheckoutSessionId: null,
-        stripePaymentIntentId: null,
-        activatedAt: null,
-        createdAt: now,
-        updatedAt: now,
-      };
+      const record = { ...this.blank(input.userKey, now), plan: defaultPlan(input.userKey) };
+      record.displayName = input.displayName ?? null;
+      record.email = input.email ?? null;
       this.map.set(input.userKey, record);
       return structuredClone(record);
     }
@@ -70,20 +78,7 @@ export class MemoryMembershipStore implements MembershipStore {
     if (existing?.stripeCheckoutSessionId === input.stripeCheckoutSessionId) {
       return structuredClone(existing);
     }
-    const base: MembershipRecord =
-      existing ??
-      ({
-        userKey: input.userKey,
-        displayName: null,
-        email: null,
-        plan: "free",
-        stripeCustomerId: null,
-        stripeCheckoutSessionId: null,
-        stripePaymentIntentId: null,
-        activatedAt: null,
-        createdAt: now,
-        updatedAt: now,
-      } satisfies MembershipRecord);
+    const base = existing ?? this.blank(input.userKey, now);
     const record: MembershipRecord = {
       ...base,
       plan: planRank(input.plan) > planRank(base.plan) ? input.plan : base.plan,
@@ -91,6 +86,7 @@ export class MemoryMembershipStore implements MembershipStore {
       stripeCheckoutSessionId: input.stripeCheckoutSessionId,
       stripePaymentIntentId: input.stripePaymentIntentId ?? base.stripePaymentIntentId,
       activatedAt: now,
+      planChosenAt: base.planChosenAt ?? now,
       updatedAt: now,
     };
     this.map.set(input.userKey, record);
@@ -101,19 +97,37 @@ export class MemoryMembershipStore implements MembershipStore {
     const now = new Date().toISOString();
     const existing = this.map.get(userKey);
     const record: MembershipRecord = {
-      userKey,
+      ...this.blank(userKey, now),
       displayName: existing?.displayName ?? null,
       email: existing?.email ?? null,
-      plan: "free",
-      stripeCustomerId: null,
-      stripeCheckoutSessionId: null,
-      stripePaymentIntentId: null,
-      activatedAt: null,
       createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
     };
     this.map.set(userKey, record);
     return structuredClone(record);
+  }
+
+  async markPlanChosen(userKey: string) {
+    return this.stamp(userKey, "planChosenAt");
+  }
+
+  async completeOnboarding(userKey: string) {
+    return this.stamp(userKey, "onboardingCompletedAt");
+  }
+
+  private async stamp(userKey: string, field: "planChosenAt" | "onboardingCompletedAt") {
+    const now = new Date().toISOString();
+    const base = this.map.get(userKey) ?? this.blank(userKey, now);
+    const record: MembershipRecord = { ...base, [field]: base[field] ?? now, updatedAt: now };
+    this.map.set(userKey, record);
+    return structuredClone(record);
+  }
+
+  async findByEmail(email: string) {
+    const target = email.trim().toLowerCase();
+    for (const record of this.map.values()) {
+      if (record.email?.toLowerCase() === target) return structuredClone(record);
+    }
+    return null;
   }
 }
 

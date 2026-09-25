@@ -57,7 +57,7 @@ export function VitalIdView({ snapshot }: { snapshot: VitalIdSnapshot }) {
       </div>
 
       {/* Membership plan showcase */}
-      <PremiumShowcase sources={snapshot.sources} />
+      <PremiumShowcase />
 
       {/* Data sources + last updated */}
       <div className="rise" style={{ ["--i" as string]: 6 }}>

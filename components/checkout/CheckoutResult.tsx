@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { useMembership } from "@/components/providers/MembershipProvider";
 import { PLANS } from "@/lib/plans";
 import { HackathonSmallPrint } from "@/components/pricing/HackathonSmallPrint";
 
@@ -17,8 +20,19 @@ export function CheckoutResult({
   reason?: string;
 }) {
   const { t } = useLocale();
+  const { account, refresh: refreshAuth } = useAuth();
+  const { refresh: refreshMembership } = useMembership();
 
-  const primary = { href: "/", label: t("checkout.goDashboard") };
+  useEffect(() => {
+    if (status !== "activated") return;
+    void refreshAuth();
+    void refreshMembership();
+  }, [status, refreshAuth, refreshMembership]);
+
+  const continueOnboarding = account !== null && !account.onboardingCompleted;
+  const primary = continueOnboarding
+    ? { href: "/onboarding", label: t("checkout.continueOnboarding") }
+    : { href: "/", label: t("checkout.goDashboard") };
   const secondary = { href: "/pricing", label: t("checkout.managePlan") };
 
   return (
@@ -67,10 +81,14 @@ export function CheckoutResult({
 
       <div className="mt-8 flex w-full flex-col gap-2 sm:flex-row">
         <Link
-          href={status === "cancelled" ? "/pricing" : primary.href}
+          href={status === "cancelled" ? "/pricing" : status === "activated" ? "/onboarding" : primary.href}
           className="flex-1 rounded-2xl bg-brand py-3 text-sm font-semibold text-white shadow-md transition hover:bg-ink"
         >
-          {status === "cancelled" ? t("checkout.backToPricing") : primary.label}
+          {status === "cancelled"
+            ? t("checkout.backToPricing")
+            : status === "activated"
+              ? t("checkout.continueOnboarding")
+              : primary.label}
         </Link>
         <Link
           href={status === "cancelled" ? "/" : secondary.href}

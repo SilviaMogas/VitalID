@@ -4,9 +4,10 @@ import { useMemo, useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
 import {
-  CONNECTORS,
   CONNECTOR_CATEGORIES,
-  connectorsInCategory,
+  PROVIDER_LIST,
+  PROVIDERS,
+  categoriesOf,
   type ConnectorCategory,
 } from "@/lib/connectors";
 import { useConnectorSelection } from "@/lib/connectors-state";
@@ -23,10 +24,12 @@ const FILTERS: { id: Filter; key: TranslationKey; category: ConnectorCategory | 
   { id: "wearables", key: "connectors.filter.wearables", category: "wearables" },
   { id: "sleep", key: "connectors.filter.sleep", category: "sleep" },
   { id: "diet", key: "connectors.filter.diet", category: "diet" },
-  { id: "fitness", key: "connectors.filter.fitness", category: "fitness" },
-  { id: "healthRecords", key: "connectors.filter.healthRecords", category: "medical" },
+  { id: "fitness", key: "connectors.filter.fitness", category: "activity" },
+  { id: "healthRecords", key: "connectors.filter.healthRecords", category: "records" },
   { id: "habits", key: "connectors.filter.habits", category: "hydration" },
 ];
+
+const catLabel = (cat: ConnectorCategory) => `connectors.cat.${cat}` as TranslationKey;
 
 export function ConnectorsView() {
   const { t } = useLocale();
@@ -40,16 +43,16 @@ export function ConnectorsView() {
   const grouped = filter === "all" && query === "";
 
   const visible = useMemo(() => {
-    let list = CONNECTORS;
+    let list = PROVIDER_LIST;
     if (activeCategory) {
-      list = list.filter((c) => c.categories.includes(activeCategory));
+      list = list.filter((p) => categoriesOf(p.id).includes(activeCategory));
     }
     if (query) {
-      list = list.filter((c) => {
+      list = list.filter((p) => {
         const haystack = [
-          c.name,
-          ...c.categories.map((cat) => t(`connectors.category.${cat}` as TranslationKey)),
-          ...c.data.map((kind) => t(`connectors.data.${kind}` as TranslationKey)),
+          p.name,
+          ...categoriesOf(p.id).map((cat) => t(catLabel(cat))),
+          ...p.data.map((kind) => t(`connectors.data.${kind}` as TranslationKey)),
         ]
           .join(" ")
           .toLowerCase();
@@ -67,7 +70,7 @@ export function ConnectorsView() {
         <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
           <span className="rounded-full bg-brand-soft px-3 py-1 font-medium text-brand">
             {t("connectors.stats", {
-              providers: CONNECTORS.length,
+              providers: PROVIDER_LIST.length,
               categories: CONNECTOR_CATEGORIES.length,
             })}
           </span>
@@ -110,24 +113,20 @@ export function ConnectorsView() {
           {t("connectors.noResults")}
         </div>
       ) : grouped ? (
-        CONNECTOR_CATEGORIES.map((cat, i) => {
-          const list = connectorsInCategory(cat);
-          if (list.length === 0) return null;
-          return (
-            <div key={cat} className="rise" style={{ ["--i" as string]: 2 + i }}>
-              <SectionTitle>{t(`connectors.category.${cat}` as TranslationKey)}</SectionTitle>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {list.map((c) => (
-                  <ConnectorCard key={c.id} connector={c} />
-                ))}
-              </div>
+        CONNECTOR_CATEGORIES.map((cat, i) => (
+          <div key={cat.id} className="rise" style={{ ["--i" as string]: 2 + i }}>
+            <SectionTitle>{t(catLabel(cat.id))}</SectionTitle>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {cat.providers.map((pid) => (
+                <ConnectorCard key={pid} provider={PROVIDERS[pid]} />
+              ))}
             </div>
-          );
-        })
+          </div>
+        ))
       ) : (
         <div className="rise grid gap-3 sm:grid-cols-2 lg:grid-cols-3" style={{ ["--i" as string]: 2 }}>
-          {visible.map((c) => (
-            <ConnectorCard key={c.id} connector={c} />
+          {visible.map((p) => (
+            <ConnectorCard key={p.id} provider={p} />
           ))}
         </div>
       )}

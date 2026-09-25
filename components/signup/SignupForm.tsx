@@ -4,29 +4,54 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
-import { LangButton } from "@/components/layout/AppShell";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { useMembership } from "@/components/providers/MembershipProvider";
+import { AuthFrame, Field, inputClass } from "@/components/auth/AuthFrame";
+import type { TranslationKey } from "@/lib/i18n";
+
+const ERROR_KEYS: Record<string, TranslationKey> = {
+  email_taken: "auth.error.emailTaken",
+  weak_password: "auth.error.weakPassword",
+  invalid_email: "auth.error.invalidEmail",
+  not_configured: "auth.error.notConfigured",
+};
 
 export function SignupForm() {
   const { t } = useLocale();
   const router = useRouter();
-  const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
+  const { refresh: refreshAuth } = useAuth();
+  const { refresh: refreshMembership } = useMembership();
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    country: "",
+    city: "",
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setBusy(true);
     try {
-      const res = await fetch("/api/membership/signup", {
+      const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName, email }),
+        body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      window.localStorage.setItem("vitalid.session", "member");
-      router.push("/pricing?onboarding=1");
+      const data = (await res.json().catch(() => ({}))) as { error?: string; next?: string };
+      if (!res.ok) {
+        setError(t(ERROR_KEYS[data.error ?? ""] ?? "common.error"));
+        return;
+      }
+      await Promise.all([refreshAuth(), refreshMembership()]);
+      router.push(data.next ?? "/pricing");
     } catch {
       setError(t("common.error"));
     } finally {
@@ -34,72 +59,55 @@ export function SignupForm() {
     }
   }
 
-  const input =
-    "w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-brand";
-
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 py-8">
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-ink text-white">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-5 w-5">
-              <path d="M3 12h4l2.5-6 4 12 2.5-6H21" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-          <span className="text-base font-semibold tracking-tight">{t("app.name")}</span>
-        </div>
-        <LangButton />
-      </header>
-
-      <main className="mt-10">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("signup.title")}</h1>
-        <p className="mt-1 text-sm text-muted">{t("signup.subtitle")}</p>
-
-        <form onSubmit={submit} className="card mt-6 space-y-4 p-5">
-          <div>
-            <label htmlFor="signup-name" className="mb-1 block text-xs font-medium text-ink-2">
-              {t("signup.name")}
-            </label>
-            <input
-              id="signup-name"
-              required
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className={input}
-              autoComplete="name"
-            />
-          </div>
-          <div>
-            <label htmlFor="signup-email" className="mb-1 block text-xs font-medium text-ink-2">
-              {t("signup.email")}
-            </label>
-            <input
-              id="signup-email"
-              type="email"
-              required
-              dir="ltr"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={input}
-              autoComplete="email"
-            />
-          </div>
-          {error && <p className="text-sm text-bad">{error}</p>}
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full rounded-2xl bg-brand py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-ink disabled:opacity-50"
-          >
-            {busy ? t("common.loading") : t("signup.continue")}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-muted">
-          <Link href="/" className="font-medium text-brand">
+    <AuthFrame
+      title={t("signup.title")}
+      subtitle={t("signup.subtitle")}
+      footer={
+        <>
+          {t("auth.haveAccount")}{" "}
+          <Link href="/signin" className="font-medium text-brand">
+            {t("onboarding.signIn")}
+          </Link>
+          <span className="mx-2 text-line">·</span>
+          <Link href="/welcome" className="font-medium text-brand">
             {t("signup.exploreDemo")}
           </Link>
-        </p>
-      </main>
-    </div>
+        </>
+      }
+    >
+      <form onSubmit={submit} className="card space-y-4 p-5">
+        <div className="grid grid-cols-2 gap-3">
+          <Field id="su-first" label={t("auth.firstName")}>
+            <input id="su-first" required value={form.firstName} onChange={set("firstName")} className={inputClass} autoComplete="given-name" />
+          </Field>
+          <Field id="su-last" label={t("auth.lastName")}>
+            <input id="su-last" required value={form.lastName} onChange={set("lastName")} className={inputClass} autoComplete="family-name" />
+          </Field>
+        </div>
+        <Field id="su-email" label={t("signup.email")}>
+          <input id="su-email" type="email" required dir="ltr" value={form.email} onChange={set("email")} className={inputClass} autoComplete="email" />
+        </Field>
+        <Field id="su-password" label={t("auth.password")} hint={t("auth.passwordHint")}>
+          <input id="su-password" type="password" required minLength={8} dir="ltr" value={form.password} onChange={set("password")} className={inputClass} autoComplete="new-password" />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field id="su-country" label={t("auth.country")}>
+            <input id="su-country" required value={form.country} onChange={set("country")} className={inputClass} autoComplete="country-name" />
+          </Field>
+          <Field id="su-city" label={t("auth.city")}>
+            <input id="su-city" required value={form.city} onChange={set("city")} className={inputClass} autoComplete="address-level2" />
+          </Field>
+        </div>
+        {error && <p className="text-sm text-bad">{error}</p>}
+        <button
+          type="submit"
+          disabled={busy}
+          className="press w-full rounded-2xl bg-brand py-3.5 text-sm font-semibold text-white shadow-hero transition hover:bg-brand-deep disabled:opacity-50"
+        >
+          {busy ? t("common.loading") : t("signup.continue")}
+        </button>
+      </form>
+    </AuthFrame>
   );
 }

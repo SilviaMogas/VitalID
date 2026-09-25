@@ -2,20 +2,21 @@
 
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
-import { getConnectorLimit, hasFeature, type Feature } from "@/lib/plans";
+import { hasFeature, type Feature } from "@/lib/plans";
+import { useConnectorSelection } from "@/lib/connectors-state";
 import type { TranslationKey } from "@/lib/i18n";
 import { SectionTitle } from "@/components/vital-id/VitalIdSections";
 import { LockIcon, UpgradeChip } from "./UpgradeChip";
 
 /** "Included in your plan" section listing gated capabilities on the Vital ID page. */
-export function PremiumShowcase({ sources }: { sources: readonly unknown[] }) {
+export function PremiumShowcase() {
   const { t } = useLocale();
   const { plan, loading } = useMembership();
+  const { count, limit, ready } = useConnectorSelection();
 
-  if (loading) return null;
+  if (loading || !ready) return null;
 
-  const used = sources.length;
-  const limit = getConnectorLimit(plan);
+  const used = count;
 
   const items: { feature: Feature; titleKey: TranslationKey; descKey: TranslationKey }[] = [
     { feature: "advancedInsights", titleKey: "membership.showcase.advancedInsights", descKey: "membership.showcase.advancedInsightsDesc" },

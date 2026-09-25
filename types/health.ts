@@ -26,7 +26,29 @@ export type TrendStatus = "stable" | "improving" | "declining" | "unusual";
 /** Direction of change from baseline: which way is "good" for this metric. */
 export type MetricPolarity = "higherIsBetter" | "lowerIsBetter";
 
-export type DataSource = "circularRing" | "demoWearable" | "manualProfile";
+/**
+ * Where a value came from. `manual` = onboarding baseline entered by the user,
+ * `demo` = deterministic fallback, provider ids = a real connected integration.
+ */
+export type ProviderSource =
+  | "whoop"
+  | "oura"
+  | "circular_ring"
+  | "fitbit"
+  | "garmin"
+  | "apple_health"
+  | "myfitnesspal"
+  | "cronometer"
+  | "macrofactor"
+  | "lifesum"
+  | "strava"
+  | "medical_records"
+  | "uae_health"
+  | "calm"
+  | "headspace"
+  | "wellbeing_future";
+
+export type DataSource = "circularRing" | "demoWearable" | "manualProfile" | "manual" | "demo" | ProviderSource;
 
 /** One day of synthetic signals. Dates are ISO (YYYY-MM-DD). */
 export interface DailyRecord {
@@ -68,7 +90,7 @@ export interface Identity {
   localizedName?: Partial<Record<Locale, string>>;
   vitalId: string;
   dateOfBirth: string; // ISO date
-  sex: "female" | "male";
+  sex: "female" | "male" | "other";
   nationality: string;
 }
 

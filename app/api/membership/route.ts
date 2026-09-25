@@ -6,11 +6,15 @@ export const runtime = 'nodejs';
 
 export async function GET() {
   const membership = await getCurrentMembership();
+  const isDemoUser = membership.userKey === DEMO_USER_KEY;
   return NextResponse.json(
     {
       userKey: membership.userKey,
       plan: membership.plan,
-      isDemoUser: membership.userKey === DEMO_USER_KEY,
+      isDemoUser,
+      // Fatima bypasses the signup funnel entirely.
+      planChosen: isDemoUser || membership.planChosenAt !== null,
+      onboardingComplete: isDemoUser || membership.onboardingCompletedAt !== null,
       displayName: membership.displayName,
       activatedAt: membership.activatedAt,
     },
