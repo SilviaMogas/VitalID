@@ -27,11 +27,12 @@ export function isStripeConfigured(): boolean {
 export function getDemoPriceId(plan: PlanId): string {
   const envKey = PLANS[plan].demoPriceEnvKey;
   if (!envKey) throw new Error(`Plan "${plan}" has no demo price.`);
-  const productEnvKey = `STRIPE_PRODUCT_${plan.toUpperCase()}`;
-  const priceId = process.env[envKey] || process.env[productEnvKey];
+  const upper = plan.toUpperCase();
+  const candidates = [`STRIPE_PRICE_${upper}`, envKey, `STRIPE_PRODUCT_${upper}`];
+  const priceId = candidates.map((k) => process.env[k]).find(Boolean);
   if (!priceId) {
     throw new Error(
-      `Missing env var ${envKey} (or ${productEnvKey}) — run scripts/stripe-setup.mjs to create demo prices.`,
+      `Missing env var: set one of ${candidates.join(', ')} (price_… or prod_… id) — or run scripts/stripe-setup.mjs.`,
     );
   }
   return priceId;
