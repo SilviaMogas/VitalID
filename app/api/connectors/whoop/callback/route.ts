@@ -6,15 +6,17 @@ import {
   consumeState,
   exchangeCode,
   getWhoopStore,
+  publicOrigin,
   readWhoopEnv,
   syncWhoop,
+  whoopRedirectUri,
 } from '@/lib/connectors/whoop';
 import type { UserBasicProfile } from '@/lib/connectors/whoop/types';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const home = (req: NextRequest, flag: string) => NextResponse.redirect(new URL(`/?whoop=${flag}`, req.url));
+const home = (req: NextRequest, flag: string) => NextResponse.redirect(new URL(`/?whoop=${flag}`, publicOrigin(req)));
 
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams;
@@ -27,12 +29,9 @@ export async function GET(req: NextRequest) {
 
   const env = readWhoopEnv();
   if (!env) return home(req, 'not_configured');
-  const redirectUri =
-    env.redirectUri ??
-    new URL('/api/connectors/whoop/callback', process.env.NEXT_PUBLIC_APP_URL ?? req.url).toString();
 
   try {
-    const tokens = await exchangeCode(code, redirectUri);
+    const tokens = await exchangeCode(code, whoopRedirectUri(req));
 
     // Fetch the WHOOP profile to bind the connection to a WHOOP user id.
     let whoopUserId: number | null = null;
