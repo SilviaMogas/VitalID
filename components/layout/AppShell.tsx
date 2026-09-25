@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
@@ -107,19 +107,46 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isBare = BARE_PREFIXES.some((p) => pathname.startsWith(p));
   const isCore = !isBare && pathname !== "/welcome";
 
+  // The intro (splash → welcome) plays on every full page load that lands on the home,
+  // regardless of session. It is dismissed for the rest of the SPA session once the user
+  // continues, or as soon as they navigate anywhere else inside the app.
+  const [introDone, setIntroDone] = useState(false);
+  useEffect(() => {
+    if (pathname !== "/" && pathname !== "/welcome") setIntroDone(true);
+  }, [pathname]);
+  const showIntro = pathname === "/welcome" || (pathname === "/" && !introDone);
+
   // Members who have not finished the journey are steered to the right step;
   // finished members / Fatima / guests are never redirected away from core routes here.
   useEffect(() => {
-    if (!isCore || status !== "member" || !account) return;
+    if (!isCore || showIntro || status !== "member" || !account) return;
     if (account.next !== "/") router.replace(account.next);
-  }, [isCore, status, account, router]);
+  }, [isCore, showIntro, status, account, router]);
 
   const enter = () => {
     void enterAsFatima().then(() => {
       void refreshMembership();
+      setIntroDone(true);
       if (pathname === "/welcome") router.push("/");
     });
   };
+
+  const continueSession =
+    status === "fatima" || (status === "member" && account)
+      ? () => {
+          setIntroDone(true);
+          if (status === "member" && account && account.next !== "/") {
+            router.push(account.next);
+          } else if (pathname === "/welcome") {
+            router.push("/");
+          }
+        }
+      : undefined;
+
+  const continueName =
+    status === "member"
+      ? account?.firstName || t("profile.you")
+      : DEMO_IDENTITY.localizedName?.[locale] ?? DEMO_IDENTITY.fullName;
 
   const signOut = () => {
     window.localStorage.removeItem(CONNECTORS_STORAGE_KEY);
@@ -165,8 +192,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  if (pathname === "/welcome") {
-    return <Onboarding onEnter={enter} />;
+  if (showIntro) {
+    return (
+      <Onboarding
+        onEnter={enter}
+        onContinue={continueSession}
+        continueName={continueName}
+        onAuthLink={() => setIntroDone(true)}
+      />
+    );
   }
 
   if (status === "loading") {
@@ -174,7 +208,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   if (status === "guest") {
-    return <Onboarding onEnter={enter} />;
+    return <Onboarding onEnter={enter} skipSplash />;
   }
 
   if (status === "member" && account && account.next !== "/") {
