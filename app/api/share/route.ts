@@ -18,7 +18,7 @@ export const runtime = 'nodejs';
 
 const BASE62 = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-function randomId(len = 10): string {
+function randomId(len = 16): string {
   const bytes = crypto.randomBytes(len);
   let id = '';
   for (let i = 0; i < len; i++) id += BASE62[bytes[i] % 62];
