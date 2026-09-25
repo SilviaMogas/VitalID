@@ -55,12 +55,21 @@ export function PricingView() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
       });
-      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        url?: string;
+        error?: string;
+        stage?: string;
+        detail?: string;
+      };
       if (res.status === 503 || data.error === "stripe_not_configured") {
         setError(t("pricing.stripeNotConfigured"));
         return;
       }
-      if (!res.ok || !data.url) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok || !data.url) {
+        const code = [data.stage, data.detail].filter(Boolean).join(" / ");
+        setError(`${t("common.error")}${code ? ` (${code})` : ` (HTTP ${res.status})`}`);
+        return;
+      }
       window.location.assign(data.url);
     } catch {
       setError(t("common.error"));
