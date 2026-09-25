@@ -72,13 +72,17 @@ async function doRefresh(userKey: string, conn: WhoopConnection): Promise<WhoopC
     // The in-flight map only covers this process; another instance may have
     // rotated the pair (making ours invalid). Reuse it instead of failing,
     // refreshing once more if the newer access token is itself about to expire.
+    let attempted = conn;
     const other = await rotatedByOther(userKey, conn);
     if (other) {
       if (!isExpired(other)) return other;
+      attempted = other;
       try {
         return await rotate(userKey, other);
       } catch {
-        /* fall through to the original failure */
+        // Lost a second race on the same pair: accept whatever newer pair won.
+        const newer = await rotatedByOther(userKey, other);
+        if (newer && !isExpired(newer)) return newer;
       }
     }
     const err =
@@ -88,8 +92,10 @@ async function doRefresh(userKey: string, conn: WhoopConnection): Promise<WhoopC
             'refresh_failed',
             e instanceof Error ? e.message : 'WHOOP refresh failed',
           );
+    // Conditional on the row still holding the token we failed with, so a
+    // pair rotated by another instance is never flagged as needing reauth.
     await getWhoopStore()
-      .markSync(userKey, { lastSyncError: 'refresh_failed' })
+      .markRefreshFailed(userKey, attempted.refreshToken)
       .catch(() => undefined);
     throw err;
   }
