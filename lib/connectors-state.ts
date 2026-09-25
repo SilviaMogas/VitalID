@@ -54,6 +54,17 @@ function writeDemoSelection(connectors: UserConnector[]) {
   window.dispatchEvent(new Event("vitalid:connectors"));
 }
 
+// Member selection shared across every hook instance on the page (each card
+// and the usage counter mount their own hook) so a toggle in one card is
+// reflected everywhere without refetching.
+const MEMBER_EVENT = "vitalid:member-connectors";
+let memberCache: { memberId: string; connectors: UserConnector[] } | null = null;
+
+function publishMemberSelection(memberId: string, connectors: UserConnector[]) {
+  memberCache = { memberId, connectors };
+  window.dispatchEvent(new Event(MEMBER_EVENT));
+}
+
 export function useConnectorSelection() {
   const { isDemoUser, connectorLimit, loading } = useMembership();
   const { account } = useAuth();
@@ -72,12 +83,13 @@ export function useConnectorSelection() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const setup = (await res.json()) as UserSetup;
       setConnectors(setup.connectors);
+      if (memberId) publishMemberSelection(memberId, setup.connectors);
     } catch {
       setConnectors([]);
     } finally {
       setReady(true);
     }
-  }, [isDemoUser]);
+  }, [isDemoUser, memberId]);
 
   useEffect(() => {
     if (loading) return;
@@ -85,6 +97,15 @@ export function useConnectorSelection() {
     setConnectors([]);
     void load();
   }, [loading, load, memberId]);
+
+  useEffect(() => {
+    if (!memberId) return;
+    const sync = () => {
+      if (memberCache?.memberId === memberId) setConnectors(memberCache.connectors);
+    };
+    window.addEventListener(MEMBER_EVENT, sync);
+    return () => window.removeEventListener(MEMBER_EVENT, sync);
+  }, [memberId]);
 
   // Keep in sync when another component writes the demo selection.
   useEffect(() => {
@@ -135,15 +156,26 @@ export function useConnectorSelection() {
         writeDemoSelection(next);
         return;
       }
+      if (memberId) publishMemberSelection(memberId, next);
+      const rollback = () => {
+        setConnectors(prev);
+        if (memberId) publishMemberSelection(memberId, prev);
+      };
       void fetch("/api/onboarding", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ connectors: next }),
-      }).then((res) => {
-        if (!res.ok) setConnectors(prev);
-      }).catch(() => setConnectors(prev));
+      }).then(async (res) => {
+        if (!res.ok) {
+          rollback();
+          return;
+        }
+        const setup = (await res.json()) as UserSetup;
+        setConnectors(setup.connectors);
+        if (memberId) publishMemberSelection(memberId, setup.connectors);
+      }).catch(rollback);
     },
-    [connectors, count, limit, isDemoUser],
+    [connectors, count, limit, isDemoUser, memberId],
   );
 
   return useMemo(
