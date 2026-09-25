@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { useMembership } from "@/components/providers/MembershipProvider";
+import { PlanBadge } from "@/components/membership/PlanBadge";
 import type { TranslationKey } from "@/lib/i18n";
 import { LogoMark } from "@/components/layout/Logo";
-import { PlanBadge } from "@/components/membership/PlanBadge";
-import { useMembership } from "@/components/providers/MembershipProvider";
 import { Broccoli } from "@/components/mascot/Broccoli";
-import { Onboarding, SESSION_KEY, hasSession } from "@/components/onboarding/Onboarding";
+import { Onboarding } from "@/components/onboarding/Onboarding";
+
+/** Routes rendered without the app navigation (auth + setup journey, public share view). */
+const BARE_PREFIXES = ["/shared", "/signup", "/signin", "/checkout", "/pricing", "/onboarding"];
 
 const NAV: { href: string; key: TranslationKey; icon: ReactNode }[] = [
   {
@@ -61,56 +65,44 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { t, locale } = useLocale();
-  const { planChosen, onboardingComplete, loading: membershipLoading, refresh } = useMembership();
-  const [session, setSession] = useState<boolean | null>(null);
+  const { status, account, enterAsFatima, signOut: authSignOut } = useAuth();
+  const { refresh: refreshMembership } = useMembership();
 
+  const isBare = BARE_PREFIXES.some((p) => pathname.startsWith(p));
+  const isCore = !isBare && pathname !== "/welcome";
+
+  // Members who have not finished the journey are steered to the right step;
+  // finished members / Fatima / guests are never redirected away from core routes here.
   useEffect(() => {
-    setSession(hasSession());
-  }, [pathname]);
+    if (!isCore || status !== "member" || !account) return;
+    if (account.next !== "/") router.replace(account.next);
+  }, [isCore, status, account, router]);
 
-  // Re-read localStorage during render post-mount so a just-set session
-  // (e.g. right after signup) isn't masked by stale state (splash flash fix).
-  const effectiveSession = session === null ? null : hasSession();
-
-  const enter = async () => {
-    // Clear any lingering member cookie BEFORE entering so the membership
-    // provider re-fetches as fatima, not the previous member.
-    await fetch("/api/membership/signout", { method: "POST" }).catch(() => {});
-    window.localStorage.setItem(SESSION_KEY, "fatima");
-    await refresh();
-    setSession(true);
-    if (pathname === "/welcome") router.push("/");
+  const enter = () => {
+    void enterAsFatima().then(() => {
+      void refreshMembership();
+      if (pathname === "/welcome") router.push("/");
+    });
   };
 
   const signOut = () => {
-    window.localStorage.removeItem(SESSION_KEY);
-    setSession(false);
-    // Clear the membership cookie too (fire-and-forget).
-    void fetch("/api/membership/signout", { method: "POST" }).catch(() => {});
-    router.push("/welcome");
+    void authSignOut().then(() => {
+      void refreshMembership();
+      router.push("/welcome");
+    });
   };
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  // Member funnel gating on shell routes: signed-up users must pick a plan and
-  // finish onboarding before reaching the app. Fatima is never gated.
-  const sessionKind = effectiveSession ? window.localStorage.getItem(SESSION_KEY) : null;
-  const isShellRoute =
-    pathname === "/" ||
-    pathname.startsWith("/trends") ||
-    pathname.startsWith("/vital-id") ||
-    (pathname.startsWith("/share") && !pathname.startsWith("/shared"));
-  useEffect(() => {
-    if (sessionKind !== "member" || membershipLoading || !isShellRoute) return;
-    if (!planChosen) router.replace("/pricing");
-    else if (!onboardingComplete) router.replace("/onboarding");
-  }, [sessionKind, membershipLoading, isShellRoute, planChosen, onboardingComplete, router]);
-
-  if (["/shared", "/signup", "/checkout", "/onboarding"].some((p) => pathname.startsWith(p))) {
+  if (isBare) {
     return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-2xl">
-        {pathname.startsWith("/shared") && (
+      <div
+        className={`mx-auto flex min-h-dvh w-full max-w-md flex-col ${
+          pathname.startsWith("/pricing") ? "md:max-w-5xl" : "md:max-w-2xl"
+        }`}
+      >
+        {["/shared", "/pricing", "/onboarding"].some((p) => pathname.startsWith(p)) && (
           <header className="flex items-center justify-between px-5 pt-5">
             <Brand compact />
             <LangButton />
@@ -125,12 +117,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     return <Onboarding onEnter={enter} />;
   }
 
-  if (effectiveSession === null) {
+  if (status === "loading") {
     return <div className="min-h-dvh" aria-busy />;
   }
 
-  if (!effectiveSession) {
+  if (status === "guest") {
     return <Onboarding onEnter={enter} />;
+  }
+
+  if (status === "member" && account && account.next !== "/") {
+    return <div className="min-h-dvh" aria-busy />;
   }
 
   return (

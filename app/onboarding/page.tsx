@@ -1,7 +1,12 @@
-import { OnboardingSetup } from "@/components/onboarding/OnboardingSetup";
+import { Suspense } from "react";
+import { SetupWizard } from "@/components/onboarding/setup/SetupWizard";
 
 export const dynamic = "force-dynamic";
 
 export default function OnboardingPage() {
-  return <OnboardingSetup />;
+  return (
+    <Suspense fallback={<div className="min-h-[60dvh]" aria-busy />}>
+      <SetupWizard />
+    </Suspense>
+  );
 }

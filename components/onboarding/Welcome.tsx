@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { LogoMark } from "@/components/layout/Logo";
 import { Broccoli } from "@/components/mascot/Broccoli";
@@ -11,36 +10,6 @@ import { DEMO_EMERGENCY, DEMO_IDENTITY } from "@/lib/demo-data";
 
 export function Welcome({ onEnter }: { onEnter: () => void }) {
   const { t, toggleLocale, locale } = useLocale();
-  const router = useRouter();
-  const [signInOpen, setSignInOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [notFound, setNotFound] = useState(false);
-
-  async function signIn(e: React.FormEvent) {
-    e.preventDefault();
-    setNotFound(false);
-    setBusy(true);
-    try {
-      const res = await fetch("/api/membership/signin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      if (res.status === 404) {
-        setNotFound(true);
-        return;
-      }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { planChosen: boolean; onboardingComplete: boolean };
-      window.localStorage.setItem("vitalid.session", "member");
-      router.push(!data.planChosen ? "/pricing" : !data.onboardingComplete ? "/onboarding" : "/");
-    } catch {
-      setNotFound(true);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   const Arrow = () => <span className="inline-block rtl:-scale-x-100">→</span>;
 
@@ -76,43 +45,20 @@ export function Welcome({ onEnter }: { onEnter: () => void }) {
           </p>
 
           <div className="mt-8 space-y-3">
-            <button
-              type="button"
-              onClick={() => setSignInOpen((v) => !v)}
+            <Link
+              href="/signup"
               className="rise press flex w-full items-center justify-between rounded-2xl bg-brand px-5 py-3.5 text-sm font-semibold text-white shadow-hero hover:bg-brand-deep"
               style={{ ["--i" as string]: 3 }}
             >
-              {t("onboarding.signIn")} <Arrow />
-            </button>
-            {signInOpen && (
-              <form onSubmit={signIn} className="pop space-y-2">
-                <input
-                  type="email"
-                  required
-                  dir="ltr"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder={t("onboarding.signInEmail")}
-                  className="w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-brand"
-                />
-                {notFound && <p className="text-xs text-bad">{t("onboarding.signInNotFound")}</p>}
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="press w-full rounded-xl bg-ink py-2.5 text-sm font-semibold text-white transition hover:bg-brand disabled:opacity-50"
-                >
-                  {busy ? t("common.loading") : t("onboarding.signInCta")}
-                </button>
-              </form>
-            )}
-            <button
-              type="button"
-              onClick={() => router.push("/signup")}
+              {t("onboarding.signUp")} <Arrow />
+            </Link>
+            <Link
+              href="/signin"
               className="rise press flex w-full items-center justify-between rounded-2xl border border-brand/40 bg-white px-5 py-3.5 text-sm font-semibold text-brand hover:bg-sage"
               style={{ ["--i" as string]: 4 }}
             >
-              {t("onboarding.signUp")} <Arrow />
-            </button>
+              {t("onboarding.signIn")} <Arrow />
+            </Link>
             <button
               type="button"
               onClick={onEnter}
@@ -128,15 +74,7 @@ export function Welcome({ onEnter }: { onEnter: () => void }) {
               <Arrow />
             </button>
           </div>
-          <p className="rise mt-3 flex items-center gap-2 text-xs font-medium text-ink-2" style={{ ["--i" as string]: 6 }}>
-            <span className="text-brand">
-              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
-                <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2.5" fill="none" />
-              </svg>
-            </span>
-            {t("onboarding.dataProvidedBy")}
-          </p>
-          <p className="rise mt-1.5 text-sm text-muted" style={{ ["--i" as string]: 6 }}>
+          <p className="rise mt-3 text-sm text-muted" style={{ ["--i" as string]: 6 }}>
             {t("onboarding.demoHint")}
           </p>
         </div>

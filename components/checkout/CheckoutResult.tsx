@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { useMembership } from "@/components/providers/MembershipProvider";
 import { PLANS } from "@/lib/plans";
 import { HackathonSmallPrint } from "@/components/pricing/HackathonSmallPrint";
 
@@ -17,8 +20,19 @@ export function CheckoutResult({
   reason?: string;
 }) {
   const { t } = useLocale();
+  const { account, refresh: refreshAuth } = useAuth();
+  const { refresh: refreshMembership } = useMembership();
 
-  const primary = { href: "/", label: t("checkout.goDashboard") };
+  useEffect(() => {
+    if (status !== "activated") return;
+    void refreshAuth();
+    void refreshMembership();
+  }, [status, refreshAuth, refreshMembership]);
+
+  const continueOnboarding = account !== null && !account.onboardingCompleted;
+  const primary = continueOnboarding
+    ? { href: "/onboarding", label: t("checkout.continueOnboarding") }
+    : { href: "/", label: t("checkout.goDashboard") };
   const secondary = { href: "/pricing", label: t("checkout.managePlan") };
 
   return (
