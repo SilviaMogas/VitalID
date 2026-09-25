@@ -53,6 +53,7 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
 
   async function post(path: string): Promise<void> {
     setBusy(true);
+    setNotice(null);
     try {
       const res = await fetch(path, { method: "POST" });
       if (res.status === 401) setNotice({ key: "whoop.notice.reauth", tone: "warn" });

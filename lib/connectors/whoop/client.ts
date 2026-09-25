@@ -23,7 +23,22 @@ function isExpired(conn: WhoopConnection): boolean {
   return new Date(conn.expiresAt).getTime() - 60_000 <= Date.now();
 }
 
-async function refreshAndPersist(userKey: string, conn: WhoopConnection): Promise<WhoopConnection> {
+/**
+ * Concurrent callers (the sync fans out six requests) share one refresh per
+ * user: WHOOP rotates refresh tokens, so a second parallel refresh with the
+ * same token would be rejected.
+ */
+const inflightRefresh = new Map<string, Promise<WhoopConnection>>();
+
+function refreshAndPersist(userKey: string, conn: WhoopConnection): Promise<WhoopConnection> {
+  const existing = inflightRefresh.get(userKey);
+  if (existing) return existing;
+  const p = doRefresh(userKey, conn).finally(() => inflightRefresh.delete(userKey));
+  inflightRefresh.set(userKey, p);
+  return p;
+}
+
+async function doRefresh(userKey: string, conn: WhoopConnection): Promise<WhoopConnection> {
   try {
     const tokens = await refreshTokens(conn.refreshToken);
     // Rotated pair must be persisted before it is ever used.
@@ -77,7 +92,12 @@ export async function whoopGet<T>(userKey: string, path: string, query?: Record<
   const first = await apiGet<T>(env.apiBase, path, conn.accessToken, query);
   if (first.status !== 401) return first.data as T;
 
-  conn = await refreshAndPersist(userKey, conn);
+  // Another request may already have rotated the tokens; reuse them before refreshing again.
+  const latest = await store.get(userKey);
+  conn =
+    latest && latest.accessToken !== conn.accessToken && !isExpired(latest)
+      ? latest
+      : await refreshAndPersist(userKey, latest ?? conn);
   const retry = await apiGet<T>(env.apiBase, path, conn.accessToken, query);
   if (retry.status === 401) {
     throw new WhoopError('unauthorized', 'WHOOP API still returns 401 after refresh', 401);
