@@ -4,6 +4,7 @@ import { LocaleProvider } from "@/components/providers/LocaleProvider";
 import { MembershipProvider } from "@/components/providers/MembershipProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { AppShell } from "@/components/layout/AppShell";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "Vital ID",
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </MembershipProvider>
           </AuthProvider>
         </LocaleProvider>
+        <Analytics />
       </body>
     </html>
   );
