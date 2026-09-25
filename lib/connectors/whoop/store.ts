@@ -41,6 +41,8 @@ export interface WhoopStore {
       whoopUserId?: number;
     },
   ): Promise<void>;
+  /** Records a refresh failure only if the row still holds the refresh token that failed. */
+  markRefreshFailed(userKey: string, attemptedRefreshToken: string): Promise<void>;
   delete(userKey: string): Promise<void>;
   saveDaily(userKey: string, rows: WhoopDaily[]): Promise<void>;
   getDaily(userKey: string): Promise<WhoopDaily[]>;
@@ -66,7 +68,11 @@ class MemoryWhoopStore implements WhoopStore {
   async updateTokens(userKey: string, tokens: { accessToken: string; refreshToken: string; expiresAt: string }) {
     const c = this.connections.get(userKey);
     if (!c) return;
-    this.connections.set(userKey, { ...c, ...tokens });
+    this.connections.set(userKey, {
+      ...c,
+      ...tokens,
+      lastSyncError: c.lastSyncError === 'refresh_failed' ? null : c.lastSyncError,
+    });
   }
   async markSync(userKey: string, patch: Parameters<WhoopStore['markSync']>[1]) {
     const c = this.connections.get(userKey);
@@ -80,6 +86,11 @@ class MemoryWhoopStore implements WhoopStore {
       weightKg: patch.body?.weightKg ?? c.weightKg,
       maxHeartRate: patch.body?.maxHeartRate ?? c.maxHeartRate,
     });
+  }
+  async markRefreshFailed(userKey: string, attemptedRefreshToken: string) {
+    const c = this.connections.get(userKey);
+    if (!c || c.refreshToken !== attemptedRefreshToken) return;
+    this.connections.set(userKey, { ...c, lastSyncError: 'refresh_failed' });
   }
   async delete(userKey: string) {
     this.connections.delete(userKey);
@@ -212,6 +223,23 @@ class SupabaseWhoopStore implements WhoopStore {
       })
       .eq('user_key', userKey);
     if (error) throw new Error(`whoop token update failed: ${error.message}`);
+    // A stale refresh_failed from a lost refresh race is void once valid tokens are stored.
+    const cleared = await sb
+      .from('vital_id_whoop_connections')
+      .update({ last_sync_error: null })
+      .eq('user_key', userKey)
+      .eq('last_sync_error', 'refresh_failed');
+    if (cleared.error) throw new Error(`whoop token update failed: ${cleared.error.message}`);
+  }
+
+  async markRefreshFailed(userKey: string, attemptedRefreshToken: string): Promise<void> {
+    const sb = getSupabaseServerClient();
+    const { error } = await sb
+      .from('vital_id_whoop_connections')
+      .update({ last_sync_error: 'refresh_failed', updated_at: new Date().toISOString() })
+      .eq('user_key', userKey)
+      .eq('refresh_token', attemptedRefreshToken);
+    if (error) throw new Error(`whoop mark refresh failed: ${error.message}`);
   }
 
   async markSync(userKey: string, patch: Parameters<WhoopStore['markSync']>[1]): Promise<void> {
