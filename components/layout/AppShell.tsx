@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import { LogoMark } from "@/components/layout/Logo";
+import { PlanBadge } from "@/components/membership/PlanBadge";
 import { Broccoli } from "@/components/mascot/Broccoli";
 import { Onboarding, SESSION_KEY, hasSession } from "@/components/onboarding/Onboarding";
 
@@ -74,19 +75,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   const signOut = () => {
     window.localStorage.removeItem(SESSION_KEY);
     setSession(false);
+    // Clear the membership cookie too (fire-and-forget).
+    void fetch("/api/membership/signout", { method: "POST" }).catch(() => {});
     router.push("/welcome");
   };
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  if (pathname.startsWith("/shared")) {
+  if (["/shared", "/signup", "/checkout"].some((p) => pathname.startsWith(p))) {
     return (
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-2xl">
-        <header className="flex items-center justify-between px-5 pt-5">
-          <Brand compact />
-          <LangButton />
-        </header>
+        {pathname.startsWith("/shared") && (
+          <header className="flex items-center justify-between px-5 pt-5">
+            <Brand compact />
+            <LangButton />
+          </header>
+        )}
         <main className="flex-1 px-5 pb-12 pt-4" key={locale}>{children}</main>
       </div>
     );
@@ -133,6 +138,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <PlanBadge />
             <LangButton />
             <button
               type="button"
@@ -150,6 +156,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="flex items-center justify-between px-5 pt-5 md:hidden">
           <Brand compact />
           <div className="flex items-center gap-1.5">
+            <PlanBadge />
             <LangButton />
             <button
               type="button"

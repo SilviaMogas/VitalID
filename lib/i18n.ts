@@ -66,6 +66,88 @@ const companionStrings = {
   "companion.shieldNote": ["You choose what to share — and for how long.", "أنت تختار ما تشاركه — ولأي مدة."],
 } as const satisfies Record<string, readonly [string, string]>;
 
+const pricingStrings = {
+  "pricing.title": ["Choose your plan", "اختر خطتك"],
+  "pricing.subtitle": ["Unlock more of Vital ID — pick the plan that fits you.", "افتح المزيد من Vital ID — اختر الخطة المناسبة لك."],
+  "pricing.plan.free.name": ["Free", "مجاني"],
+  "pricing.plan.plus.name": ["Plus", "Plus"],
+  "pricing.plan.pro.name": ["Pro", "Pro"],
+  "pricing.billing.free": ["Free forever", "مجاني دائمًا"],
+  "pricing.billing.monthly": ["/month", "/شهريًا"],
+  "pricing.recommended": ["Recommended", "موصى به"],
+  "pricing.yourPlan": ["Your plan", "خطتك"],
+  "pricing.currentPlan": ["Current plan", "الخطة الحالية"],
+  "pricing.included": ["Included", "مشمول"],
+  "pricing.getPlan": ["Get {plan}", "احصل على {plan}"],
+  "pricing.cta.continueFree": ["Continue with Free", "المتابعة بالخطة المجانية"],
+  "pricing.upgrade": ["Upgrade", "ترقية"],
+  "pricing.upgradeTo": ["Upgrade to {plan}", "الترقية إلى {plan}"],
+  "pricing.stripeNotConfigured": ["Payments are not configured yet — Stripe keys are missing.", "المدفوعات غير مهيأة بعد — مفاتيح Stripe غير موجودة."],
+  "pricing.smallPrint": [
+    "Hackathon launch offer: Plus and Pro are displayed at their intended monthly pricing. During this demo, a one-time $1 payment is charged. No recurring subscription is created.",
+    "عرض إطلاق الهاكاثون: تُعرض خطتا Plus وPro بأسعارهما الشهرية المقصودة. خلال هذا العرض التجريبي، يُحصَّل مبلغ $1 لمرة واحدة فقط. لا يتم إنشاء أي اشتراك متكرر.",
+  ],
+  "pricing.smallPrint.short": ["Demo: one-time $1 charge today", "عرض تجريبي: دفعة $1 لمرة واحدة اليوم"],
+
+  "pricing.feature.free.vitalId": ["Vital ID profile", "ملف Vital ID"],
+  "pricing.feature.free.dashboard": ["Dashboard", "لوحة التحكم"],
+  "pricing.feature.free.basicMetrics": ["Basic health metrics", "المؤشرات الصحية الأساسية"],
+  "pricing.feature.free.basicTrends": ["Basic trends", "الاتجاهات الأساسية"],
+  "pricing.feature.free.basicSharing": ["Basic sharing", "المشاركة الأساسية"],
+  "pricing.feature.free.connectors": ["Up to 2 connectors", "حتى موصلَين"],
+  "pricing.feature.plus.everythingFree": ["Everything in Free", "كل ما في الخطة المجانية"],
+  "pricing.feature.plus.connectors": ["Up to 5 connectors", "حتى 5 موصلات"],
+  "pricing.feature.plus.advancedTrends": ["Advanced trends", "اتجاهات متقدمة"],
+  "pricing.feature.plus.qrSharing": ["QR sharing", "المشاركة عبر QR"],
+  "pricing.feature.plus.configurableExpiry": ["Configurable link expiry", "مدة صلاحية قابلة للتخصيص"],
+  "pricing.feature.plus.advancedInsights": ["Advanced insights", "رؤى متقدمة"],
+  "pricing.feature.plus.detailedHealthProfile": ["More detailed health profile", "ملف صحي أكثر تفصيلًا"],
+  "pricing.feature.pro.everythingPlus": ["Everything in Plus", "كل ما في خطة Plus"],
+  "pricing.feature.pro.connectors": ["Unlimited connectors", "موصلات غير محدودة"],
+  "pricing.feature.pro.nutrition": ["Nutrition & macros", "التغذية والعناصر الغذائية"],
+  "pricing.feature.pro.advancedConsent": ["Advanced consent controls", "ضوابط موافقة متقدمة"],
+  "pricing.feature.pro.caregiverAccess": ["Caregiver / family access", "وصول مقدّم الرعاية / العائلة"],
+  "pricing.feature.pro.completeTimeline": ["Complete health timeline", "الجدول الزمني الصحي الكامل"],
+  "pricing.feature.pro.priorityIntegrations": ["Priority future integrations", "أولوية في التكاملات المستقبلية"],
+
+  "signup.title": ["Create your Vital ID", "أنشئ معرّفك الحيوي"],
+  "signup.subtitle": ["One quick step before choosing your plan.", "خطوة سريعة واحدة قبل اختيار خطتك."],
+  "signup.name": ["Name", "الاسم"],
+  "signup.email": ["Email", "البريد الإلكتروني"],
+  "signup.continue": ["Continue to plans", "المتابعة إلى الخطط"],
+  "signup.exploreDemo": ["Explore the demo as Fatima", "استكشف العرض التجريبي بحساب فاطمة"],
+
+  "checkout.welcome": ["Welcome to {plan}", "مرحبًا بك في {plan}"],
+  "checkout.active": ["Your membership is active.", "عضويتك نشطة."],
+  "checkout.goDashboard": ["Go to dashboard", "الانتقال إلى لوحة التحكم"],
+  "checkout.managePlan": ["Manage plan", "إدارة الخطة"],
+  "checkout.failedTitle": ["Payment not completed", "لم يكتمل الدفع"],
+  "checkout.failedBody": ["We could not confirm your payment. If you were charged, your plan will activate automatically.", "تعذّر تأكيد الدفع. إذا تم خصم المبلغ، ستُفعَّل خطتك تلقائيًا."],
+  "checkout.cancelledTitle": ["Checkout cancelled", "تم إلغاء الدفع"],
+  "checkout.cancelledBody": ["No charge was made.", "لم يتم خصم أي مبلغ."],
+  "checkout.backToPricing": ["Back to plans", "العودة إلى الخطط"],
+
+  "membership.showcase.title": ["Included in your plan", "ضمن خطتك"],
+  "membership.showcase.connectors": ["Data connectors", "موصلات البيانات"],
+  "membership.showcase.connectorsUsed": ["{used} of {limit} connectors", "{used} من {limit} موصلات"],
+  "membership.showcase.connectorsUnlimited": ["{used} connectors — unlimited", "{used} موصلات — غير محدود"],
+  "membership.showcase.connectorsOver": ["You are over your plan's connector limit.", "لقد تجاوزت حد الموصلات في خطتك."],
+  "membership.showcase.advancedInsights": ["Advanced insights", "رؤى متقدمة"],
+  "membership.showcase.advancedInsightsDesc": ["Deeper analysis of your trends and signals.", "تحليل أعمق لاتجاهاتك ومؤشراتك."],
+  "membership.showcase.nutrition": ["Nutrition & macros", "التغذية والعناصر الغذائية"],
+  "membership.showcase.nutritionDesc": ["Track nutrition and macronutrients.", "تتبّع التغذية والعناصر الغذائية الكبرى."],
+  "membership.showcase.caregiver": ["Caregiver / family access", "وصول مقدّم الرعاية / العائلة"],
+  "membership.showcase.caregiverDesc": ["Share access with a caregiver or family member.", "شارك الوصول مع مقدّم رعاية أو فرد من العائلة."],
+  "membership.showcase.consent": ["Advanced consent controls", "ضوابط موافقة متقدمة"],
+  "membership.showcase.consentDesc": ["Fine-grained control over who sees what.", "تحكم دقيق في من يرى ماذا."],
+  "membership.showcase.timeline": ["Complete health timeline", "الجدول الزمني الصحي الكامل"],
+  "membership.showcase.timelineDesc": ["Your full health history in one place.", "سجلك الصحي الكامل في مكان واحد."],
+  "membership.showcase.active": ["Active", "نشط"],
+
+  "membership.gate.qrTitle": ["QR sharing is a Plus feature", "المشاركة عبر QR من ميزات Plus"],
+  "membership.gate.qrDesc": ["Upgrade to share via QR code.", "قم بالترقية للمشاركة عبر رمز QR."],
+} as const satisfies Record<string, readonly [string, string]>;
+
 function pickLocale<T extends Record<string, readonly [string, string]>>(table: T, index: 0 | 1): { [K in keyof T]: string } {
   return Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v[index]])) as { [K in keyof T]: string };
 }
@@ -225,6 +307,7 @@ const en = {
   ...pickLocale(shareStrings, 0),
   ...pickLocale(brandStrings, 0),
   ...pickLocale(companionStrings, 0),
+  ...pickLocale(pricingStrings, 0),
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -354,6 +437,7 @@ const ar: Record<TranslationKey, string> = {
   ...pickLocale(shareStrings, 1),
   ...pickLocale(brandStrings, 1),
   ...pickLocale(companionStrings, 1),
+  ...pickLocale(pricingStrings, 1),
 };
 
 export const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, ar };

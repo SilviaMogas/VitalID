@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { LocaleProvider } from "@/components/providers/LocaleProvider";
+import { MembershipProvider } from "@/components/providers/MembershipProvider";
 import { AppShell } from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
@@ -19,7 +20,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" dir="ltr" suppressHydrationWarning>
       <body>
         <LocaleProvider>
-          <AppShell>{children}</AppShell>
+          <MembershipProvider>
+            <AppShell>{children}</AppShell>
+          </MembershipProvider>
         </LocaleProvider>
       </body>
     </html>

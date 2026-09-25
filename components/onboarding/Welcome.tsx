@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { LogoMark } from "@/components/layout/Logo";
 import { Broccoli } from "@/components/mascot/Broccoli";
@@ -10,6 +11,7 @@ import { DEMO_EMERGENCY, DEMO_IDENTITY } from "@/lib/demo-data";
 
 export function Welcome({ onEnter }: { onEnter: () => void }) {
   const { t, toggleLocale, locale } = useLocale();
+  const router = useRouter();
   const [note, setNote] = useState(false);
 
   const Arrow = () => <span className="inline-block rtl:-scale-x-100">→</span>;
@@ -56,7 +58,7 @@ export function Welcome({ onEnter }: { onEnter: () => void }) {
             </button>
             <button
               type="button"
-              onClick={() => setNote(true)}
+              onClick={() => router.push("/signup")}
               className="rise press flex w-full items-center justify-between rounded-2xl border border-brand/40 bg-white px-5 py-3.5 text-sm font-semibold text-brand hover:bg-sage"
               style={{ ["--i" as string]: 4 }}
             >
