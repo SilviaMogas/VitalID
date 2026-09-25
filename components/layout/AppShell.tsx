@@ -64,7 +64,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setSession(hasSession());
-  }, []);
+  }, [pathname]);
 
   const enter = () => {
     window.localStorage.setItem(SESSION_KEY, "fatima");
