@@ -175,7 +175,7 @@ export function PricingView() {
                     disabled={busyPlan !== null}
                     className="w-full rounded-2xl border border-line bg-white py-3 text-sm font-semibold text-ink-2 transition hover:bg-canvas disabled:opacity-50"
                   >
-                    {busyPlan === "free" ? t("common.loading") : t("pricing.continueFree")}
+                    {busyPlan === "free" ? t("common.loading") : t("pricing.cta.continueFree")}
                   </button>
                 )}
               </div>

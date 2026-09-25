@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
-import { LockIcon } from "@/components/membership/UpgradeChip";
+import { LockIcon, UpgradeChip } from "@/components/membership/UpgradeChip";
 import type { TranslationKey } from "@/lib/i18n";
 import { METRIC_KEYS, type HealthMetric, type Insight, type MetricKey } from "@/types";
 import { METRIC_META } from "@/lib/demo-data";
@@ -18,7 +18,7 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
   const { t, n } = useLocale();
   const router = useRouter();
   const { hasFeature, loading } = useMembership();
-  const canUse30d = loading || hasFeature("advancedTrends");
+  const locked30d = !loading && !hasFeature("advancedTrends");
   const params = useSearchParams();
   const initial = params.get("metric") as MetricKey | null;
   const [selected, setSelected] = useState<MetricKey>(
@@ -53,22 +53,22 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
         ))}
       </div>
 
-      <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-line">
-        {([7, 30] as const).map((r) => {
-          const locked = r === 30 && !canUse30d;
-          return (
+      <div className="flex items-center gap-2">
+        <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-line">
+          {([7, 30] as const).map((r) => (
             <button
               key={r}
-              onClick={() => (locked ? router.push("/pricing") : setRange(r))}
+              onClick={() => (r === 30 && locked30d ? router.push("/pricing") : setRange(r))}
               className={`press inline-flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-semibold transition ${
                 range === r ? "bg-brand text-white shadow-card" : "text-muted hover:text-ink-2"
               }`}
             >
               {t(r === 7 ? "trends.range.7d" : "trends.range.30d")}
-              {locked && <LockIcon className="h-3 w-3" />}
+              {r === 30 && locked30d && <LockIcon className="h-3 w-3" />}
             </button>
-          );
-        })}
+          ))}
+        </div>
+        {locked30d && <UpgradeChip plan="plus" />}
       </div>
 
       <div className="card rounded-[1.75rem] p-5">

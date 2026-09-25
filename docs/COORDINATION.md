@@ -115,8 +115,7 @@ Small, working increments. Avoid long-lived divergent branches.
 
 Branch: `devin/1790337054-stripe-membership`. Stripe LIVE membership (one-time $1 demo charge), docs in `docs/BILLING.md`.
 
-- Welcome "Sign up" button should `router.push("/signup")`.
-- `hasSession()` should accept any non-null `vitalid.session` value — the signup flow sets `vitalid.session="member"`. Fatima flow is unchanged (no cookie → demo user `"fatima"`).
+- Done on this branch: Welcome "Sign up" button routes to `/signup`; `hasSession()` accepts any non-empty `vitalid.session` value (signup sets `"member"`, Fatima still sets `"fatima"`). AppShell sign-out also clears the `vitalid_uid` cookie via `POST /api/membership/signout`.
 - Membership API: `GET /api/membership` → `{userKey, plan, isDemoUser, displayName, activatedAt}`; `POST /api/membership/reset` (demo reset).
 - Client helpers: `useMembership()` from `@/components/providers/MembershipProvider` → `{plan, loading, isDemoUser, refresh, hasFeature, connectorLimit}`; `PlanBadge`, `UpgradeChip`, `LockedFeature` (card + `overlay` variants), `PremiumShowcase` under `components/membership/`.
 - All plan/feature logic: `lib/plans.ts` (`PLANS`, `hasFeature`, `requiredPlanFor`, `getConnectorLimit`, `planRank`). Use these — don't fork entitlement logic.

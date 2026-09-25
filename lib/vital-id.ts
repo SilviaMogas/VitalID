@@ -12,5 +12,5 @@ export {
   getDelta,
   getTrend,
 } from "@/lib/analytics";
-export { getDailyRecords, METRIC_META } from "@/lib/demo-data";
+export { getDailyRecords, METRIC_META, METRIC_SOURCE } from "@/lib/demo-data";
 export type * from "@/types";

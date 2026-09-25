@@ -44,7 +44,7 @@ export type ProviderSource =
   | "medical_records"
   | "uae_health";
 
-export type DataSource = "demoWearable" | "manualProfile" | "manual" | "demo" | ProviderSource;
+export type DataSource = "circularRing" | "demoWearable" | "manualProfile" | "manual" | "demo" | ProviderSource;
 
 /** One day of synthetic signals. Dates are ISO (YYYY-MM-DD). */
 export interface DailyRecord {

@@ -54,7 +54,7 @@ const shareStrings = {
   "share.sharedBy": ["Shared by", "شاركه"],
   "share.purposeLabel": ["Purpose", "الغرض"],
   "share.unavailable": ["This Vital ID access has expired or been revoked.", "انتهت صلاحية هذا الوصول إلى المعرّف الحيوي أو تم إلغاؤه."],
-  "share.readonlyFooter": ["Read-only. Data source: demo dataset (synthetic)", "للقراءة فقط. مصدر البيانات: مجموعة بيانات تجريبية (اصطناعية)"],
+  "share.readonlyFooter": ["Read-only. Data source: Circular Ring sample data", "للقراءة فقط. مصدر البيانات: بيانات نموذجية من Circular Ring"],
 } as const satisfies Record<string, readonly [string, string]>;
 
 const companionStrings = {
@@ -79,7 +79,7 @@ const pricingStrings = {
   "pricing.currentPlan": ["Current plan", "الخطة الحالية"],
   "pricing.included": ["Included", "مشمول"],
   "pricing.getPlan": ["Get {plan}", "احصل على {plan}"],
-  "pricing.continueFree": ["Continue with Free", "المتابعة بالخطة المجانية"],
+  "pricing.cta.continueFree": ["Continue with Free", "المتابعة بالخطة المجانية"],
   "pricing.upgrade": ["Upgrade", "ترقية"],
   "pricing.upgradeTo": ["Upgrade to {plan}", "الترقية إلى {plan}"],
   "pricing.stripeNotConfigured": ["Payments are not configured yet — Stripe keys are missing.", "المدفوعات غير مهيأة بعد — مفاتيح Stripe غير موجودة."],
@@ -305,6 +305,7 @@ const brandStrings = {
   "onboarding.signIn": ["Sign in", "تسجيل الدخول"],
   "onboarding.signUp": ["Sign up", "إنشاء حساب"],
   "onboarding.demoCta": ["Login as Fatima", "الدخول كفاطمة"],
+  "onboarding.dataProvidedBy": ["Data provided by Circular Ring", "البيانات مقدمة من Circular Ring"],
   "onboarding.demoHint": ["Explore the demo instantly as Fatima", "استكشف النسخة التجريبية فورًا كفاطمة"],
   "onboarding.demoOnly": ["Accounts are not part of this demo — continue as Fatima.", "الحسابات ليست جزءًا من هذه النسخة التجريبية — تابع كفاطمة."],
   "onboarding.previewTag": ["Health has a new identity", "للصحة هوية جديدة"],
@@ -312,7 +313,7 @@ const brandStrings = {
   "onboarding.pill.private": ["Private", "خاص"],
   "onboarding.pill.portable": ["Portable", "محمول"],
   "onboarding.foot.privacy": ["Your data, your control", "بياناتك، تحت سيطرتك"],
-  "onboarding.foot.demo": ["Synthetic demo data", "بيانات تجريبية اصطناعية"],
+  "onboarding.foot.demo": ["Sample data from Circular Ring", "بيانات نموذجية من Circular Ring"],
   "onboarding.signOut": ["Sign out", "تسجيل الخروج"],
   "mascot.insightAttention": ["Worth a look — compared with your own baseline.", "يستحق نظرة — مقارنةً بخط أساسك."],
   "mascot.insightCalm": ["Looking steady. Nice work.", "الأمور مستقرة. أحسنت."],
@@ -373,6 +374,7 @@ const en = {
   "range.above": "Above usual range",
   "range.within": "Within usual range",
 
+  "source.circularRing": "Circular Ring",
   "source.demoWearable": "Demo wearable",
   "source.manualProfile": "Manual profile",
   "source.label": "Source",
@@ -504,6 +506,7 @@ const ar: Record<TranslationKey, string> = {
   "range.above": "أعلى من النطاق المعتاد",
   "range.within": "ضمن النطاق المعتاد",
 
+  "source.circularRing": "Circular Ring",
   "source.demoWearable": "جهاز قابل للارتداء تجريبي",
   "source.manualProfile": "ملف يدوي",
   "source.label": "المصدر",
