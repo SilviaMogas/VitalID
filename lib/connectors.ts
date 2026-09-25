@@ -178,7 +178,17 @@ export function applyPlanToConnectors(connectors: UserConnector[], plan: PlanId)
   );
   const limit = getConnectorLimit(plan);
   if (limit === null) return eligible;
-  const connected = eligible.filter((c) => c.status === "connected");
-  const rest = eligible.filter((c) => c.status !== "connected");
-  return [...connected, ...rest.slice(0, Math.max(0, limit - connected.length))];
+  // The limit counts distinct providers (a provider may appear under several
+  // categories), matching the client-side count.
+  const kept = new Set<ProviderId>();
+  const ordered = [
+    ...eligible.filter((c) => c.status === "connected"),
+    ...eligible.filter((c) => c.status !== "connected"),
+  ];
+  return ordered.filter((c) => {
+    if (kept.has(c.provider)) return true;
+    if (kept.size >= limit && c.status !== "connected") return false;
+    kept.add(c.provider);
+    return true;
+  });
 }

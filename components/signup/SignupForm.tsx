@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
@@ -19,7 +19,7 @@ const ERROR_KEYS: Record<string, TranslationKey> = {
 export function SignupForm() {
   const { t } = useLocale();
   const router = useRouter();
-  const { refresh: refreshAuth } = useAuth();
+  const { status, account, refresh: refreshAuth } = useAuth();
   const { refresh: refreshMembership } = useMembership();
   const [form, setForm] = useState({
     firstName: "",
@@ -31,6 +31,11 @@ export function SignupForm() {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Already signed in: hand off to the routing rules instead of showing the form.
+  useEffect(() => {
+    if (status === "member" && account) router.replace(account.next);
+  }, [status, account, router]);
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));

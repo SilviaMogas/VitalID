@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
@@ -11,12 +11,17 @@ import { AuthFrame, Field, inputClass } from "@/components/auth/AuthFrame";
 export function SigninForm() {
   const { t } = useLocale();
   const router = useRouter();
-  const { refresh: refreshAuth } = useAuth();
+  const { status, account, refresh: refreshAuth } = useAuth();
   const { refresh: refreshMembership } = useMembership();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Already signed in: hand off to the routing rules instead of showing the form.
+  useEffect(() => {
+    if (status === "member" && account) router.replace(account.next);
+  }, [status, account, router]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
