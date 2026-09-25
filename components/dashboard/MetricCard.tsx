@@ -6,6 +6,8 @@ import { METRIC_META } from "@/lib/demo-data";
 import type { TranslationKey } from "@/lib/i18n";
 import type { HealthMetric, TrendStatus } from "@/types";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
+import { Companion } from "@/components/companions/Companion";
+import { COMPANION_FOR_METRIC, companionMood } from "@/lib/companions";
 import { Sparkline } from "@/components/trends/Sparkline";
 
 export function rangeKey(m: HealthMetric): TranslationKey {
@@ -51,7 +53,15 @@ export function MetricCard({ metric, href, index = 0 }: { metric: HealthMetric; 
             <span className="text-sm text-muted">{t(`unit.${metric.unit}` as TranslationKey)}</span>
           </p>
         </div>
-        <StatusBadge status={metric.status} tone={tone} />
+        <div className="flex items-start gap-2">
+          <Companion
+            name={COMPANION_FOR_METRIC[metric.metric]}
+            mood={companionMood(metric)}
+            size={44}
+            className="shrink-0"
+          />
+          <StatusBadge status={metric.status} tone={tone} />
+        </div>
       </div>
 
       <div className="mt-3 flex items-end justify-between gap-3">
