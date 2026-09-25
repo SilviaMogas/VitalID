@@ -128,6 +128,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       void refreshMembership();
       setIntroDone(true);
       if (pathname === "/welcome") router.push("/");
+      else router.refresh();
     });
   };
 
