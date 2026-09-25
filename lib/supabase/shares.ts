@@ -170,4 +170,19 @@ export class SupabaseShareStore implements ShareStore {
       .not('id', 'is', null);
     if (error) throw new Error(`clearVitalIdShares failed: ${error.message}`);
   }
+
+  async clearVitalIdSharesForOwner(ownerKey: string, includeLegacyNull = false): Promise<void> {
+    const { error } = await this.client
+      .from(VITAL_ID_SHARES_TABLE)
+      .delete()
+      .eq('snapshot->>ownerKey', ownerKey);
+    if (error) throw new Error(`clearVitalIdSharesForOwner failed: ${error.message}`);
+    if (includeLegacyNull) {
+      const { error: legacyError } = await this.client
+        .from(VITAL_ID_SHARES_TABLE)
+        .delete()
+        .is('snapshot->>ownerKey', null);
+      if (legacyError) throw new Error(`clearVitalIdSharesForOwner failed: ${legacyError.message}`);
+    }
+  }
 }

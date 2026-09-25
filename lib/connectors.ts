@@ -15,7 +15,7 @@
  * the provider, and have the OAuth callback upsert `status: "connected"` via
  * the onboarding store — no UI redesign needed.
  */
-import type { PlanId } from "@/lib/plans";
+import { getConnectorLimit, planRank, type PlanId } from "@/lib/plans";
 
 export type ConnectorStatus =
   | "connected"
@@ -162,4 +162,21 @@ export function isConnectorStatus(v: unknown): v is ConnectorStatus {
     v === "coming_soon" ||
     v === "disconnected"
   );
+}
+
+/**
+ * Server-side plan enforcement for a user's connector list.
+ * Drops providers whose `requiredPlan` exceeds `plan` and caps the list at the
+ * plan's connector limit. `connected` rows are never dropped (a real OAuth
+ * link must stay visible so it can be disconnected) and sort first.
+ */
+export function applyPlanToConnectors(connectors: UserConnector[], plan: PlanId): UserConnector[] {
+  const eligible = connectors.filter(
+    (c) => c.status === "connected" || planRank(PROVIDERS[c.provider].requiredPlan) <= planRank(plan),
+  );
+  const limit = getConnectorLimit(plan);
+  if (limit === null) return eligible;
+  const connected = eligible.filter((c) => c.status === "connected");
+  const rest = eligible.filter((c) => c.status !== "connected");
+  return [...connected, ...rest.slice(0, Math.max(0, limit - connected.length))];
 }

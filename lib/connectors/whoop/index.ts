@@ -16,7 +16,7 @@ export async function getWhoopStatus(userKey: string): Promise<WhoopConnectionPu
     connected: conn !== null,
     connectedAt: conn?.connectedAt ?? null,
     lastSyncedAt: conn?.lastSyncedAt ?? null,
-    needsReauth: conn?.lastSyncError === 'refresh_failed',
+    needsReauth: conn?.lastSyncError === 'refresh_failed' || conn?.lastSyncError === 'unauthorized',
   };
 }
 
