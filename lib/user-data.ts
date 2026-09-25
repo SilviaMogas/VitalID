@@ -101,8 +101,9 @@ function applyWhoop(
     restingHeartRate: 0,
     activity: 0,
   };
+  const today = new Date().toISOString().slice(0, 10);
   for (const w of whoopDaily) {
-    if (w.date > lastDate) records.push(overlay(seed, w.date));
+    if (w.date > lastDate && w.date <= today) records.push(overlay(seed, w.date));
   }
   return { records, whoopMetrics };
 }

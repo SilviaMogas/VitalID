@@ -100,5 +100,13 @@ export function mapWhoopToDaily(input: {
     d.workoutCount = (d.workoutCount ?? 0) + 1;
   }
 
+  // A scored cycle with no workouts is a zero-activity day, not a missing one.
+  for (const d of days.values()) {
+    if (d.strain !== null && d.workoutMinutes === null) {
+      d.workoutMinutes = 0;
+      d.workoutCount = 0;
+    }
+  }
+
   return [...days.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
 }
