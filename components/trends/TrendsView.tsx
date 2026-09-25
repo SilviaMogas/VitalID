@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
-import { LockIcon } from "@/components/membership/UpgradeChip";
+import { LockIcon, UpgradeChip } from "@/components/membership/UpgradeChip";
 import type { TranslationKey } from "@/lib/i18n";
 import { METRIC_KEYS, type HealthMetric, type Insight, type MetricKey } from "@/types";
 import { METRIC_META } from "@/lib/demo-data";
@@ -12,12 +12,13 @@ import { isWorse, rangeKey, statusTone } from "@/components/dashboard/MetricCard
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { InsightCard } from "@/components/dashboard/InsightCard";
 import { TrendChart } from "@/components/trends/TrendChart";
+import { MascotNote } from "@/components/mascot/MascotNote";
 
 export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; insights: Insight[] }) {
   const { t, n } = useLocale();
   const router = useRouter();
   const { hasFeature, loading } = useMembership();
-  const canUse30d = loading || hasFeature("advancedTrends");
+  const locked30d = !loading && !hasFeature("advancedTrends");
   const params = useSearchParams();
   const initial = params.get("metric") as MetricKey | null;
   const [selected, setSelected] = useState<MetricKey>(
@@ -41,8 +42,10 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
           <button
             key={m.metric}
             onClick={() => setSelected(m.metric)}
-            className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
-              m.metric === selected ? "bg-ink text-white" : "bg-white text-ink-2 border border-line"
+            className={`press shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+              m.metric === selected
+                ? "bg-brand text-white shadow-hero"
+                : "bg-white text-ink-2 ring-1 ring-line hover:bg-sage"
             }`}
           >
             {t(`metric.${m.metric}` as TranslationKey)}
@@ -50,25 +53,25 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
         ))}
       </div>
 
-      <div className="flex gap-2">
-        {([7, 30] as const).map((r) => {
-          const locked = r === 30 && !canUse30d;
-          return (
+      <div className="flex items-center gap-2">
+        <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-line">
+          {([7, 30] as const).map((r) => (
             <button
               key={r}
-              onClick={() => (locked ? router.push("/pricing") : setRange(r))}
-              className={`inline-flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold ${
-                range === r ? "bg-brand-soft text-brand" : "text-muted"
+              onClick={() => (r === 30 && locked30d ? router.push("/pricing") : setRange(r))}
+              className={`press inline-flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                range === r ? "bg-brand text-white shadow-card" : "text-muted hover:text-ink-2"
               }`}
             >
               {t(r === 7 ? "trends.range.7d" : "trends.range.30d")}
-              {locked && <LockIcon className="h-3 w-3" />}
+              {r === 30 && locked30d && <LockIcon className="h-3 w-3" />}
             </button>
-          );
-        })}
+          ))}
+        </div>
+        {locked30d && <UpgradeChip plan="plus" />}
       </div>
 
-      <div className="card p-5">
+      <div className="card rounded-[1.75rem] p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-ink-2">
@@ -125,12 +128,24 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
           </span>
           <span>{t(rangeKey(metric))}</span>
         </p>
+
+        {metric.status === "unusual" ? (
+          <div className="mt-4">
+            <MascotNote state="alert" size={48}>
+              {t("mascot.metricUnusual")}
+            </MascotNote>
+          </div>
+        ) : metric.status === "stable" ? (
+          <div className="mt-4">
+            <MascotNote state="happy" size={48}>
+              {t("mascot.metricStable")}
+            </MascotNote>
+          </div>
+        ) : null}
       </div>
 
       <div>
-        <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted">
-          {t("trends.whatItMeans")}
-        </h2>
+        <h2 className="eyebrow">{t("trends.whatItMeans")}</h2>
         <div className="mt-2 space-y-3">
           {metricInsights.length === 0 ? (
             <p className="card p-4 text-sm text-ink-2">

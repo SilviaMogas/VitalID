@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
@@ -18,9 +18,7 @@ function CheckIcon() {
 export function PricingView() {
   const { t } = useLocale();
   const router = useRouter();
-  const params = useSearchParams();
-  const onboarding = params.get("onboarding") === "1";
-  const { plan: currentPlan, loading, refresh } = useMembership();
+  const { plan: currentPlan, loading } = useMembership();
   const [busyPlan, setBusyPlan] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,7 +96,7 @@ export function PricingView() {
               </ul>
 
               <div className="mt-5">
-                {isCurrent ? (
+                {isCurrent && isPaid ? (
                   <button
                     type="button"
                     disabled
@@ -135,13 +133,10 @@ export function PricingView() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => {
-                      if (onboarding) router.push("/");
-                      else void refresh();
-                    }}
+                    onClick={() => router.push("/")}
                     className="w-full rounded-2xl border border-line bg-white py-3 text-sm font-semibold text-ink-2 transition hover:bg-canvas"
                   >
-                    {t("pricing.continueFree")}
+                    {t("pricing.cta.continueFree")}
                   </button>
                 )}
               </div>

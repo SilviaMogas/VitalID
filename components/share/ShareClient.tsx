@@ -8,6 +8,8 @@ import { LockedFeature } from "@/components/membership/LockedFeature";
 import { LockIcon, UpgradeChip } from "@/components/membership/UpgradeChip";
 import type { TranslationKey } from "@/lib/i18n";
 import { SectionTitle } from "@/components/vital-id/VitalIdSections";
+import { MascotNote } from "@/components/mascot/MascotNote";
+import { Companion } from "@/components/companions/Companion";
 import {
   PURPOSE_PRESETS,
   SHARE_DURATIONS,
@@ -142,22 +144,33 @@ export default function ShareClient() {
   }
 
   const pill = (on: boolean) =>
-    `rounded-full border px-4 py-1.5 text-sm font-medium transition ${
+    `press rounded-2xl px-4 py-1.5 text-sm font-medium transition ${
       on
-        ? "border-brand bg-brand text-white"
-        : "border-line bg-white text-ink-2 hover:border-brand"
+        ? "bg-brand text-white shadow-card"
+        : "bg-white text-ink-2 ring-1 ring-line hover:bg-sage"
     }`;
 
   return (
     <div className="space-y-5">
-      <section>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("share.title")}</h1>
-        <p className="mt-1 text-sm text-muted">{t("share.subtitle")}</p>
+      <section className="flex items-center gap-3">
+        <Companion name="shield" mood="idle" size={56} label={t("companion.shield")} className="shrink-0" />
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("share.title")}</h1>
+          <p className="mt-1 text-sm text-muted">{t("share.subtitle")}</p>
+        </div>
       </section>
 
+      <div className="rise" style={{ ["--i" as string]: 0 }}>
+        <MascotNote state="encouraging" size={56}>
+          {t("mascot.shareIntro")}
+        </MascotNote>
+      </div>
+
       {/* Step 1 — purpose */}
-      <div className="card p-5">
-        <SectionTitle>{t("share.stepPurpose")}</SectionTitle>
+      <div className="card rise p-5" style={{ ["--i" as string]: 1 }}>
+        <div className="flex items-baseline gap-2">
+          <SectionTitle>{t("share.stepPurpose")}</SectionTitle>
+        </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {SHARE_PURPOSES.map((p) => (
             <button key={p} type="button" onClick={() => pickPurpose(p)} className={pill(purpose === p)}>
@@ -168,13 +181,15 @@ export default function ShareClient() {
       </div>
 
       {/* Step 2 — fields */}
-      <div className="card p-5">
-        <SectionTitle>{t("share.stepInfo")}</SectionTitle>
+      <div className="card rise p-5" style={{ ["--i" as string]: 2 }}>
+        <div className="flex items-baseline gap-2">
+          <SectionTitle>{t("share.stepInfo")}</SectionTitle>
+        </div>
         <div className="mt-3 space-y-2">
           {SHARE_FIELDS.map((f) => (
             <label
               key={f}
-              className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-canvas/50 p-3 transition hover:border-brand"
+              className="flex cursor-pointer items-start gap-3 rounded-2xl bg-surface p-3 ring-1 ring-line transition hover:ring-brand"
             >
               <input
                 type="checkbox"
@@ -192,8 +207,10 @@ export default function ShareClient() {
       </div>
 
       {/* Step 3 — expiry */}
-      <div className="card p-5">
-        <SectionTitle>{t("share.stepExpiry")}</SectionTitle>
+      <div className="card rise p-5" style={{ ["--i" as string]: 3 }}>
+        <div className="flex items-baseline gap-2">
+          <SectionTitle>{t("share.stepExpiry")}</SectionTitle>
+        </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {SHARE_DURATIONS.map((dur) => {
             const locked = !canPickExpiry && dur !== 60;
@@ -224,19 +241,31 @@ export default function ShareClient() {
         type="button"
         onClick={generate}
         disabled={busy}
-        className="w-full rounded-2xl bg-brand py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-ink disabled:opacity-50"
+        className="press w-full rounded-2xl bg-brand py-3.5 text-sm font-semibold text-white shadow-lift transition hover:bg-brand-deep disabled:opacity-50"
       >
         {busy ? t("share.generating") : t("share.generate")}
       </button>
 
       {/* Result card */}
       {result && (
-        <div className="card p-5">
+        <div className="card pop p-5">
           {result.revoked ? (
-            <p className="text-center font-semibold text-bad">{t("share.revoked")}</p>
+            <div className="flex flex-col items-center gap-2 py-2">
+              <MascotNote state="neutral" size={56}>
+                {t("mascot.shareRevoked")}
+              </MascotNote>
+              <p className="text-center font-semibold text-bad">{t("share.revoked")}</p>
+            </div>
           ) : (
             <>
-              <SectionTitle>{t("share.yourLink")}</SectionTitle>
+              <div className="flex justify-center">
+                <MascotNote state="success" size={56}>
+                  {t("mascot.shareReady")}
+                </MascotNote>
+              </div>
+              <div className="mt-3">
+                <SectionTitle>{t("share.yourLink")}</SectionTitle>
+              </div>
               <div className="mt-3 flex items-center gap-2">
                 <input
                   readOnly
@@ -260,27 +289,34 @@ export default function ShareClient() {
                   title={t("membership.gate.qrTitle")}
                   description={t("membership.gate.qrDesc")}
                 >
-                  <QRCodeSVG value={link} size={220} />
+                  <div className="rounded-2xl bg-white p-4 shadow-lift ring-1 ring-line">
+                    <QRCodeSVG value={link} size={200} />
+                  </div>
                 </LockedFeature>
               </div>
-              <p className="mt-2 text-center text-xs text-muted">{t("share.qrNote")}</p>
-              <p className="mt-3 text-sm text-ink-2">
-                {t("share.validUntil")}:{" "}
-                {d(result.expiresAt, { year: "numeric", hour: "2-digit", minute: "2-digit" })}
+              <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-xs text-muted">
+                <span aria-hidden>🔒</span>
+                {t("share.qrNote")}
+              </p>
+              <p className="mt-3 flex justify-center">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3.5 py-1.5 text-sm font-semibold text-brand-deep">
+                  {t("share.validUntil")}:{" "}
+                  {d(result.expiresAt, { year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </span>
               </p>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <a
                   href={link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 rounded-xl border border-brand px-4 py-2.5 text-center text-sm font-medium text-brand transition hover:bg-brand-soft"
+                  className="press flex-1 rounded-xl bg-white px-4 py-2.5 text-center text-sm font-medium text-brand ring-1 ring-brand transition hover:bg-brand-soft"
                 >
                   {t("share.openRecipient")}
                 </a>
                 <button
                   type="button"
                   onClick={() => revoke(result.id)}
-                  className="flex-1 rounded-xl bg-bad px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
+                  className="press flex-1 rounded-xl bg-bad px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
                 >
                   {t("share.revoke")}
                 </button>
@@ -291,14 +327,17 @@ export default function ShareClient() {
       )}
 
       {/* Active shares */}
-      <div className="card p-5">
+      <div className="surface p-5">
         <SectionTitle>{t("share.activeShares")}</SectionTitle>
-        <div className="mt-3 divide-y divide-line">
+        <div className="mt-3 space-y-2">
           {shares.length === 0 && <p className="py-1 text-sm text-muted">{t("share.noShares")}</p>}
           {shares.map((s) => {
             const st = statusOf(s);
             return (
-              <div key={s.id} className="flex items-center justify-between gap-3 py-2.5">
+              <div
+                key={s.id}
+                className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-line"
+              >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">
                     {t(`share.purpose.${s.purpose}` as TranslationKey)}
@@ -319,7 +358,7 @@ export default function ShareClient() {
                     <button
                       type="button"
                       onClick={() => revoke(s.id)}
-                      className="rounded-lg border border-bad/30 px-2.5 py-1 text-xs text-bad transition hover:bg-bad-soft"
+                      className="press rounded-full bg-white px-3 py-1 text-xs font-medium text-bad ring-1 ring-bad/40 transition hover:bg-bad-soft"
                     >
                       {t("share.revoke")}
                     </button>
@@ -335,7 +374,7 @@ export default function ShareClient() {
         <button
           type="button"
           onClick={resetDemo}
-          className="rounded-xl border border-line px-3.5 py-2 text-sm text-muted transition hover:bg-canvas"
+          className="press rounded-full bg-white px-3.5 py-2 text-sm text-muted ring-1 ring-line transition hover:bg-sage"
         >
           {t("share.reset")}
         </button>
