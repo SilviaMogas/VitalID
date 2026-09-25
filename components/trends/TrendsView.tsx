@@ -8,7 +8,8 @@ import { LockIcon, UpgradeChip } from "@/components/membership/UpgradeChip";
 import type { TranslationKey } from "@/lib/i18n";
 import { METRIC_KEYS, type HealthMetric, type Insight, type MetricKey } from "@/types";
 import { METRIC_META } from "@/lib/demo-data";
-import { isWorse, rangeKey, statusTone } from "@/components/dashboard/MetricCard";
+import Link from "next/link";
+import { baselineLabel, isWorse, rangeKey, statusTone } from "@/components/dashboard/MetricCard";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { InsightCard } from "@/components/dashboard/InsightCard";
 import { TrendChart } from "@/components/trends/TrendChart";
@@ -26,7 +27,33 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
   );
   const [range, setRange] = useState<7 | 30>(7);
   const metric = metrics.find((m) => m.metric === selected) ?? metrics[0];
+
+  if (!metric) {
+    return (
+      <div className="space-y-6">
+        <section>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("trends.title")}</h1>
+          <p className="mt-1 text-sm text-muted">{t("trends.subtitle")}</p>
+        </section>
+        <section className="card rounded-[1.75rem] p-6 md:p-8">
+          <h2 className="text-xl font-semibold tracking-tight">{t("empty.trends.title")}</h2>
+          <p className="mt-2 max-w-prose text-sm text-ink-2">{t("empty.trends.body")}</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Link href="/onboarding?step=4" className="press rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-hero">
+              {t("empty.dashboard.manual")}
+            </Link>
+            <Link href="/connectors" className="press rounded-full bg-white px-4 py-2 text-sm font-semibold text-brand ring-1 ring-line">
+              {t("empty.dashboard.connect")}
+            </Link>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   const tone = statusTone(metric.status, isWorse(metric));
+  const available = metric.history.length;
+  const shown = Math.min(range, available);
   const arrow = metric.deltaPercent === 0 ? "→" : metric.deltaPercent > 0 ? "↑" : "↓";
   const metricInsights = insights.filter((i) => i.metric === selected);
 
@@ -93,7 +120,7 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
           {[
             { label: t("baseline.today"), value: metric.value },
             { label: t("baseline.7dayAvg"), value: metric.sevenDayAverage },
-            { label: t("baseline.30day"), value: metric.baseline },
+            { label: baselineLabel(metric, t), value: metric.baseline },
           ].map((s) => (
             <div key={s.label}>
               <p className="text-[10px] uppercase tracking-wide text-muted">{s.label}</p>
@@ -108,7 +135,16 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
         </div>
 
         <div className="mt-4">
-          <TrendChart metric={metric} days={range} />
+          {available < 2 ? (
+            <p className="rounded-xl bg-canvas p-4 text-sm text-ink-2">{t("empty.trends.single")}</p>
+          ) : (
+            <>
+              <TrendChart metric={metric} days={range} />
+              {shown < range && (
+                <p className="mt-2 text-[11px] text-muted">{t("trends.range.available", { days: shown })}</p>
+              )}
+            </>
+          )}
         </div>
 
         <p className="mt-3 flex items-center gap-1.5 text-xs text-muted">
@@ -147,7 +183,9 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
       <div>
         <h2 className="eyebrow">{t("trends.whatItMeans")}</h2>
         <div className="mt-2 space-y-3">
-          {metricInsights.length === 0 ? (
+          {available < 2 ? (
+            <p className="card p-4 text-sm text-ink-2">{t("baseline.manualNote")}</p>
+          ) : metricInsights.length === 0 ? (
             <p className="card p-4 text-sm text-ink-2">
               {t(
                 metric.status === "stable"

@@ -1,38 +1,46 @@
 import "server-only";
 import { cache } from "react";
 import { getCurrentUser } from "@/lib/auth/server";
-import { buildHealthMetric, buildHealthMetrics, generateInsights, buildVitalIdSnapshot } from "@/lib/analytics";
-import { DEMO_DAYS, DEMO_IDENTITY, METRIC_META, getDailyRecords } from "@/lib/demo-data";
+import { buildMetricFromSeries, insightsFromMetrics, type SeriesPoint } from "@/lib/analytics";
+import {
+  DEMO_EMERGENCY,
+  DEMO_IDENTITY,
+  DEMO_PROFILE,
+  DEMO_SETUP,
+  METRIC_META,
+  METRIC_SOURCE,
+  getDailyRecords,
+} from "@/lib/demo-data";
 import { DEMO_USER_KEY } from "@/lib/membership/constants";
 import { getOnboardingStore } from "@/lib/onboarding/store";
 import { emptySetup, type UserSetup } from "@/lib/onboarding/types";
 import { getWhoopBody, getWhoopDaily, getWhoopStatus } from "@/lib/connectors/whoop";
 import type { WhoopConnectionPublic, WhoopDaily } from "@/lib/connectors/whoop/types";
-import type {
-  DailyRecord,
-  DataSource,
-  EmergencyInfo,
-  HealthMetric,
-  HealthProfile,
-  Identity,
-  Insight,
-  MetricKey,
-  VitalIdSnapshot,
+import {
+  METRIC_KEYS,
+  type DataSource,
+  type EmergencyInfo,
+  type HealthMetric,
+  type HealthProfile,
+  type Identity,
+  type Insight,
+  type MetricKey,
+  type VitalIdSnapshot,
 } from "@/types";
 
 /**
  * Single place that decides where dashboard numbers come from.
  *
- * Priority, per metric:
- *   1. real connected provider data     (WHOOP OAuth sync)          → source "whoop"
- *   2. provider sample data             (Circular Ring for Fatima)
- *   3. manual onboarding baseline        (Step 4 of setup)          → source "manual"
- *   4. demo fallback                     (deterministic seed data)  → source "demo"
+ * Priority, per metric and per user:
+ *   1. real connected provider data   (WHOOP OAuth sync)            → source "whoop"
+ *   2. provider sample data assigned  (Circular Ring, Fatima only)  → "circularRing" / "demoWearable"
+ *   3. manual onboarding baseline     (Step 4 of setup)             → source "manual"
+ *   4. nothing                        → metric is omitted (UI renders an empty state)
  *
- * Fatima (no server session) is served the prepared demo dataset; when the
- * demo WHOOP connection (keyed by DEMO_USER_KEY) has synced rows, they take
- * precedence over the Circular Ring records for WHOOP-supplied metrics.
- * Real members never receive Fatima's identity/profile.
+ * Every series is built exclusively from that user's own readings; a member
+ * never receives Fatima's identity, profile, Circular Ring rows or any other
+ * synthetic history. Fatima (no server session) is the only account that gets
+ * the prepared sample dataset.
  */
 
 export type DataOwner = "fatima" | "member";
@@ -40,80 +48,40 @@ export type DataOwner = "fatima" | "member";
 export interface ResolvedUserData {
   owner: DataOwner;
   identity: Identity;
+  /** Only metrics for which the user has at least one reading. */
   metrics: HealthMetric[];
+  /** Metrics with no data for this user, in display order. */
+  missingMetrics: MetricKey[];
   insights: Insight[];
   snapshot: VitalIdSnapshot;
   /** Public WHOOP connection state (never tokens). */
   whoop: WhoopConnectionPublic;
-  /** Present for members only. */
-  setup: UserSetup | null;
+  setup: UserSetup;
 }
 
 /** WHOOP daily column → dashboard metric. */
-const WHOOP_METRIC_FIELD: [MetricKey, keyof WhoopDaily][] = [
-  ["recovery", "recoveryScore"],
-  ["sleep", "sleepHours"],
-  ["hrv", "hrvMs"],
-  ["restingHeartRate", "restingHr"],
-  ["activity", "workoutMinutes"],
-];
+const WHOOP_METRIC_FIELD: Record<MetricKey, keyof WhoopDaily> = {
+  recovery: "recoveryScore",
+  sleep: "sleepHours",
+  hrv: "hrvMs",
+  restingHeartRate: "restingHr",
+  activity: "workoutMinutes",
+};
 
 function roundFor(metric: MetricKey, v: number): number {
   const f = 10 ** METRIC_META[metric].decimals;
   return Math.round(v * f) / f;
 }
 
-/**
- * Overlays WHOOP daily rows on the fallback record series (aligned by date).
- * WHOOP days newer than the fallback range are appended. Returns the merged
- * records plus the set of metrics that have at least one non-null WHOOP value.
- */
-function applyWhoop(
-  fallbackRecords: DailyRecord[],
-  whoopDaily: WhoopDaily[],
-): { records: DailyRecord[]; whoopMetrics: Set<MetricKey> } {
-  const whoopMetrics = new Set<MetricKey>();
-  for (const w of whoopDaily) {
-    for (const [metric, field] of WHOOP_METRIC_FIELD) {
-      if (w[field] !== null) whoopMetrics.add(metric);
-    }
-  }
-
-  const byDate = new Map(whoopDaily.map((w) => [w.date, w]));
-  // For WHOOP-supplied metrics, gaps carry the latest WHOOP value forward so
-  // the current reading is never a fallback number labelled "whoop".
-  const lastSeen = new Map<MetricKey, number>();
-  const overlay = (base: DailyRecord, date: string): DailyRecord => {
-    const w = byDate.get(date);
-    const rec: DailyRecord = { ...base, date };
-    for (const [metric, field] of WHOOP_METRIC_FIELD) {
-      const v = w?.[field];
-      if (typeof v === "number") {
-        rec[metric] = roundFor(metric, v);
-        lastSeen.set(metric, rec[metric]);
-      } else if (whoopMetrics.has(metric) && lastSeen.has(metric)) {
-        rec[metric] = lastSeen.get(metric)!;
-      }
-    }
-    return rec;
-  };
-
-  const records = fallbackRecords.map((r) => overlay(r, r.date));
-  const lastDate = fallbackRecords[fallbackRecords.length - 1]?.date ?? "";
-  const seed = fallbackRecords[fallbackRecords.length - 1] ?? {
-    date: "",
-    recovery: 0,
-    sleep: 0,
-    hrv: 0,
-    restingHeartRate: 0,
-    activity: 0,
-  };
-  const today = new Date().toISOString().slice(0, 10);
-  for (const w of whoopDaily) {
-    if (w.date > lastDate && w.date <= today) records.push(overlay(seed, w.date));
-  }
-  records.sort((a, b) => (a.date < b.date ? -1 : 1));
-  return { records, whoopMetrics };
+/** Oldest-first series of the non-null WHOOP readings for one metric. */
+function whoopSeries(whoopDaily: WhoopDaily[], metric: MetricKey): SeriesPoint[] {
+  const field = WHOOP_METRIC_FIELD[metric];
+  return whoopDaily
+    .flatMap((w) => {
+      const v = w[field];
+      return typeof v === "number" ? [{ date: w.date, value: roundFor(metric, v) }] : [];
+    })
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
 function manualValue(setup: UserSetup, metric: MetricKey): number | null {
@@ -127,51 +95,43 @@ function manualValue(setup: UserSetup, metric: MetricKey): number | null {
   }
 }
 
-function isoDaysAgo(daysAgo: number): string {
-  const d = new Date();
-  d.setUTCHours(0, 0, 0, 0);
-  d.setUTCDate(d.getUTCDate() - daysAgo);
-  return d.toISOString().slice(0, 10);
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
-function flatMetric(metric: MetricKey, value: number, source: DataSource): HealthMetric {
-  const meta = METRIC_META[metric];
-  const history = Array.from({ length: DEMO_DAYS }, (_, i) => ({ date: isoDaysAgo(DEMO_DAYS - 1 - i), value }));
-  return {
-    metric,
-    value,
-    unit: meta.unit,
-    timestamp: history[history.length - 1].date,
-    source,
-    baseline: value,
-    sevenDayAverage: value,
-    delta: 0,
-    deltaPercent: 0,
-    status: "stable",
-    polarity: meta.polarity,
-    history,
-  };
+interface MetricInputs {
+  setup: UserSetup;
+  whoop: WhoopConnectionPublic;
+  whoopDaily: WhoopDaily[];
+  /** Provider sample rows explicitly assigned to this user (Fatima's Circular Ring export). */
+  sampleSeries: ((metric: MetricKey) => SeriesPoint[]) | null;
 }
 
-function memberMetrics(
-  setup: UserSetup,
-  whoop: WhoopConnectionPublic,
-  whoopDaily: WhoopDaily[],
-): { metrics: HealthMetric[]; records: DailyRecord[]; hasWhoop: boolean } {
-  const fallbackRecords = getDailyRecords();
-  const { records, whoopMetrics } = whoop.connected
-    ? applyWhoop(fallbackRecords, whoopDaily)
-    : { records: fallbackRecords, whoopMetrics: new Set<MetricKey>() };
+function resolveMetric(metric: MetricKey, input: MetricInputs): HealthMetric | null {
+  if (input.whoop.connected) {
+    const live = whoopSeries(input.whoopDaily, metric);
+    if (live.length > 0) return buildMetricFromSeries(metric, live, "whoop");
+  }
+  if (input.sampleSeries) {
+    const sample = input.sampleSeries(metric);
+    if (sample.length > 0) return buildMetricFromSeries(metric, sample, METRIC_SOURCE[metric]);
+  }
+  const manual = manualValue(input.setup, metric);
+  if (manual !== null) {
+    return buildMetricFromSeries(metric, [{ date: today(), value: manual }], "manual");
+  }
+  return null;
+}
 
-  const metrics = buildHealthMetrics(fallbackRecords).map((fallback): HealthMetric => {
-    if (whoopMetrics.has(fallback.metric)) {
-      return { ...buildHealthMetric(records, fallback.metric), source: "whoop" };
-    }
-    const manual = manualValue(setup, fallback.metric);
-    if (manual !== null) return flatMetric(fallback.metric, manual, "manual");
-    return { ...fallback, source: "demo" };
-  });
-  return { metrics, records, hasWhoop: whoopMetrics.size > 0 };
+function resolveMetrics(input: MetricInputs): { metrics: HealthMetric[]; missing: MetricKey[] } {
+  const metrics: HealthMetric[] = [];
+  const missing: MetricKey[] = [];
+  for (const key of METRIC_KEYS) {
+    const m = resolveMetric(key, input);
+    if (m) metrics.push(m);
+    else missing.push(key);
+  }
+  return { metrics, missing };
 }
 
 function splitList(v: string): string[] {
@@ -214,14 +174,26 @@ interface WhoopBody {
   maxHeartRate: number | null;
 }
 
-function memberProfile(setup: UserSetup, body: WhoopBody | null): HealthProfile {
+function withWhoopBody(profile: HealthProfile, body: WhoopBody | null): HealthProfile {
+  if (!body) return profile;
   return {
-    heightCm: body ? Math.round(body.heightM * 100) : (setup.profile.heightCm ?? 0),
-    weightKg: body ? body.weightKg : (setup.profile.weightKg ?? 0),
-    maxHeartRate: body?.maxHeartRate ?? undefined,
-    medications: splitList(setup.health.medications),
-    notes: setup.health.notes || undefined,
+    ...profile,
+    heightCm: Math.round(body.heightM * 100),
+    weightKg: body.weightKg,
+    maxHeartRate: body.maxHeartRate ?? undefined,
   };
+}
+
+function memberProfile(setup: UserSetup, body: WhoopBody | null): HealthProfile {
+  return withWhoopBody(
+    {
+      heightCm: setup.profile.heightCm ?? 0,
+      weightKg: setup.profile.weightKg ?? 0,
+      medications: splitList(setup.health.medications),
+      notes: setup.health.notes || undefined,
+    },
+    body,
+  );
 }
 
 function distinctSources(metrics: HealthMetric[]): DataSource[] {
@@ -231,51 +203,62 @@ function distinctSources(metrics: HealthMetric[]): DataSource[] {
   return [...seen];
 }
 
-function fatimaData(
-  whoop: WhoopConnectionPublic,
-  whoopDaily: WhoopDaily[],
-  body: WhoopBody | null,
-): ResolvedUserData {
-  const fallback = getDailyRecords();
-  if (whoop.connected && whoopDaily.length > 0) {
-    const { records, whoopMetrics } = applyWhoop(fallback, whoopDaily);
-    const metrics: HealthMetric[] = buildHealthMetrics(records).map((m): HealthMetric =>
-      whoopMetrics.has(m.metric) ? { ...m, source: "whoop" } : m,
-    );
-    const snapshot = buildVitalIdSnapshot(records);
-    const sources = Array.from(new Set<DataSource>([...snapshot.sources, "whoop"]));
-    return {
-      owner: "fatima",
-      identity: DEMO_IDENTITY,
-      metrics,
-      insights: generateInsights(records),
-      snapshot: {
-        ...snapshot,
-        currentSignals: metrics,
-        healthProfile: body
-          ? {
-              ...snapshot.healthProfile,
-              heightCm: Math.round(body.heightM * 100),
-              weightKg: body.weightKg,
-              maxHeartRate: body.maxHeartRate ?? undefined,
-            }
-          : snapshot.healthProfile,
-        sources,
-        lastUpdated: whoop.lastSyncedAt ?? snapshot.lastUpdated,
-      },
-      whoop,
-      setup: null,
-    };
-  }
+function lastUpdated(metrics: HealthMetric[], whoop: WhoopConnectionPublic): string {
+  if (whoop.connected && whoop.lastSyncedAt) return whoop.lastSyncedAt;
+  const latest = metrics.map((m) => m.timestamp).sort().pop();
+  return latest ? new Date(`${latest}T00:00:00Z`).toISOString() : new Date().toISOString();
+}
+
+function assemble(args: {
+  owner: DataOwner;
+  identity: Identity;
+  setup: UserSetup;
+  emergency: EmergencyInfo;
+  profile: HealthProfile;
+  whoop: WhoopConnectionPublic;
+  whoopDaily: WhoopDaily[];
+  sampleSeries: MetricInputs["sampleSeries"];
+}): ResolvedUserData {
+  const { metrics, missing } = resolveMetrics({
+    setup: args.setup,
+    whoop: args.whoop,
+    whoopDaily: args.whoopDaily,
+    sampleSeries: args.sampleSeries,
+  });
+  const insights = insightsFromMetrics(metrics);
+  const snapshot: VitalIdSnapshot = {
+    identity: args.identity,
+    emergencyInfo: args.emergency,
+    currentSignals: metrics,
+    recentTrends: insights,
+    healthProfile: args.profile,
+    sources: distinctSources(metrics),
+    lastUpdated: lastUpdated(metrics, args.whoop),
+  };
   return {
+    owner: args.owner,
+    identity: args.identity,
+    metrics,
+    missingMetrics: missing,
+    insights,
+    snapshot,
+    whoop: args.whoop,
+    setup: args.setup,
+  };
+}
+
+function fatimaData(whoop: WhoopConnectionPublic, whoopDaily: WhoopDaily[], body: WhoopBody | null): ResolvedUserData {
+  const records = getDailyRecords();
+  return assemble({
     owner: "fatima",
     identity: DEMO_IDENTITY,
-    metrics: buildHealthMetrics(fallback),
-    insights: generateInsights(fallback),
-    snapshot: buildVitalIdSnapshot(fallback),
+    setup: DEMO_SETUP,
+    emergency: DEMO_EMERGENCY,
+    profile: withWhoopBody(DEMO_PROFILE, body),
     whoop,
-    setup: null,
-  };
+    whoopDaily,
+    sampleSeries: (metric) => records.map((r) => ({ date: r.date, value: r[metric] })),
+  });
 }
 
 function memberData(
@@ -285,30 +268,16 @@ function memberData(
   whoopDaily: WhoopDaily[],
   body: WhoopBody | null,
 ): ResolvedUserData {
-  const { metrics, records, hasWhoop } = memberMetrics(setup, whoop, whoopDaily);
-  const identity = memberIdentity(userId, setup);
-  const insights: Insight[] = hasWhoop
-    ? generateInsights(records)
-    : metrics.every((m) => m.source !== "demo")
-      ? [{ id: "manual-baseline", key: "insight.manualBaseline", params: {}, metric: "sleep", severity: "info" }]
-      : generateInsights(getDailyRecords());
-  return {
+  return assemble({
     owner: "member",
-    identity,
-    metrics,
-    insights,
-    snapshot: {
-      identity,
-      emergencyInfo: memberEmergency(setup),
-      currentSignals: metrics,
-      recentTrends: insights,
-      healthProfile: memberProfile(setup, body),
-      sources: distinctSources(metrics),
-      lastUpdated: (whoop.connected && whoop.lastSyncedAt) || new Date().toISOString(),
-    },
-    whoop,
+    identity: memberIdentity(userId, setup),
     setup,
-  };
+    emergency: memberEmergency(setup),
+    profile: memberProfile(setup, body),
+    whoop,
+    whoopDaily,
+    sampleSeries: null,
+  });
 }
 
 /** Resolves the data set for the current request: member (Supabase session) or Fatima demo. */

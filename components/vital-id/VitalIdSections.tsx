@@ -63,6 +63,7 @@ export function SignalsSection({ signals }: { signals: HealthMetric[] }) {
   return (
     <div className="card lift p-5">
       <SectionTitle>{t("vitalId.currentSignals")}</SectionTitle>
+      {signals.length === 0 && <p className="mt-3 text-sm text-muted">{t("empty.dashboard.title")}</p>}
       <div className="mt-3 divide-y divide-line">
         {signals.map((m) => {
           const tone = statusTone(m.status, isWorse(m));

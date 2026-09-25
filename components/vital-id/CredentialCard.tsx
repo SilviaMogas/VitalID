@@ -73,9 +73,20 @@ export function CredentialCard({
               {identity.vitalId}
             </p>
           </div>
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/15 text-base font-semibold ring-1 ring-white/25" dir="ltr">
-            {initials}
-          </span>
+          {identity.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={identity.avatarUrl}
+              alt=""
+              width={48}
+              height={48}
+              className="h-12 w-12 shrink-0 rounded-2xl object-cover ring-1 ring-white/25"
+            />
+          ) : (
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/15 text-base font-semibold ring-1 ring-white/25" dir="ltr">
+              {initials}
+            </span>
+          )}
         </div>
 
         {!compact && (

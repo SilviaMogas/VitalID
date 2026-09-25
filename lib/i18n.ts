@@ -388,6 +388,24 @@ const whoopStrings = {
   "whoop.confirmDisconnect": ["Disconnect WHOOP? Synced data will be removed.", "فصل WHOOP؟ ستتم إزالة البيانات المتزامنة."],
 } as const satisfies Record<string, readonly [string, string]>;
 
+const dataStrings = {
+  "baseline.days": ["{days}-day baseline", "خط أساس {days} أيام"],
+  "baseline.singleEntry": ["Your entry", "قيمتك المُدخلة"],
+  "baseline.availableNote": ["Baseline uses your {days} days of available data.", "يعتمد خط الأساس على {days} يومًا من بياناتك المتاحة."],
+  "baseline.manualNote": ["One manual entry — trends appear once more readings arrive.", "إدخال يدوي واحد — تظهر الاتجاهات عند وصول قراءات إضافية."],
+  "trends.range.available": ["Showing all {days} available days", "تُعرض جميع الأيام المتاحة ({days})"],
+  "empty.dashboard.title": ["No health data yet", "لا توجد بيانات صحية بعد"],
+  "empty.dashboard.body": ["Your dashboard only shows your own data. Add a manual baseline or connect a provider to see your signals here.", "تعرض لوحتك بياناتك فقط. أضف خط أساس يدويًا أو اربط مزودًا لرؤية مؤشراتك هنا."],
+  "empty.dashboard.manual": ["Enter baseline", "أدخل خط الأساس"],
+  "empty.dashboard.connect": ["Connect a provider", "اربط مزودًا"],
+  "empty.metrics.title": ["Waiting for data", "بانتظار البيانات"],
+  "empty.metrics.body": ["No source yet for: {metrics}. Connect a wearable to fill these in.", "لا يوجد مصدر بعد لـ: {metrics}. اربط جهازًا قابلًا للارتداء لتعبئتها."],
+  "empty.trends.title": ["No trends yet", "لا توجد اتجاهات بعد"],
+  "empty.trends.body": ["Trends are built only from your own history. Connect a provider or add a manual baseline to get started.", "تُبنى الاتجاهات من سجلّك فقط. اربط مزودًا أو أضف خط أساس يدويًا للبدء."],
+  "empty.trends.single": ["Only one reading so far — a trend line needs at least two days of data.", "قراءة واحدة فقط حتى الآن — يحتاج خط الاتجاه إلى يومين من البيانات على الأقل."],
+  "insight.noData": ["Nothing to compare yet. Once you add a baseline or connect a provider, insights will appear here.", "لا شيء للمقارنة بعد. عند إضافة خط أساس أو ربط مزود ستظهر الرؤى هنا."],
+} as const satisfies Record<string, readonly [string, string]>;
+
 function pickLocale<T extends Record<string, readonly [string, string]>>(table: T, index: 0 | 1): { [K in keyof T]: string } {
   return Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v[index]])) as { [K in keyof T]: string };
 }
@@ -459,7 +477,7 @@ const en = {
   "unit.bpm": "bpm",
   "unit.min": "min",
 
-  "baseline.30day": "30-day baseline",
+  "baseline.30day": "Baseline",
   "baseline.7dayAvg": "7-day average",
   "baseline.today": "Today",
   "baseline.vsBaseline": "vs baseline",
@@ -472,8 +490,8 @@ const en = {
   "range.above": "Above usual range",
   "range.within": "Within usual range",
 
-  "source.circularRing": "Circular Ring",
-  "source.demoWearable": "Demo wearable",
+  "source.circularRing": "Circular Ring sample data",
+  "source.demoWearable": "Demo wearable sample data",
   "source.manualProfile": "Manual profile",
   "source.label": "Source",
 
@@ -491,17 +509,17 @@ const en = {
   "insight.title": "Insight",
   "insight.disclaimer": "Insights compare your signals with your own baseline. They are not medical advice.",
   "insight.sleepBelowBaselineStreak":
-    "Your sleep has been below your 30-day baseline for {days} consecutive nights.",
+    "Your sleep has been below your baseline for {days} consecutive nights.",
   "insight.recoveryBelowBaseline":
-    "Your recovery is {percent}% below your 30-day baseline.",
+    "Your recovery is {percent}% below your baseline.",
   "insight.hrvDownRhrUp":
     "Your HRV is trending down while your resting heart rate is trending up — a shift worth noticing.",
   "insight.activityStable":
     "Your activity has stayed steady at around {minutes} active minutes a day.",
   "insight.allStable": "All your signals are within your usual range.",
-  "insight.metricStable": "Your {metric} is within your usual range, close to your 30-day baseline.",
-  "insight.metricAbove": "Your {metric} is {percent}% above your 30-day baseline.",
-  "insight.metricBelow": "Your {metric} is {percent}% below your 30-day baseline.",
+  "insight.metricStable": "Your {metric} is within your usual range, close to your baseline.",
+  "insight.metricAbove": "Your {metric} is {percent}% above your baseline.",
+  "insight.metricBelow": "Your {metric} is {percent}% below your baseline.",
 
   "vitalId.title": "Vital ID",
   "vitalId.subtitle": "A portable snapshot of your health identity",
@@ -554,6 +572,7 @@ const en = {
   ...pickLocale(setupStrings, 0),
   ...pickLocale(connectorStrings, 0),
   ...pickLocale(whoopStrings, 0),
+  ...pickLocale(dataStrings, 0),
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -594,7 +613,7 @@ const ar: Record<TranslationKey, string> = {
   "unit.bpm": "نبضة/د",
   "unit.min": "د",
 
-  "baseline.30day": "خط الأساس لـ 30 يومًا",
+  "baseline.30day": "خط الأساس",
   "baseline.7dayAvg": "متوسط 7 أيام",
   "baseline.today": "اليوم",
   "baseline.vsBaseline": "مقابل خط الأساس",
@@ -607,8 +626,8 @@ const ar: Record<TranslationKey, string> = {
   "range.above": "أعلى من النطاق المعتاد",
   "range.within": "ضمن النطاق المعتاد",
 
-  "source.circularRing": "Circular Ring",
-  "source.demoWearable": "جهاز قابل للارتداء تجريبي",
+  "source.circularRing": "بيانات Circular Ring التجريبية",
+  "source.demoWearable": "بيانات تجريبية من جهاز قابل للارتداء",
   "source.manualProfile": "ملف يدوي",
   "source.label": "المصدر",
 
@@ -626,17 +645,17 @@ const ar: Record<TranslationKey, string> = {
   "insight.title": "رؤية",
   "insight.disclaimer": "تقارن الرؤى مؤشراتك بخط أساسك الشخصي، وهي ليست نصيحة طبية.",
   "insight.sleepBelowBaselineStreak":
-    "كان نومك أقل من خط أساسك لـ 30 يومًا خلال {days} ليالٍ متتالية.",
+    "كان نومك أقل من خط أساسك خلال {days} ليالٍ متتالية.",
   "insight.recoveryBelowBaseline":
-    "تعافيك أقل بنسبة {percent}% من خط أساسك لـ 30 يومًا.",
+    "تعافيك أقل بنسبة {percent}% من خط أساسك.",
   "insight.hrvDownRhrUp":
     "تقلب معدل ضربات قلبك يتراجع بينما يرتفع معدل ضربات القلب أثناء الراحة — تغيّر يستحق الملاحظة.",
   "insight.activityStable":
     "بقي نشاطك ثابتًا عند نحو {minutes} دقيقة نشطة يوميًا.",
   "insight.allStable": "جميع مؤشراتك ضمن نطاقك المعتاد.",
-  "insight.metricStable": "{metric} ضمن نطاقك المعتاد وقريب من خط أساسك لثلاثين يومًا.",
-  "insight.metricAbove": "{metric} أعلى بنسبة {percent}% من خط أساسك لثلاثين يومًا.",
-  "insight.metricBelow": "{metric} أقل بنسبة {percent}% من خط أساسك لثلاثين يومًا.",
+  "insight.metricStable": "{metric} ضمن نطاقك المعتاد وقريب من خط أساسك.",
+  "insight.metricAbove": "{metric} أعلى بنسبة {percent}% من خط أساسك.",
+  "insight.metricBelow": "{metric} أقل بنسبة {percent}% من خط أساسك.",
 
   "vitalId.title": "Vital ID",
   "vitalId.subtitle": "لقطة محمولة لهويتك الصحية",
@@ -689,6 +708,7 @@ const ar: Record<TranslationKey, string> = {
   ...pickLocale(setupStrings, 1),
   ...pickLocale(connectorStrings, 1),
   ...pickLocale(whoopStrings, 1),
+  ...pickLocale(dataStrings, 1),
 };
 
 export const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, ar };

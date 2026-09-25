@@ -66,13 +66,15 @@ export interface HealthMetric {
   unit: string;
   timestamp: string; // ISO date of the latest reading
   source: DataSource;
-  baseline: number; // 30-day baseline
+  baseline: number; // mean of the last `baselineDays` readings (max 30)
+  /** Number of the user's own readings the baseline is computed from (1..30). */
+  baselineDays: number;
   sevenDayAverage: number;
   delta: number; // absolute change vs baseline (value - baseline)
   deltaPercent: number; // signed percentage vs baseline
   status: TrendStatus;
   polarity: MetricPolarity;
-  history: { date: string; value: number }[]; // 30 days, oldest first
+  history: { date: string; value: number }[]; // available readings only, oldest first
 }
 
 export interface Insight {
@@ -88,6 +90,8 @@ export interface Identity {
   fullName: string;
   /** Optional localized display names, keyed by locale (falls back to fullName). */
   localizedName?: Partial<Record<Locale, string>>;
+  /** Public path of a profile picture (demo persona only for now). */
+  avatarUrl?: string;
   vitalId: string;
   dateOfBirth: string; // ISO date
   sex: "female" | "male" | "other";

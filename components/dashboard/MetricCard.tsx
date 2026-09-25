@@ -35,6 +35,12 @@ const ACCENT = {
   neutral: "bg-mint",
 } as const;
 
+/** Truthful baseline label: "Your entry" for a single reading, "{n}-day baseline" otherwise. */
+export function baselineLabel(m: HealthMetric, t: (k: TranslationKey, p?: Record<string, string | number>) => string): string {
+  if (m.baselineDays <= 1) return t("baseline.singleEntry");
+  return t("baseline.days", { days: m.baselineDays });
+}
+
 export function MetricCard({ metric, href, index = 0 }: { metric: HealthMetric; href?: string; index?: number }) {
   const { t, n } = useLocale();
   const decimals = METRIC_META[metric.metric].decimals;
@@ -62,7 +68,7 @@ export function MetricCard({ metric, href, index = 0 }: { metric: HealthMetric; 
       <div className="mt-3 flex items-end justify-between gap-3">
         <div className="min-w-0 flex-1 text-xs text-muted">
           <p>
-            {t("baseline.30day")}{" "}
+            {baselineLabel(metric, t)}{" "}
             <span className="tabular whitespace-nowrap font-medium text-ink-2">
               {n(metric.baseline, decimals)} {t(`unit.${metric.unit}` as TranslationKey)}
             </span>
@@ -79,7 +85,11 @@ export function MetricCard({ metric, href, index = 0 }: { metric: HealthMetric; 
             <span>{t(rangeKey(metric))}</span>
           </p>
         </div>
-        <Sparkline values={metric.history.slice(-14).map((h) => h.value)} baseline={metric.baseline} tone={tone} className="h-9 w-20 shrink-0" />
+        {metric.history.length >= 2 ? (
+          <Sparkline values={metric.history.slice(-14).map((h) => h.value)} baseline={metric.baseline} tone={tone} className="h-9 w-20 shrink-0" />
+        ) : (
+          <span className="max-w-[9rem] text-end text-[10px] leading-tight text-muted">{t("baseline.manualNote")}</span>
+        )}
       </div>
 
       <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted">
