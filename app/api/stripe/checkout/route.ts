@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import Stripe from 'stripe';
 import { PAID_PLANS } from '@/lib/plans';
-import { getStripe, isStripeConfigured, resolveDemoPriceId } from '@/lib/stripe/server';
+import { getStripe, isStripeConfigured, resolveDemoPriceId, StripeConfigError } from '@/lib/stripe/server';
 import { assertDemoPrice } from '@/lib/stripe/verify';
 import { getCurrentUserKey } from '@/lib/membership/session';
 import { getMembershipStore } from '@/lib/membership/store';
@@ -16,15 +17,15 @@ function requestOrigin(req: Request): string {
   return new URL(req.url).origin;
 }
 
-type Stage = 'membership_store' | 'price_config' | 'stripe_session';
+type Stage = 'auth' | 'membership_store' | 'price_config' | 'stripe_session';
 
 /** Stripe error code/type only — never the message, which may echo config values. */
 function safeDetail(err: unknown): string | undefined {
-  if (typeof err !== 'object' || err === null) return undefined;
-  const e = err as { code?: unknown; type?: unknown; statusCode?: unknown };
-  const parts = [e.type, e.code, e.statusCode].filter(
-    (v): v is string | number => typeof v === 'string' || typeof v === 'number',
-  );
+  if (err instanceof StripeConfigError) return err.code;
+  if (!(err instanceof Stripe.errors.StripeError)) return undefined;
+  const parts = [err.type, err.code, err.statusCode]
+    .filter((v): v is string | number => typeof v === 'string' || typeof v === 'number')
+    .map((v) => String(v).replace(/[^A-Za-z0-9_.-]/g, ''));
   return parts.length ? parts.join(':') : undefined;
 }
 
@@ -43,9 +44,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'stripe_not_configured' }, { status: 503 });
   }
 
-  let stage: Stage = 'membership_store';
+  let stage: Stage = 'auth';
   try {
     const userKey = await getCurrentUserKey();
+    stage = 'membership_store';
     const membership = await getMembershipStore().upsert({ userKey });
     stage = 'price_config';
     const priceId = await resolveDemoPriceId(plan as 'plus' | 'pro');
