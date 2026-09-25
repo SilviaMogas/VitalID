@@ -17,7 +17,7 @@ function requestOrigin(req: Request): string {
   return new URL(req.url).origin;
 }
 
-type Stage = 'membership_store' | 'price_config' | 'stripe_session';
+type Stage = 'auth' | 'membership_store' | 'price_config' | 'stripe_session';
 
 /** Stripe error code/type only — never the message, which may echo config values. */
 function safeDetail(err: unknown): string | undefined {
@@ -44,9 +44,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'stripe_not_configured' }, { status: 503 });
   }
 
-  let stage: Stage = 'membership_store';
+  let stage: Stage = 'auth';
   try {
     const userKey = await getCurrentUserKey();
+    stage = 'membership_store';
     const membership = await getMembershipStore().upsert({ userKey });
     stage = 'price_config';
     const priceId = await resolveDemoPriceId(plan as 'plus' | 'pro');
