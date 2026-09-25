@@ -26,7 +26,7 @@ export type TrendStatus = "stable" | "improving" | "declining" | "unusual";
 /** Direction of change from baseline: which way is "good" for this metric. */
 export type MetricPolarity = "higherIsBetter" | "lowerIsBetter";
 
-export type DataSource = "demoWearable" | "manualProfile";
+export type DataSource = "circularRing" | "demoWearable" | "manualProfile";
 
 /** One day of synthetic signals. Dates are ISO (YYYY-MM-DD). */
 export interface DailyRecord {
