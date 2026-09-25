@@ -53,6 +53,10 @@ session cannot be retrieved.
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` — publishable key (client-safe; reserved).
 - `STRIPE_WEBHOOK_SECRET` — printed once by `stripe-webhook-setup.mjs`.
 - `STRIPE_PLUS_DEMO_PRICE_ID` / `STRIPE_PRO_DEMO_PRICE_ID` — one-time $1 prices.
+  Each value may be a `price_…` id **or** a `prod_…` product id; a `prod_…`
+  value is resolved at request time via the product's `default_price`
+  (`resolveDemoPriceId`, cached per process). Known live ids:
+  Plus `prod_VKDczLrBC2JdYD`, Pro `prod_VKDdoPnKPmF18a`.
 - `NEXT_PUBLIC_APP_URL` — optional public origin for Checkout return URLs
   (defaults to the request origin).
 - `MEMBERSHIP_STORE` — `"supabase" | "memory"` (empty = auto).
