@@ -6,9 +6,10 @@ import { CONNECTORS } from "@/lib/connectors";
 import { useConnectorSelection } from "@/lib/connectors-state";
 import { ConnectorCard } from "@/components/connectors/ConnectorCard";
 import { LogoMark } from "@/components/layout/Logo";
+import { LangButton } from "@/components/layout/AppShell";
 
 export function ConnectorPicker() {
-  const { t, toggleLocale, locale } = useLocale();
+  const { t } = useLocale();
   const router = useRouter();
   const { count, limit } = useConnectorSelection();
 
@@ -19,15 +20,7 @@ export function ConnectorPicker() {
           <LogoMark size={34} />
           <span className="text-base font-semibold tracking-tight text-brand">{t("app.name")}</span>
         </div>
-        <button
-          type="button"
-          onClick={toggleLocale}
-          aria-label={t("lang.label")}
-          lang={locale === "en" ? "ar" : "en"}
-          className="rounded-full border border-line bg-white px-3.5 py-1.5 text-sm font-medium text-ink-2 shadow-sm transition hover:bg-canvas"
-        >
-          {t("lang.switch")}
-        </button>
+        <LangButton />
       </header>
 
       <main className="mt-8 pb-24">

@@ -231,7 +231,7 @@ function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function LangButton() {
+export function LangButton() {
   const { t, toggleLocale, locale } = useLocale();
   return (
     <button

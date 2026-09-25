@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { LangButton } from "@/components/layout/AppShell";
 
 export function SignupForm() {
-  const { t, toggleLocale, locale } = useLocale();
+  const { t } = useLocale();
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -47,15 +48,7 @@ export function SignupForm() {
           </span>
           <span className="text-base font-semibold tracking-tight">{t("app.name")}</span>
         </div>
-        <button
-          type="button"
-          onClick={toggleLocale}
-          aria-label={t("lang.label")}
-          lang={locale === "en" ? "ar" : "en"}
-          className="rounded-full border border-line bg-white px-3.5 py-1.5 text-sm font-medium text-ink-2 shadow-sm transition hover:bg-canvas"
-        >
-          {t("lang.switch")}
-        </button>
+        <LangButton />
       </header>
 
       <main className="mt-10">
