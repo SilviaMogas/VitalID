@@ -49,18 +49,12 @@ export function PhotoUploader({ hasPhoto }: { hasPhoto: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
 
-  const save = async (photoUrl: string) => {
+  const run = async (op: () => Promise<void>) => {
+    if (busy) return;
     setBusy(true);
     setError(false);
     try {
-      const res = await fetch("/api/onboarding", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile: { photoUrl } }),
-      });
-      if (!res.ok) throw new Error("save failed");
-      await refresh();
-      router.refresh();
+      await op();
     } catch {
       setError(true);
     } finally {
@@ -68,7 +62,19 @@ export function PhotoUploader({ hasPhoto }: { hasPhoto: boolean }) {
     }
   };
 
-  const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
+  const save = async (photoUrl: string) => {
+    const res = await fetch("/api/onboarding", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile: { photoUrl } }),
+    });
+    if (!res.ok) throw new Error("save failed");
+    router.refresh();
+    // A failed session probe must not mark a successful upload as failed.
+    void refresh().catch(() => undefined);
+  };
+
+  const onFile = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || busy) return;
@@ -76,12 +82,10 @@ export function PhotoUploader({ hasPhoto }: { hasPhoto: boolean }) {
       setError(true);
       return;
     }
-    try {
+    void run(async () => {
       const photoUrl = await resizeToDataUrl(file);
       await save(photoUrl);
-    } catch {
-      setError(true);
-    }
+    });
   };
 
   return (
@@ -96,14 +100,14 @@ export function PhotoUploader({ hasPhoto }: { hasPhoto: boolean }) {
             <button
               type="button"
               disabled={busy}
-              onClick={() => void save("")}
+              onClick={() => void run(() => save(""))}
               className="press rounded-full px-3 py-2 text-sm font-medium text-muted hover:text-ink-2 disabled:opacity-50"
             >
               {t("profile.photo.remove")}
             </button>
           )}
           <label
-            className={`press cursor-pointer rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-lift transition hover:bg-brand-deep ${
+            className={`press cursor-pointer rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-lift transition hover:bg-brand-deep focus-within:ring-2 focus-within:ring-brand/50 focus-within:ring-offset-2 ${
               busy ? "pointer-events-none opacity-50" : ""
             }`}
           >
@@ -112,9 +116,9 @@ export function PhotoUploader({ hasPhoto }: { hasPhoto: boolean }) {
               ref={inputRef}
               type="file"
               accept="image/*"
-              className="hidden"
+              className="sr-only"
               disabled={busy}
-              onChange={(e) => void onFile(e)}
+              onChange={onFile}
             />
           </label>
         </div>
