@@ -33,7 +33,9 @@ const inflightRefresh = new Map<string, Promise<WhoopConnection>>();
 function refreshAndPersist(userKey: string, conn: WhoopConnection): Promise<WhoopConnection> {
   const existing = inflightRefresh.get(userKey);
   if (existing) return existing;
-  const p = doRefresh(userKey, conn).finally(() => inflightRefresh.delete(userKey));
+  const p = doRefresh(userKey, conn).finally(() => {
+    if (inflightRefresh.get(userKey) === p) inflightRefresh.delete(userKey);
+  });
   inflightRefresh.set(userKey, p);
   return p;
 }
@@ -49,6 +51,10 @@ async function doRefresh(userKey: string, conn: WhoopConnection): Promise<WhoopC
     });
     return { ...conn, ...tokens };
   } catch (e) {
+    // The in-flight map only covers this process; another instance may have
+    // rotated the pair (making ours invalid). Reuse it instead of failing.
+    const latest = await getWhoopStore().get(userKey).catch(() => null);
+    if (latest && latest.refreshToken !== conn.refreshToken && !isExpired(latest)) return latest;
     const err =
       e instanceof WhoopError && e.code === 'refresh_failed'
         ? e
