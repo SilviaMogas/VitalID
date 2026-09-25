@@ -45,7 +45,7 @@ export function Dashboard({
             {t("home.viewTrends")} <span className="inline-block rtl:-scale-x-100">→</span>
           </Link>
         </div>
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {metrics.map((m) => (
             <MetricCard key={m.metric} metric={m} href={`/trends?metric=${m.metric}`} />
           ))}

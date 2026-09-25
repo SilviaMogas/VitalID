@@ -60,7 +60,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-5xl md:flex-row md:gap-8 md:px-8">
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-6xl md:flex-row md:gap-8 md:px-8">
       {/* Sidebar (desktop) */}
       <aside className="hidden md:sticky md:top-0 md:flex md:h-dvh md:w-56 md:shrink-0 md:flex-col md:py-8">
         <Brand />

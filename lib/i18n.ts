@@ -162,7 +162,7 @@ const ar: Record<TranslationKey, string> = {
   "metric.restingHeartRate": "معدل ضربات القلب أثناء الراحة",
   "metric.activity": "النشاط",
 
-  "unit.%": "٪",
+  "unit.%": "%",
   "unit.h": "س",
   "unit.ms": "م.ث",
   "unit.bpm": "نبضة/د",
@@ -201,7 +201,7 @@ const ar: Record<TranslationKey, string> = {
   "insight.sleepBelowBaselineStreak":
     "كان نومك أقل من خط أساسك لـ 30 يومًا خلال {days} ليالٍ متتالية.",
   "insight.recoveryBelowBaseline":
-    "تعافيك أقل بنسبة {percent}٪ من خط أساسك لـ 30 يومًا.",
+    "تعافيك أقل بنسبة {percent}% من خط أساسك لـ 30 يومًا.",
   "insight.hrvDownRhrUp":
     "تقلب معدل ضربات قلبك يتراجع بينما يرتفع معدل ضربات القلب أثناء الراحة — تغيّر يستحق الملاحظة.",
   "insight.activityStable":
@@ -273,7 +273,7 @@ export function translate(
 }
 
 export function formatNumber(locale: Locale, value: number, decimals = 0): string {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-EG" : "en-US", {
+  return new Intl.NumberFormat(locale === "ar" ? "ar-AE" : "en-US", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(value);
