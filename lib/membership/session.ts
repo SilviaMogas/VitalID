@@ -30,6 +30,19 @@ export async function createUserSession(): Promise<{ userKey: string }> {
   return { userKey };
 }
 
+/** Sets the session cookie for an existing user key (demo sign-in). */
+export async function setUserSession(userKey: string): Promise<void> {
+  if (!USER_KEY_RE.test(userKey)) throw new Error(`invalid user key: ${userKey}`);
+  const store = await cookies();
+  store.set(COOKIE_NAME, userKey, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+  });
+}
+
 export async function clearUserSession(): Promise<void> {
   const store = await cookies();
   store.delete(COOKIE_NAME);

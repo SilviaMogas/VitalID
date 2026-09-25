@@ -7,6 +7,7 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import { LogoMark } from "@/components/layout/Logo";
 import { PlanBadge } from "@/components/membership/PlanBadge";
+import { useMembership } from "@/components/providers/MembershipProvider";
 import { Broccoli } from "@/components/mascot/Broccoli";
 import { Onboarding, SESSION_KEY, hasSession } from "@/components/onboarding/Onboarding";
 
@@ -60,15 +61,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { t, locale } = useLocale();
+  const { planChosen, onboardingComplete, loading: membershipLoading } = useMembership();
   const [session, setSession] = useState<boolean | null>(null);
 
   useEffect(() => {
     setSession(hasSession());
   }, [pathname]);
 
+  // Re-read localStorage during render post-mount so a just-set session
+  // (e.g. right after signup) isn't masked by stale state (splash flash fix).
+  const effectiveSession = session === null ? null : hasSession();
+
   const enter = () => {
     window.localStorage.setItem(SESSION_KEY, "fatima");
     setSession(true);
+    // Clear any lingering member cookie so Fatima stays the demo user.
+    void fetch("/api/membership/signout", { method: "POST" }).catch(() => {});
     if (pathname === "/welcome") router.push("/");
   };
 
@@ -83,7 +91,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  if (["/shared", "/signup", "/checkout"].some((p) => pathname.startsWith(p))) {
+  // Member funnel gating on shell routes: signed-up users must pick a plan and
+  // finish onboarding before reaching the app. Fatima is never gated.
+  const sessionKind = effectiveSession ? window.localStorage.getItem(SESSION_KEY) : null;
+  useEffect(() => {
+    if (sessionKind !== "member" || membershipLoading) return;
+    if (pathname === "/pricing" || pathname === "/onboarding") return;
+    if (!planChosen) router.replace("/pricing");
+    else if (!onboardingComplete) router.replace("/onboarding");
+  }, [sessionKind, membershipLoading, planChosen, onboardingComplete, pathname, router]);
+
+  if (["/shared", "/signup", "/checkout", "/onboarding"].some((p) => pathname.startsWith(p))) {
     return (
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-2xl">
         {pathname.startsWith("/shared") && (
@@ -101,11 +119,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     return <Onboarding onEnter={enter} />;
   }
 
-  if (session === null) {
+  if (effectiveSession === null) {
     return <div className="min-h-dvh" aria-busy />;
   }
 
-  if (!session) {
+  if (!effectiveSession) {
     return <Onboarding onEnter={enter} />;
   }
 

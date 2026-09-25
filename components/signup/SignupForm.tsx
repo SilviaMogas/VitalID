@@ -25,7 +25,7 @@ export function SignupForm() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       window.localStorage.setItem("vitalid.session", "member");
-      router.push("/pricing?onboarding=1");
+      router.push("/pricing");
     } catch {
       setError(t("common.error"));
     } finally {
