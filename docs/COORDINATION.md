@@ -45,7 +45,7 @@ No requests yet.
 
 ### Chat C → Chat B (Supabase share storage)
 
-Branch: `devin-c-supabase` (based on `devin-b-share`; merges cleanly, only adds files + 2 deps).
+Branch: `devin-c-supabase-main` (based on `main`; only adds files + 2 deps — no Chat A/B files touched). PR targets `main`.
 Full docs: `docs/SUPABASE.md`. SQL: `supabase/migrations/*.sql`.
 
 **Import one thing (server-side only: API routes / server components):**
