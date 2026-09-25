@@ -66,7 +66,11 @@ class MemoryWhoopStore implements WhoopStore {
   async updateTokens(userKey: string, tokens: { accessToken: string; refreshToken: string; expiresAt: string }) {
     const c = this.connections.get(userKey);
     if (!c) return;
-    this.connections.set(userKey, { ...c, ...tokens });
+    this.connections.set(userKey, {
+      ...c,
+      ...tokens,
+      lastSyncError: c.lastSyncError === 'refresh_failed' ? null : c.lastSyncError,
+    });
   }
   async markSync(userKey: string, patch: Parameters<WhoopStore['markSync']>[1]) {
     const c = this.connections.get(userKey);
@@ -212,6 +216,12 @@ class SupabaseWhoopStore implements WhoopStore {
       })
       .eq('user_key', userKey);
     if (error) throw new Error(`whoop token update failed: ${error.message}`);
+    // A stale refresh_failed from a lost refresh race is void once valid tokens are stored.
+    await sb
+      .from('vital_id_whoop_connections')
+      .update({ last_sync_error: null })
+      .eq('user_key', userKey)
+      .eq('last_sync_error', 'refresh_failed');
   }
 
   async markSync(userKey: string, patch: Parameters<WhoopStore['markSync']>[1]): Promise<void> {

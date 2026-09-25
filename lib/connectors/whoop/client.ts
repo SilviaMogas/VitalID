@@ -40,21 +40,47 @@ function refreshAndPersist(userKey: string, conn: WhoopConnection): Promise<Whoo
   return p;
 }
 
+const RACE_REREAD_DELAY_MS = 1500;
+
+async function rotate(userKey: string, conn: WhoopConnection): Promise<WhoopConnection> {
+  const tokens = await refreshTokens(conn.refreshToken);
+  // Rotated pair must be persisted before it is ever used.
+  await getWhoopStore().updateTokens(userKey, {
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    expiresAt: tokens.expiresAt,
+  });
+  return { ...conn, ...tokens };
+}
+
+/** The pair another instance persisted after winning the rotation race, if any. */
+async function rotatedByOther(userKey: string, conn: WhoopConnection): Promise<WhoopConnection | null> {
+  const store = getWhoopStore();
+  let latest = await store.get(userKey).catch(() => null);
+  if (!latest || latest.refreshToken === conn.refreshToken) {
+    // The winner may not have written yet; give it one short grace period.
+    await new Promise((r) => setTimeout(r, RACE_REREAD_DELAY_MS));
+    latest = await store.get(userKey).catch(() => null);
+  }
+  return latest && latest.refreshToken !== conn.refreshToken ? latest : null;
+}
+
 async function doRefresh(userKey: string, conn: WhoopConnection): Promise<WhoopConnection> {
   try {
-    const tokens = await refreshTokens(conn.refreshToken);
-    // Rotated pair must be persisted before it is ever used.
-    await getWhoopStore().updateTokens(userKey, {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresAt: tokens.expiresAt,
-    });
-    return { ...conn, ...tokens };
+    return await rotate(userKey, conn);
   } catch (e) {
     // The in-flight map only covers this process; another instance may have
-    // rotated the pair (making ours invalid). Reuse it instead of failing.
-    const latest = await getWhoopStore().get(userKey).catch(() => null);
-    if (latest && latest.refreshToken !== conn.refreshToken && !isExpired(latest)) return latest;
+    // rotated the pair (making ours invalid). Reuse it instead of failing,
+    // refreshing once more if the newer access token is itself about to expire.
+    const other = await rotatedByOther(userKey, conn);
+    if (other) {
+      if (!isExpired(other)) return other;
+      try {
+        return await rotate(userKey, other);
+      } catch {
+        /* fall through to the original failure */
+      }
+    }
     const err =
       e instanceof WhoopError && e.code === 'refresh_failed'
         ? e
