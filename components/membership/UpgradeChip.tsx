@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { PLANS, type PlanId } from "@/lib/plans";
+import { Companion } from "@/components/companions/Companion";
 
 export function UpgradeChip({ plan }: { plan: Exclude<PlanId, "free"> }) {
   const { t } = useLocale();
@@ -11,6 +12,7 @@ export function UpgradeChip({ plan }: { plan: Exclude<PlanId, "free"> }) {
       href="/pricing"
       className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-ink"
     >
+      <Companion name={PLANS[plan].companion} size={20} className="-ms-0.5" />
       <LockIcon className="h-3.5 w-3.5" />
       {t("pricing.upgradeTo", { plan: t(PLANS[plan].nameKey) })}
     </Link>

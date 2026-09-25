@@ -7,6 +7,7 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
 import { PLAN_ORDER, PLANS, planRank, type PlanId } from "@/lib/plans";
+import { Companion } from "@/components/companions/Companion";
 import { HackathonSmallPrint } from "./HackathonSmallPrint";
 
 function CheckIcon() {
@@ -91,6 +92,18 @@ export function PricingView() {
         )}
       </section>
 
+      <div aria-hidden className="flex items-end justify-center gap-0 md:justify-start">
+        {(["shield", "heart", "muscle", "moon", "dumbbell"] as const).map((name, i) => (
+          <Companion
+            key={name}
+            name={name}
+            mood={i === 1 ? "cheer" : "idle"}
+            size={56}
+            className="-ms-3 first:ms-0"
+          />
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {PLAN_ORDER.map((planId) => {
           const plan = PLANS[planId];
@@ -115,13 +128,23 @@ export function PricingView() {
                 </span>
               )}
 
-              <h2 className="text-lg font-semibold">{t(plan.nameKey)}</h2>
-              <p className="mt-2 flex items-baseline gap-1">
-                <span className="text-3xl font-semibold tracking-tight" dir="ltr">
-                  {plan.displayPrice}
-                </span>
-                <span className="text-sm text-muted">{t(plan.billingLabelKey)}</span>
-              </p>
+              <div className="flex items-start justify-between gap-2 pt-2">
+                <div>
+                  <h2 className="text-lg font-semibold">{t(plan.nameKey)}</h2>
+                  <p className="mt-2 flex items-baseline gap-1">
+                    <span className="text-3xl font-semibold tracking-tight" dir="ltr">
+                      {plan.displayPrice}
+                    </span>
+                    <span className="text-sm text-muted">{t(plan.billingLabelKey)}</span>
+                  </p>
+                </div>
+                <Companion
+                  name={plan.companion}
+                  mood={plan.recommended ? "cheer" : "idle"}
+                  size={88}
+                  label={t(plan.nameKey)}
+                />
+              </div>
 
               <ul className="mt-4 flex-1 space-y-2">
                 {plan.featureKeys.map((key) => (

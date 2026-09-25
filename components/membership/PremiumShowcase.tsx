@@ -6,6 +6,7 @@ import { hasFeature, type Feature } from "@/lib/plans";
 import { useConnectorSelection } from "@/lib/connectors-state";
 import type { TranslationKey } from "@/lib/i18n";
 import { SectionTitle } from "@/components/vital-id/VitalIdSections";
+import { Companion } from "@/components/companions/Companion";
 import { LockIcon, UpgradeChip } from "./UpgradeChip";
 
 /** "Included in your plan" section listing gated capabilities on the Vital ID page. */
@@ -53,15 +54,20 @@ export function PremiumShowcase() {
                 unlocked ? "border-line bg-canvas/50" : "border-dashed border-line"
               }`}
             >
-              <span
-                className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${
-                  unlocked ? "bg-brand-soft text-brand" : "bg-canvas text-muted"
-                }`}
-              >
-                <LockIcon className="h-4 w-4" />
+              <span className="shrink-0">
+                {unlocked ? (
+                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-soft text-brand">
+                    <LockIcon className="h-4 w-4" />
+                  </span>
+                ) : (
+                  <Companion name={feature === "advancedInsights" ? "heart" : "muscle"} mood="idle" size={40} />
+                )}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{t(titleKey)}</p>
+                <p className="flex items-center gap-1.5 text-sm font-medium">
+                  {!unlocked && <LockIcon className="h-3.5 w-3.5 text-muted" />}
+                  {t(titleKey)}
+                </p>
                 <p className="mt-0.5 text-xs text-muted">
                   {unlocked ? t("membership.showcase.active") : t(descKey)}
                 </p>

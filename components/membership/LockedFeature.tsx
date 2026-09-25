@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useMembership } from "@/components/providers/MembershipProvider";
 import { requiredPlanFor, type Feature } from "@/lib/plans";
+import { Companion } from "@/components/companions/Companion";
 import { LockIcon, UpgradeChip } from "./UpgradeChip";
 
 /**
@@ -49,11 +50,14 @@ export function LockedFeature({
   return (
     <div className="card border-dashed p-5">
       <div className="flex items-start gap-3">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-canvas text-muted">
-          <LockIcon />
+        <span className="shrink-0">
+          <Companion name={required === "pro" ? "muscle" : "heart"} mood="idle" size={40} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">{title}</p>
+          <p className="flex items-center gap-1.5 text-sm font-semibold">
+            <LockIcon className="h-3.5 w-3.5 text-muted" />
+            {title}
+          </p>
           {description && <p className="mt-0.5 text-xs text-muted">{description}</p>}
           <div className="mt-3">{chip}</div>
         </div>
