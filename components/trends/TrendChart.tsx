@@ -32,7 +32,7 @@ export function TrendChart({ metric, days }: { metric: HealthMetric; days: 7 | 3
   const H = 160;
   const PAD_X = 8;
   const PAD_TOP = 18;
-  const PAD_BOTTOM = 24;
+  const PAD_BOTTOM = 6;
 
   const baseline = metric.baseline;
   const bandHigh = baseline * 1.05;
@@ -69,8 +69,14 @@ export function TrendChart({ metric, days }: { metric: HealthMetric; days: 7 | 3
         </span>
       </div>
 
-      <div dir="ltr">
-        <svg viewBox={`0 0 ${W} ${H}`} className="h-44 w-full" role="img" aria-hidden>
+      <div dir="ltr" className="relative">
+        <span
+          className="tabular pointer-events-none absolute -translate-x-1/2 -translate-y-full text-[11px] font-semibold"
+          style={{ left: `${(labelX / W) * 100}%`, top: `${(Math.max(10, lastY - 8) / H) * 100}%`, color }}
+        >
+          {n(last.value, decimals)}
+        </span>
+        <svg viewBox={`0 0 ${W} ${H}`} className="h-44 w-full" preserveAspectRatio="none" role="img" aria-hidden>
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={color} stopOpacity="0.22" />
@@ -96,30 +102,18 @@ export function TrendChart({ metric, days }: { metric: HealthMetric; days: 7 | 3
             stroke={BASELINE_COLOR}
             strokeWidth="1.5"
             strokeDasharray="5 4"
+            vectorEffect="non-scaling-stroke"
           />
 
           <path d={area} fill={`url(#${gradientId})`} />
-          <path d={line} fill="none" stroke={color} strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
+          <path d={line} fill="none" stroke={color} strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
 
-          <circle cx={lastX} cy={lastY} r="4" fill={color} stroke="#fff" strokeWidth="2" />
-          <text
-            x={labelX}
-            y={Math.max(10, lastY - 10)}
-            textAnchor="middle"
-            fontSize="11"
-            fontWeight="600"
-            fill={color}
-          >
-            {n(last.value, decimals)}
-          </text>
-
-          <text x={PAD_X} y={H - 8} fontSize="10" fill="#7b8596" textAnchor="start">
-            {d(points[0].date)}
-          </text>
-          <text x={W - PAD_X} y={H - 8} fontSize="10" fill="#7b8596" textAnchor="end">
-            {d(last.date)}
-          </text>
+          <circle cx={lastX} cy={lastY} r="4" fill={color} stroke="#fff" strokeWidth="2" vectorEffect="non-scaling-stroke" />
         </svg>
+        <div className="mt-1 flex justify-between px-1 text-[10px] text-muted">
+          <span>{d(points[0].date)}</span>
+          <span>{d(last.date)}</span>
+        </div>
       </div>
     </div>
   );
