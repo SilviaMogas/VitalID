@@ -18,6 +18,7 @@ export default async function CoachPage() {
       metrics={data.metrics}
       goals={goals}
       identity={data.identity}
+      owner={data.owner}
     />
   );
 }
