@@ -83,3 +83,17 @@ SUPABASE_URL=... SUPABASE_SECRET_KEY=... node scripts/membership-smoke.mjs      
 - `assertDemoPrice` blocks misconfigured Price IDs (wrong amount, recurring, inactive)
   before a checkout can be created.
 - `vital_id_memberships` has RLS enabled with no policies — service_role only.
+
+## Demo sign-in (no real auth)
+
+`POST /api/membership/signin {email}` looks up a membership row by email
+(case-insensitive, `lower(email)` index) and sets the `vitalid_uid` cookie —
+there is no password or verification; it is a demo-grade shortcut for the
+hackathon, not authentication. Unknown email → `404 {error:"not_found"}`.
+
+Routing state is tracked on the membership row: `plan_chosen_at` (set by
+`POST /api/membership/choose-free` or any paid activation) and
+`onboarding_completed_at` (set by `POST /api/membership/onboarding/complete`).
+`GET /api/membership` exposes them as `planChosen` / `onboardingComplete`
+(always `true` for the Fatima demo user). AppShell redirects `member` sessions
+on shell routes to `/pricing` or `/onboarding` until both are done.

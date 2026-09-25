@@ -15,6 +15,8 @@ interface Row {
   stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null;
   activated_at: string | null;
+  plan_chosen_at: string | null;
+  onboarding_completed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -29,6 +31,8 @@ function toRecord(row: Row): MembershipRecord {
     stripeCheckoutSessionId: row.stripe_checkout_session_id,
     stripePaymentIntentId: row.stripe_payment_intent_id,
     activatedAt: row.activated_at,
+    planChosenAt: row.plan_chosen_at,
+    onboardingCompletedAt: row.onboarding_completed_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -44,8 +48,27 @@ function toRow(record: MembershipRecord): Row {
     stripe_checkout_session_id: record.stripeCheckoutSessionId,
     stripe_payment_intent_id: record.stripePaymentIntentId,
     activated_at: record.activatedAt,
+    plan_chosen_at: record.planChosenAt,
+    onboarding_completed_at: record.onboardingCompletedAt,
     created_at: record.createdAt,
     updated_at: record.updatedAt,
+  };
+}
+
+function blank(userKey: string, now: string): MembershipRecord {
+  return {
+    userKey,
+    displayName: null,
+    email: null,
+    plan: 'free',
+    stripeCustomerId: null,
+    stripeCheckoutSessionId: null,
+    stripePaymentIntentId: null,
+    activatedAt: null,
+    planChosenAt: null,
+    onboardingCompletedAt: null,
+    createdAt: now,
+    updatedAt: now,
   };
 }
 
@@ -60,12 +83,20 @@ export class SupabaseMembershipStore implements MembershipStore {
     return data ? toRecord(data as Row) : null;
   }
 
+  private async write(record: MembershipRecord): Promise<MembershipRecord> {
+    const { error } = await getSupabaseServerClient()
+      .from(TABLE)
+      .upsert(toRow(record), { onConflict: 'user_key' });
+    if (error) throw new Error(`membership write failed: ${error.message}`);
+    return record;
+  }
+
   async upsert(input: { userKey: string; displayName?: string; email?: string }) {
     const existing = await this.get(input.userKey);
     const now = new Date().toISOString();
     if (!existing) {
       const record: MembershipRecord = {
-        userKey: input.userKey,
+        ...blank(input.userKey, now),
         displayName: input.displayName ?? null,
         email: input.email ?? null,
         // DEMO_DEFAULT_PLAN applies only to the Fatima demo user.
@@ -73,29 +104,15 @@ export class SupabaseMembershipStore implements MembershipStore {
           input.userKey === DEMO_USER_KEY && isPlanId(process.env.DEMO_DEFAULT_PLAN)
             ? process.env.DEMO_DEFAULT_PLAN
             : 'free',
-        stripeCustomerId: null,
-        stripeCheckoutSessionId: null,
-        stripePaymentIntentId: null,
-        activatedAt: null,
-        createdAt: now,
-        updatedAt: now,
       };
-      const { error } = await getSupabaseServerClient().from(TABLE).insert(toRow(record));
-      if (error) throw new Error(`membership insert failed: ${error.message}`);
-      return record;
+      return this.write(record);
     }
-    const updated: MembershipRecord = {
+    return this.write({
       ...existing,
       displayName: input.displayName ?? existing.displayName,
       email: input.email ?? existing.email,
       updatedAt: now,
-    };
-    const { error } = await getSupabaseServerClient()
-      .from(TABLE)
-      .update(toRow(updated))
-      .eq('user_key', input.userKey);
-    if (error) throw new Error(`membership update failed: ${error.message}`);
-    return updated;
+    });
   }
 
   async activatePlan(input: {
@@ -110,55 +127,52 @@ export class SupabaseMembershipStore implements MembershipStore {
       return existing;
     }
     const now = new Date().toISOString();
-    const base: MembershipRecord =
-      existing ??
-      ({
-        userKey: input.userKey,
-        displayName: null,
-        email: null,
-        plan: 'free',
-        stripeCustomerId: null,
-        stripeCheckoutSessionId: null,
-        stripePaymentIntentId: null,
-        activatedAt: null,
-        createdAt: now,
-        updatedAt: now,
-      } satisfies MembershipRecord);
-    const record: MembershipRecord = {
+    const base = existing ?? blank(input.userKey, now);
+    return this.write({
       ...base,
       plan: planRank(input.plan) > planRank(base.plan) ? input.plan : base.plan,
       stripeCustomerId: input.stripeCustomerId ?? base.stripeCustomerId,
       stripeCheckoutSessionId: input.stripeCheckoutSessionId,
       stripePaymentIntentId: input.stripePaymentIntentId ?? base.stripePaymentIntentId,
       activatedAt: now,
+      planChosenAt: base.planChosenAt ?? now,
       updatedAt: now,
-    };
-    const { error } = await getSupabaseServerClient()
-      .from(TABLE)
-      .upsert(toRow(record), { onConflict: 'user_key' });
-    if (error) throw new Error(`membership activate failed: ${error.message}`);
-    return record;
+    });
   }
 
   async reset(userKey: string) {
     const existing = await this.get(userKey);
     const now = new Date().toISOString();
-    const record: MembershipRecord = {
-      userKey,
+    return this.write({
+      ...blank(userKey, now),
       displayName: existing?.displayName ?? null,
       email: existing?.email ?? null,
-      plan: 'free',
-      stripeCustomerId: null,
-      stripeCheckoutSessionId: null,
-      stripePaymentIntentId: null,
-      activatedAt: null,
       createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
-    };
-    const { error } = await getSupabaseServerClient()
+    });
+  }
+
+  async markPlanChosen(userKey: string) {
+    return this.stamp(userKey, 'planChosenAt');
+  }
+
+  async completeOnboarding(userKey: string) {
+    return this.stamp(userKey, 'onboardingCompletedAt');
+  }
+
+  private async stamp(userKey: string, field: 'planChosenAt' | 'onboardingCompletedAt') {
+    const now = new Date().toISOString();
+    const base = (await this.get(userKey)) ?? blank(userKey, now);
+    return this.write({ ...base, [field]: base[field] ?? now, updatedAt: now });
+  }
+
+  async findByEmail(email: string) {
+    const { data, error } = await getSupabaseServerClient()
       .from(TABLE)
-      .upsert(toRow(record), { onConflict: 'user_key' });
-    if (error) throw new Error(`membership reset failed: ${error.message}`);
-    return record;
+      .select('*')
+      .ilike('email', email.trim())
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new Error(`membership findByEmail failed: ${error.message}`);
+    return data ? toRecord(data as Row) : null;
   }
 }

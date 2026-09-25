@@ -10,6 +10,10 @@ export interface MembershipRecord {
   stripeCheckoutSessionId: string | null;
   stripePaymentIntentId: string | null;
   activatedAt: string | null;
+  /** Set when the user picks any plan (free or paid). */
+  planChosenAt: string | null;
+  /** Set when the post-signup intro is finished. */
+  onboardingCompletedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,4 +39,10 @@ export interface MembershipStore {
   }): Promise<MembershipRecord>;
   /** Demo reset: back to free, clears stripe fields. */
   reset(userKey: string): Promise<MembershipRecord>;
+  /** Marks that the user picked a plan (free or paid). */
+  markPlanChosen(userKey: string): Promise<MembershipRecord>;
+  /** Marks the post-signup intro as finished. */
+  completeOnboarding(userKey: string): Promise<MembershipRecord>;
+  /** Case-insensitive email lookup for demo sign-in. */
+  findByEmail(email: string): Promise<MembershipRecord | null>;
 }
