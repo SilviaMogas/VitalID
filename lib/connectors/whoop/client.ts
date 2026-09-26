@@ -109,14 +109,19 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Exponential backoff with jitter, honoring a numeric `Retry-After` header when present. */
+/**
+ * Exponential backoff with jitter, honoring a numeric `Retry-After` header
+ * when present. The jitter only has to spread out retries across concurrent
+ * requests (never a security concern), so it's derived from the clock rather
+ * than Math.random() — no PRNG needed for that.
+ */
 function retryDelayMs(attempt: number, retryAfterHeader: string | null): number {
   if (retryAfterHeader) {
     const seconds = Number(retryAfterHeader);
     if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds * 1000, MAX_DELAY_MS);
   }
   const backoff = BASE_DELAY_MS * 2 ** attempt;
-  const jitter = Math.random() * BASE_DELAY_MS;
+  const jitter = Date.now() % BASE_DELAY_MS;
   return Math.min(backoff + jitter, MAX_DELAY_MS);
 }
 

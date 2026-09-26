@@ -22,6 +22,7 @@ import {
   type ShareRecipient,
 } from "@/lib/sharing";
 import { getInsurer, INSURERS, type InsurerId } from "@/lib/insurers";
+import { InsurerMonogram, resolveRecipients } from "@/components/share/InsurerBadge";
 
 interface ShareSummary {
   id: string;
@@ -435,27 +436,23 @@ export default function ShareClient() {
                   <div className="mt-4 rounded-2xl bg-canvas p-3.5">
                     <p className="text-xs font-semibold text-ink-2">{t("share.auditTitle")}</p>
                     <ul className="mt-2 space-y-2.5">
-                      {result.sentTo.map((recipient) => {
-                        const insurer = getInsurer(recipient.insurerId);
-                        if (!insurer) return null;
-                        return (
-                          <li key={recipient.insurerId} className="text-xs">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="min-w-0 truncate font-medium text-ink-2">
-                                {locale === "ar" ? insurer.nameAr : insurer.name}
+                      {resolveRecipients(result.sentTo).map(({ recipient, insurer }) => (
+                        <li key={recipient.insurerId} className="text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="min-w-0 truncate font-medium text-ink-2">
+                              {locale === "ar" ? insurer.nameAr : insurer.name}
+                            </span>
+                            {recipient.consented && (
+                              <span className="shrink-0 rounded-full bg-good-soft px-2 py-0.5 font-medium text-good">
+                                {t("share.auditConsented")}
                               </span>
-                              {recipient.consented && (
-                                <span className="shrink-0 rounded-full bg-good-soft px-2 py-0.5 font-medium text-good">
-                                  {t("share.auditConsented")}
-                                </span>
-                              )}
-                            </div>
-                            <p dir="ltr" className="mt-0.5 truncate font-mono text-[11px] text-muted">
-                              {recipient.deliveryRef}
-                            </p>
-                          </li>
-                        );
-                      })}
+                            )}
+                          </div>
+                          <p dir="ltr" className="mt-0.5 truncate font-mono text-[11px] text-muted">
+                            {recipient.deliveryRef}
+                          </p>
+                        </li>
+                      ))}
                     </ul>
                     <p className="mt-2.5 text-[11px] text-muted">{t("share.auditNote")}</p>
                   </div>
@@ -522,20 +519,11 @@ export default function ShareClient() {
                     {t(`share.purpose.${s.purpose}` as TranslationKey)}
                     {!!s.sentTo?.length && (
                       <span className="ms-2 inline-flex -space-x-1 align-middle">
-                        {s.sentTo.map((recipient) => {
-                          const insurer = getInsurer(recipient.insurerId);
-                          if (!insurer) return null;
-                          return (
-                            <span
-                              key={recipient.insurerId}
-                              title={locale === "ar" ? insurer.nameAr : insurer.name}
-                              className="grid h-5 w-5 place-items-center rounded-full text-[9px] font-bold text-white ring-2 ring-white"
-                              style={{ backgroundColor: insurer.color }}
-                            >
-                              {insurer.monogram}
-                            </span>
-                          );
-                        })}
+                        {resolveRecipients(s.sentTo).map(({ recipient, insurer }) => (
+                          <span key={recipient.insurerId} title={locale === "ar" ? insurer.nameAr : insurer.name}>
+                            <InsurerMonogram insurer={insurer} className="h-5 w-5 text-[9px] ring-2 ring-white" />
+                          </span>
+                        ))}
                       </span>
                     )}
                     <span className="ms-2 font-mono text-xs text-muted" dir="ltr">

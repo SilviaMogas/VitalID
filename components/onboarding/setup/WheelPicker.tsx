@@ -109,6 +109,16 @@ function range(min: number, max: number): number[] {
   return Array.from({ length: max - min + 1 }, (_, i) => min + i);
 }
 
+interface WheelFieldProps {
+  value: number | null;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+  defaultValue?: number;
+  unit?: string;
+  ariaLabel?: string;
+}
+
 /** Single-wheel integer picker, e.g. height in cm. */
 export function HeightWheel({
   value,
@@ -118,15 +128,7 @@ export function HeightWheel({
   defaultValue = 170,
   unit = "cm",
   ariaLabel = "Height",
-}: {
-  value: number | null;
-  onChange: (v: number) => void;
-  min?: number;
-  max?: number;
-  defaultValue?: number;
-  unit?: string;
-  ariaLabel?: string;
-}) {
+}: WheelFieldProps) {
   const values = useMemo(() => range(min, max), [min, max]);
   const current = value ?? defaultValue;
   return (
@@ -146,15 +148,7 @@ export function WeightWheel({
   defaultValue = 70,
   unit = "kg",
   ariaLabel = "Weight",
-}: {
-  value: number | null;
-  onChange: (v: number) => void;
-  min?: number;
-  max?: number;
-  defaultValue?: number;
-  unit?: string;
-  ariaLabel?: string;
-}) {
+}: WheelFieldProps) {
   const wholeValues = useMemo(() => range(min, max), [min, max]);
   const decValues = useMemo(() => range(0, 9), []);
   const current = value ?? defaultValue;

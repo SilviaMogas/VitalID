@@ -8,13 +8,13 @@ import { LockIcon, UpgradeChip } from "@/components/membership/UpgradeChip";
 import type { TranslationKey } from "@/lib/i18n";
 import { METRIC_KEYS, type HealthMetric, type Insight, type MetricKey } from "@/types";
 import { METRIC_META } from "@/lib/demo-data";
-import Link from "next/link";
 import { baselineLabel, isWorse, rangeKey, statusTone } from "@/components/dashboard/MetricCard";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { InsightCard } from "@/components/dashboard/InsightCard";
 import { TrendChart } from "@/components/trends/TrendChart";
 import { MascotNote } from "@/components/mascot/MascotNote";
 import { DiagonalHero } from "@/components/ui/DiagonalHero";
+import { EmptyDataActions } from "@/components/ui/EmptyDataActions";
 
 export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; insights: Insight[] }) {
   const { t, n } = useLocale();
@@ -36,14 +36,7 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
         <section className="alert-banner rounded-[1.75rem] p-6 md:p-8">
           <h2 className="display-italic text-lg sm:text-xl">{t("empty.trends.title")}</h2>
           <p className="mt-3 max-w-prose text-sm text-white/90">{t("empty.trends.body")}</p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <Link href="/onboarding?step=4" className="press rounded-full bg-white px-4 py-2 text-sm font-semibold text-alert-deep shadow-card">
-              {t("empty.dashboard.manual")}
-            </Link>
-            <Link href="/connectors" className="press rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/40">
-              {t("empty.dashboard.connect")}
-            </Link>
-          </div>
+          <EmptyDataActions />
         </section>
       </div>
     );

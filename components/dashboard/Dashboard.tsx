@@ -15,6 +15,7 @@ import type { WhoopConnectionPublic } from "@/lib/connectors/whoop/types";
 import type { UserSetup } from "@/lib/onboarding/types";
 import { DailyChallenge } from "./DailyChallenge";
 import { WorkdayNudge } from "./WorkdayNudge";
+import { EmptyDataActions } from "@/components/ui/EmptyDataActions";
 
 function greetingKey(): "home.greeting.morning" | "home.greeting.afternoon" | "home.greeting.evening" {
   const h = new Date().getHours();
@@ -90,16 +91,7 @@ export function Dashboard({
         <section className="alert-banner rise rounded-[1.75rem] p-6 md:p-8" style={{ ["--i" as string]: 1 }}>
           <p className="display-italic text-lg text-white/90 sm:text-xl">{t("empty.dashboard.title")}</p>
           <p className="mt-3 max-w-prose text-sm text-white/90">{t("empty.dashboard.body")}</p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {editable && (
-              <Link href="/onboarding?step=4" className="press rounded-full bg-white px-4 py-2 text-sm font-semibold text-alert-deep shadow-card">
-                {t("empty.dashboard.manual")}
-              </Link>
-            )}
-            <Link href="/connectors" className="press rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/40">
-              {t("empty.dashboard.connect")}
-            </Link>
-          </div>
+          <EmptyDataActions showManual={editable} />
         </section>
       ) : (
         insight && (
