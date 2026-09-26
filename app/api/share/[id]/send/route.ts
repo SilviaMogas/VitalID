@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { INSURER_IDS, type InsurerId } from '@/lib/insurers';
-import { isShareActive, type ShareRecipient } from '@/lib/sharing';
+import { createDeliveryRef, isShareActive, type ShareRecipient } from '@/lib/sharing';
 import { getShare, setShareRecipients } from '@/lib/share-store';
 import { DEMO_USER_KEY, getCurrentUserKey } from '@/lib/membership/session';
 
@@ -16,13 +16,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: 'invalid JSON' }, { status: 400 });
   }
 
-  const insurers = (body as { insurers?: unknown } | null)?.insurers;
+  const { insurers, consent } = body as { insurers?: unknown; consent?: unknown };
   if (
     !Array.isArray(insurers) ||
     insurers.length === 0 ||
     !insurers.every((insurer) => typeof insurer === 'string' && INSURER_IDS.includes(insurer as InsurerId))
   ) {
     return NextResponse.json({ error: 'invalid insurers' }, { status: 400 });
+  }
+  if (consent !== true) {
+    return NextResponse.json({ error: 'consent required' }, { status: 400 });
   }
 
   const [share, ownerKey] = await Promise.all([getShare(id), getCurrentUserKey()]);
@@ -35,6 +38,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const recipients: ShareRecipient[] = insurers.map((insurerId) => ({
     insurerId: insurerId as ShareRecipient['insurerId'],
     sentAt,
+    deliveryRef: createDeliveryRef(id, insurerId as InsurerId),
+    consented: true,
   }));
   const updated = await setShareRecipients(id, recipients);
   if (!updated) return NextResponse.json({ error: 'not found' }, { status: 404 });

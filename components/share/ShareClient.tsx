@@ -60,6 +60,8 @@ export default function ShareClient() {
   const [sending, setSending] = useState(false);
   const [sendFeedback, setSendFeedback] = useState<string | null>(null);
   const [sendFailed, setSendFailed] = useState(false);
+  const [consent, setConsent] = useState(false);
+  const [consentMissing, setConsentMissing] = useState(false);
 
   const link = useMemo(
     () =>
@@ -152,10 +154,15 @@ export default function ShareClient() {
     });
     setSendFeedback(null);
     setSendFailed(false);
+    setConsentMissing(false);
   }
 
   async function sendToInsurers() {
     if (!result || selectedInsurers.size === 0) return;
+    if (!consent) {
+      setConsentMissing(true);
+      return;
+    }
     const selected = Array.from(selectedInsurers);
     setSending(true);
     setSendFeedback(null);
@@ -164,7 +171,7 @@ export default function ShareClient() {
       const res = await fetch(`/api/share/${result.id}/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ insurers: selected }),
+        body: JSON.stringify({ insurers: selected, consent: true }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const response = (await res.json()) as { id: string; sentTo: ShareRecipient[] };
@@ -172,6 +179,7 @@ export default function ShareClient() {
         current?.id === response.id ? { ...current, sentTo: response.sentTo } : current,
       );
       setSelectedInsurers(new Set());
+      setConsent(false);
       const names = selected
         .map((id) => getInsurer(id))
         .filter((insurer): insurer is NonNullable<typeof insurer> => Boolean(insurer))
@@ -197,6 +205,8 @@ export default function ShareClient() {
     setSelectedInsurers(new Set());
     setSendFeedback(null);
     setSendFailed(false);
+    setConsent(false);
+    setConsentMissing(false);
     refreshShares();
   }
 
@@ -389,6 +399,20 @@ export default function ShareClient() {
                     );
                   })}
                 </div>
+                {selectedInsurers.size > 0 && (
+                  <label className="press mt-3 flex items-start gap-2.5 rounded-2xl bg-canvas p-3 text-xs text-ink-2">
+                    <input
+                      type="checkbox"
+                      checked={consent}
+                      onChange={(e) => {
+                        setConsent(e.target.checked);
+                        if (e.target.checked) setConsentMissing(false);
+                      }}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-line text-brand focus:ring-brand/40"
+                    />
+                    <span>{t("share.consentLabel")}</span>
+                  </label>
+                )}
                 <button
                   type="button"
                   onClick={sendToInsurers}
@@ -399,10 +423,42 @@ export default function ShareClient() {
                     ? t("share.sending")
                     : t("share.sendReport", { count: selectedInsurers.size })}
                 </button>
+                {consentMissing && (
+                  <p className="mt-2 text-center text-sm text-bad">{t("share.consentRequired")}</p>
+                )}
                 {sendFeedback && (
                   <p className={`mt-2 text-center text-sm ${sendFailed ? "text-bad" : "text-good"}`}>
                     {sendFeedback}
                   </p>
+                )}
+                {!!result.sentTo?.length && (
+                  <div className="mt-4 rounded-2xl bg-canvas p-3.5">
+                    <p className="text-xs font-semibold text-ink-2">{t("share.auditTitle")}</p>
+                    <ul className="mt-2 space-y-2.5">
+                      {result.sentTo.map((recipient) => {
+                        const insurer = getInsurer(recipient.insurerId);
+                        if (!insurer) return null;
+                        return (
+                          <li key={recipient.insurerId} className="text-xs">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="min-w-0 truncate font-medium text-ink-2">
+                                {locale === "ar" ? insurer.nameAr : insurer.name}
+                              </span>
+                              {recipient.consented && (
+                                <span className="shrink-0 rounded-full bg-good-soft px-2 py-0.5 font-medium text-good">
+                                  {t("share.auditConsented")}
+                                </span>
+                              )}
+                            </div>
+                            <p dir="ltr" className="mt-0.5 truncate font-mono text-[11px] text-muted">
+                              {recipient.deliveryRef}
+                            </p>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <p className="mt-2.5 text-[11px] text-muted">{t("share.auditNote")}</p>
+                  </div>
                 )}
               </section>
               <div className="mt-4 flex justify-center">

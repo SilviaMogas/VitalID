@@ -101,23 +101,60 @@ async function doRefresh(userKey: string, conn: WhoopConnection): Promise<WhoopC
   }
 }
 
+const MAX_ATTEMPTS = 3;
+const BASE_DELAY_MS = 400;
+const MAX_DELAY_MS = 10_000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Exponential backoff with jitter, honoring a numeric `Retry-After` header when present. */
+function retryDelayMs(attempt: number, retryAfterHeader: string | null): number {
+  if (retryAfterHeader) {
+    const seconds = Number(retryAfterHeader);
+    if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds * 1000, MAX_DELAY_MS);
+  }
+  const backoff = BASE_DELAY_MS * 2 ** attempt;
+  const jitter = Math.random() * BASE_DELAY_MS;
+  return Math.min(backoff + jitter, MAX_DELAY_MS);
+}
+
+/**
+ * GETs one WHOOP endpoint, retrying transient failures (network errors, 429,
+ * 5xx) with backoff — up to MAX_ATTEMPTS total. A 401 is returned as-is (the
+ * caller refreshes and retries once at a higher level); any other client
+ * error (4xx) fails immediately, since retrying won't change the outcome.
+ */
 async function apiGet<T>(apiBase: string, path: string, accessToken: string, query?: Record<string, string>): Promise<{ status: number; data: T | null }> {
   const url = new URL(`${apiBase}${path}`);
   for (const [k, v] of Object.entries(query ?? {})) url.searchParams.set(k, v);
-  let res: Response;
-  try {
-    res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-  } catch (e) {
-    throw new WhoopError('unavailable', `WHOOP API unreachable: ${(e as Error).message}`);
+
+  for (let attempt = 0; ; attempt++) {
+    const lastAttempt = attempt === MAX_ATTEMPTS - 1;
+    let res: Response;
+    try {
+      res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+    } catch (e) {
+      if (!lastAttempt) {
+        await sleep(retryDelayMs(attempt, null));
+        continue;
+      }
+      throw new WhoopError('unavailable', `WHOOP API unreachable: ${(e as Error).message}`);
+    }
+    if (res.status === 401) return { status: 401, data: null };
+    if (res.status === 429 || res.status >= 500) {
+      if (!lastAttempt) {
+        await sleep(retryDelayMs(attempt, res.headers.get('retry-after')));
+        continue;
+      }
+      throw new WhoopError('unavailable', `WHOOP API unavailable (${res.status})`, res.status);
+    }
+    if (!res.ok) {
+      throw new WhoopError('oauth_failed', `WHOOP API error (${res.status})`, res.status);
+    }
+    return { status: res.status, data: (await res.json()) as T };
   }
-  if (res.status === 401) return { status: 401, data: null };
-  if (res.status === 429 || res.status >= 500) {
-    throw new WhoopError('unavailable', `WHOOP API unavailable (${res.status})`, res.status);
-  }
-  if (!res.ok) {
-    throw new WhoopError('oauth_failed', `WHOOP API error (${res.status})`, res.status);
-  }
-  return { status: res.status, data: (await res.json()) as T };
 }
 
 export async function whoopGet<T>(userKey: string, path: string, query?: Record<string, string>): Promise<T> {
@@ -160,8 +197,10 @@ export async function whoopGetAll<T>(
     if (opts.end) query.end = opts.end;
     if (nextToken) query.nextToken = nextToken;
     const page_data = await whoopGet<Paginated<T>>(userKey, path, query);
-    records.push(...(page_data.records ?? []));
-    nextToken = page_data.next_token ?? null;
+    // Defend against a malformed page (e.g. `records` missing or not an array)
+    // rather than crash the whole sync on `push(...non-iterable)`.
+    if (Array.isArray(page_data?.records)) records.push(...page_data.records);
+    nextToken = typeof page_data?.next_token === 'string' ? page_data.next_token : null;
     if (!nextToken) break;
   }
   return records;
