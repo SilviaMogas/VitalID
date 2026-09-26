@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { SectionTitle } from "@/components/vital-id/VitalIdSections";
 import { MascotNote } from "@/components/mascot/MascotNote";
+import { CoachChat } from "./CoachChat";
 import { COACH_AREAS, type CoachArea, type Recommendation } from "@/lib/coach";
 import type { TranslationKey } from "@/lib/i18n";
 import type { GoalId } from "@/lib/onboarding/types";
@@ -79,6 +79,7 @@ function AreaIcon({ area, className = "h-5 w-5" }: { area: CoachArea; className?
 /** Params like {goal}/{metric} hold ids — translate them before rendering the template. */
 export function CoachView({
   recommendations,
+  metrics,
   goals,
   identity,
   owner,
@@ -103,41 +104,21 @@ export function CoachView({
 
   return (
     <div className="space-y-7">
-      <section className="rise" style={{ ["--i" as string]: 0 }}>
+      <CoachChat
+        firstName={firstName}
+        metrics={metrics}
+        recommendations={recommendations}
+        translateParams={translateParams}
+      />
+
+      <section className="rise pt-6" style={{ ["--i" as string]: 1 }}>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("coach.title")}</h1>
+          <h2 className="display text-3xl">{t("chat.fullPlan")}</h2>
           <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand">
             {t("coach.badge")}
           </span>
         </div>
         <p className="mt-1 text-sm text-muted">{t("coach.subtitle")}</p>
-        <p className="mt-2 text-xs leading-snug text-muted">{t("coach.notMedical")}</p>
-      </section>
-
-      <section
-        className="rise relative overflow-hidden rounded-[1.75rem] border border-line bg-gradient-to-br from-white via-white to-sage shadow-card"
-        style={{ ["--i" as string]: 1 }}
-      >
-        <div className="flex items-end gap-4 p-5 pb-0 md:gap-8 md:p-7 md:pb-0">
-          <div className="relative w-[45%] max-w-[180px] shrink-0 self-end md:max-w-[260px]">
-            <Image
-              src="/coach/doctor.png"
-              width={234}
-              height={360}
-              alt={t("coach.doctorAlt")}
-              priority
-              className="h-auto w-full"
-            />
-          </div>
-          <div className="min-w-0 flex-1 self-center pb-5 md:pb-7">
-            <p className="text-sm font-semibold text-brand">{t("coach.hello", { name: firstName })}</p>
-            <div className="relative mt-2 inline-block rounded-2xl rounded-ss-sm bg-white px-4 py-3 shadow-card">
-              <p className="text-sm font-medium leading-snug text-ink-2 md:text-base">
-                {t("coach.bubble")}
-              </p>
-            </div>
-          </div>
-        </div>
       </section>
 
       <section className="rise" style={{ ["--i" as string]: 2 }}>

@@ -14,6 +14,7 @@ import { Onboarding } from "@/components/onboarding/Onboarding";
 import { UserAvatar } from "@/components/layout/UserAvatar";
 import { CONNECTORS_STORAGE_KEY } from "@/lib/connectors-state";
 import { DEMO_IDENTITY } from "@/lib/demo-data";
+import { TabIntro } from "@/components/layout/TabIntro";
 
 /** Routes rendered without the app navigation (auth + setup journey, public share view). */
 const BARE_PREFIXES = ["/shared", "/signup", "/signin", "/checkout", "/pricing", "/onboarding"];
@@ -95,7 +96,27 @@ const NAV: { href: string; key: TranslationKey; icon: ReactNode }[] = [
       </svg>
     ),
   },
+  {
+    href: "/more",
+    key: "nav.more",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+        <circle cx="5.5" cy="12" r="1.9" />
+        <circle cx="12" cy="12" r="1.9" />
+        <circle cx="18.5" cy="12" r="1.9" />
+      </svg>
+    ),
+  },
 ];
+
+/** Mobile floating pill (Thine-style): four tabs + a separate round chat button for the coach. */
+const MOBILE_TABS = ["/", "/trends", "/vital-id", "/more"] as const;
+/** Routes reached from the More hub keep "More" highlighted in the pill. */
+const MORE_CHILDREN = ["/more", "/connectors", "/community", "/share"];
+
+export function openTabIntro() {
+  window.dispatchEvent(new Event("vitalid:intro"));
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -157,6 +178,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+  const isMobileActive = (href: string) =>
+    href === "/more" ? MORE_CHILDREN.some((p) => pathname.startsWith(p)) : isActive(href);
 
   const avatarName =
     status === "member"
@@ -272,61 +295,61 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-h-dvh flex-1 flex-col">
-        {/* Top bar (mobile) */}
+        {/* Top bar (mobile) — logo + help, like Thine */}
         <header className="flex items-center justify-between px-5 pt-5 md:hidden">
           <Brand compact />
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <Link href="/vital-id" aria-label={t("profile.viewData")}>
-              <UserAvatar name={avatarName} photoUrl={avatarPhoto} size={36} />
+              <UserAvatar name={avatarName} photoUrl={avatarPhoto} size={40} />
             </Link>
-            <PlanBadge />
-            <LangButton />
-            <button
-              type="button"
-              onClick={signOut}
-              aria-label={t("onboarding.signOut")}
-              className="press grid h-9 w-9 place-items-center rounded-full border border-line bg-white text-muted"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4 rtl:-scale-x-100">
-                <path d="M10 17l5-5-5-5M15 12H3M13 4h6v16h-6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
+            <HelpButton />
           </div>
         </header>
 
-        <main className="flex-1 px-5 pb-28 pt-4 md:px-0 md:pb-12 md:pt-8" key={locale}>
+        <main className="flex-1 px-5 pb-36 pt-4 md:px-0 md:pb-12 md:pt-8" key={locale}>
           {children}
         </main>
+        <TabIntro />
 
-        {/* Bottom nav (mobile) */}
+        {/* Floating pill nav + chat bubble (mobile) */}
         <nav
-          className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/92 backdrop-blur md:hidden"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          className="fixed inset-x-0 bottom-0 z-20 px-4 md:hidden"
+          style={{ paddingBottom: "max(env(safe-area-inset-bottom), 14px)" }}
+          aria-label={t("app.name")}
         >
-          <ul
-            className="mx-auto grid max-w-md"
-            style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}
-          >
-            {NAV.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={`press flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition ${
-                      active ? "text-brand" : "text-muted"
-                    }`}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    <span className={`grid h-8 w-12 place-items-center rounded-full transition ${active ? "bg-brand-soft" : ""}`}>
+          <div className="mx-auto flex max-w-md items-center gap-3">
+            <ul className="float-pill grid flex-1 grid-cols-4 rounded-full p-1.5">
+              {MOBILE_TABS.map((href) => {
+                const item = NAV.find((n) => n.href === href)!;
+                const active = isMobileActive(href);
+                return (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className={`press flex flex-col items-center gap-0.5 rounded-full py-2 text-[11px] font-medium transition ${
+                        active ? "bg-sage text-brand" : "text-ink"
+                      }`}
+                      aria-current={active ? "page" : undefined}
+                    >
                       {item.icon}
-                    </span>
-                    <span>{t(item.key)}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                      <span>{t(item.key)}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+            <Link
+              href="/coach"
+              aria-label={t("nav.chat")}
+              className={`press float-pill grid h-[4.1rem] w-[4.1rem] shrink-0 place-items-center rounded-full ${
+                pathname.startsWith("/coach") ? "text-brand ring-2 ring-brand/30" : "text-ink"
+              }`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-7 w-7 rtl:-scale-x-100">
+                <path d="M12 4.5c4.7 0 8.5 3 8.5 6.8S16.7 18 12 18c-.9 0-1.8-.1-2.6-.3L5 19.5l1.3-3.3C4.5 15 3.5 13.2 3.5 11.3 3.5 7.5 7.3 4.5 12 4.5z" strokeLinejoin="round" />
+              </svg>
+            </Link>
+          </div>
         </nav>
       </div>
     </div>
@@ -357,6 +380,24 @@ export function LangButton() {
       className="press rounded-full border border-line bg-white px-3.5 py-1.5 text-sm font-medium text-ink-2 shadow-sm hover:bg-sage"
     >
       {t("lang.switch")}
+    </button>
+  );
+}
+
+export function HelpButton({ className = "" }: { className?: string }) {
+  const { t } = useLocale();
+  return (
+    <button
+      type="button"
+      onClick={openTabIntro}
+      aria-label={t("nav.help")}
+      className={`press grid h-10 w-10 place-items-center rounded-full bg-white text-ink shadow-card ${className}`}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+        <circle cx="12" cy="12" r="9" strokeDasharray="3 2.4" />
+        <path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2-2.4 3.6" strokeLinecap="round" />
+        <path d="M12 16.9h.01" strokeLinecap="round" strokeWidth="2.4" />
+      </svg>
     </button>
   );
 }

@@ -10,16 +10,10 @@ import { InsightCard } from "./InsightCard";
 import { MetricCard } from "./MetricCard";
 import { LogoMark } from "@/components/layout/Logo";
 import { MemberSetupPanel } from "./MemberSetupPanel";
+import { CommunityCard, ConnectToolsCard, HeyGreeting, SectionRule, ShareCard, SyncToggleCard } from "./HomeHero";
 import { WhoopConnectorCard } from "@/components/connectors/WhoopConnectorCard";
 import type { WhoopConnectionPublic } from "@/lib/connectors/whoop/types";
 import type { UserSetup } from "@/lib/onboarding/types";
-
-function greetingKey(): "home.greeting.morning" | "home.greeting.afternoon" | "home.greeting.evening" {
-  const h = new Date().getHours();
-  if (h < 12) return "home.greeting.morning";
-  if (h < 18) return "home.greeting.afternoon";
-  return "home.greeting.evening";
-}
 
 export function Dashboard({
   metrics,
@@ -50,39 +44,30 @@ export function Dashboard({
 
   return (
     <div className="space-y-7">
-      <section className="rise flex items-end justify-between gap-4" style={{ ["--i" as string]: 0 }}>
-        <div className="flex items-center gap-4">
-          {identity.photoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={identity.photoUrl}
-              alt=""
-              width={64}
-              height={64}
-              className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-white shadow-card md:h-16 md:w-16"
-            />
-          )}
-          <div>
-          <p className="eyebrow">
-            {d(today ?? new Date().toISOString().slice(0, 10), { weekday: "long", day: "numeric", month: "long" })}
-          </p>
-          <h1 className="mt-1.5 text-[1.75rem] font-semibold leading-tight tracking-tight md:text-4xl">
-            {t(greetingKey(), { name: firstName })}
-          </h1>
-          <p className="mt-1.5 text-sm text-ink-2">{t("home.subtitle")}</p>
-          <div className="mt-3">
-            <PlanBadge />
-          </div>
-          </div>
-        </div>
+      <div className="rise" style={{ ["--i" as string]: 0 }}>
+        <SyncToggleCard whoop={whoop} hasData={!isEmpty} />
+      </div>
+
+      <div className="rise pt-4" style={{ ["--i" as string]: 1 }}>
+        <HeyGreeting
+          firstName={firstName}
+          dateLabel={d(today ?? new Date().toISOString().slice(0, 10), { weekday: "long", day: "numeric", month: "long" })}
+        />
+      </div>
+
+      <div className="flex items-center justify-between gap-3 pt-6">
+        <SectionRule>{t("home.section.today")}</SectionRule>
+      </div>
+      <div className="-mt-3 flex flex-wrap items-center gap-2">
+        <PlanBadge />
         <Link
           href="/vital-id"
-          className="press hidden items-center gap-2 rounded-full bg-white px-3.5 py-2 text-xs font-semibold text-brand ring-1 ring-line sm:inline-flex"
+          className="press inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-brand ring-1 ring-line"
         >
           <LogoMark size={16} />
           <span dir="ltr" className="font-mono tracking-wider">{identity.vitalId}</span>
         </Link>
-      </section>
+      </div>
 
       {isEmpty ? (
         <section className="card rise rounded-[1.75rem] p-6 md:p-8" style={{ ["--i" as string]: 1 }}>
@@ -148,6 +133,15 @@ export function Dashboard({
         </div>
       </section>
       )}
+
+      <div className="pt-6">
+        <SectionRule>{t("home.section.other")}</SectionRule>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <ConnectToolsCard />
+        <CommunityCard identity={identity} />
+        <ShareCard />
+      </div>
 
       <WhoopConnectorCard status={whoop} />
 
