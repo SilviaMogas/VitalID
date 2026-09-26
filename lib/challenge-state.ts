@@ -2,7 +2,8 @@
 // non-medical, so it lives in localStorage rather than the account record.
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { readJSON, useStorageSync, writeJSON } from "@/lib/local-store";
 import {
   WELLNESS_CHALLENGES,
   challengeIndexForDate,
@@ -17,24 +18,12 @@ const EVENT = "vitalid:challenge";
 type CompletedByDate = Record<string, ChallengeId>;
 
 function readCompleted(): CompletedByDate {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const out: CompletedByDate = {};
-    for (const [date, id] of Object.entries(parsed)) {
-      if (typeof id === "string" && WELLNESS_CHALLENGES.some((c) => c.id === id)) out[date] = id as ChallengeId;
-    }
-    return out;
-  } catch {
-    return {};
+  const parsed = readJSON<Record<string, unknown>>(STORAGE_KEY, {});
+  const out: CompletedByDate = {};
+  for (const [date, id] of Object.entries(parsed)) {
+    if (typeof id === "string" && WELLNESS_CHALLENGES.some((c) => c.id === id)) out[date] = id as ChallengeId;
   }
-}
-
-function writeCompleted(next: CompletedByDate) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  window.dispatchEvent(new Event(EVENT));
+  return out;
 }
 
 export function useDailyChallenge() {
@@ -53,15 +42,7 @@ export function useDailyChallenge() {
     }
   }, [date]);
 
-  useEffect(() => {
-    sync();
-    window.addEventListener(EVENT, sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener(EVENT, sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, [sync]);
+  useStorageSync(EVENT, sync);
 
   const chooseAnother = useCallback(() => {
     setIndex((v) => nextChallengeIndex(v));
@@ -70,7 +51,7 @@ export function useDailyChallenge() {
 
   const complete = useCallback(() => {
     const saved = readCompleted();
-    writeCompleted({ ...saved, [date]: WELLNESS_CHALLENGES[index].id });
+    writeJSON(STORAGE_KEY, { ...saved, [date]: WELLNESS_CHALLENGES[index].id }, EVENT);
     setCompleted(true);
   }, [date, index]);
 
