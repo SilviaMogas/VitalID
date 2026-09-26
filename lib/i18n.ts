@@ -41,14 +41,29 @@ const shareStrings = {
   "share.openRecipient": ["Open recipient view", "فتح عرض المستلم"],
   "share.sendToInsurer": ["Send directly to your insurer", "أرسل مباشرة إلى شركة التأمين"],
   "share.sendToInsurerHint": [
-    "Pick one or more insurers — they'll receive this secure link to your report.",
-    "اختر شركة تأمين واحدة أو أكثر — ستتلقى رابطًا آمنًا لتقريرك.",
+    "Pick one or more insurers — they'll be granted secure, revocable access to this link.",
+    "اختر شركة تأمين واحدة أو أكثر — سيُمنحون وصولاً آمنًا وقابلاً للإلغاء لهذا الرابط.",
   ],
-  "share.sendReport": ["Send report to {count} insurer(s)", "أرسل التقرير إلى {count} شركة تأمين"],
-  "share.sending": ["Sending…", "جارٍ الإرسال…"],
-  "share.sentLabel": ["Sent", "تم الإرسال"],
-  "share.sentTo": ["Sent to", "أُرسل إلى"],
-  "share.sentSuccess": ["Report sent to {names}", "تم إرسال التقرير إلى {names}"],
+  "share.sendReport": ["Authorize {count} insurer(s)", "منح الوصول لـ {count} شركة تأمين"],
+  "share.sending": ["Authorizing…", "جارٍ المنح…"],
+  "share.sentLabel": ["Authorized", "تم المنح"],
+  "share.sentTo": ["Authorized for", "تم المنح لـ"],
+  "share.sentSuccess": ["Access granted to {names}", "تم منح الوصول إلى {names}"],
+  "share.consentLabel": [
+    "I confirm I'm authorized to share this information with the selected insurer(s), for this purpose, until the link expires.",
+    "أؤكد أنني مخوَّل لمشاركة هذه المعلومات مع شركة (شركات) التأمين المختارة، لهذا الغرض، حتى انتهاء صلاحية الرابط.",
+  ],
+  "share.consentRequired": [
+    "Please confirm the authorization above before continuing.",
+    "يرجى تأكيد التخويل أعلاه قبل المتابعة.",
+  ],
+  "share.auditTitle": ["Access & consent log", "سجل الوصول والموافقة"],
+  "share.auditNote": [
+    "This grants each insurer secure, revocable access to your link — Vital ID does not transmit health data to them directly.",
+    "هذا يمنح كل شركة تأمين وصولاً آمنًا وقابلاً للإلغاء لرابطك — لا يقوم Vital ID بنقل البيانات الصحية إليها مباشرة.",
+  ],
+  "share.auditRef": ["Reference", "المرجع"],
+  "share.auditConsented": ["Consent confirmed", "تم تأكيد الموافقة"],
   "share.revoke": ["Revoke Access", "إلغاء الوصول"],
   "share.revoked": ["Access revoked", "تم إلغاء الوصول"],
   "share.selectAtLeastOne": ["Select at least one information category.", "اختر فئة معلومات واحدة على الأقل."],
@@ -218,6 +233,10 @@ const setupStrings = {
   "setup.nationality": ["Nationality", "الجنسية"],
   "setup.height": ["Height", "الطول"],
   "setup.weight": ["Weight", "الوزن"],
+  "setup.bodyMetrics.subtitle": [
+    "Used to personalize your baseline and calorie estimates. Never shared without your permission.",
+    "تُستخدم لتخصيص خط أساسك وتقديرات السعرات الحرارية. لن تُشارَك دون إذنك.",
+  ],
 
   "setup.step2.eyebrow": ["Your goals", "أهدافك"],
   "setup.step2.title": ["What matters most to you?", "ما الأهم بالنسبة لك؟"],
@@ -532,6 +551,91 @@ const profileStrings = {
   "profile.photo.error": ["Could not save the photo. Try a smaller image.", "تعذّر حفظ الصورة. جرّب صورة أصغر."],
 } as const satisfies Record<string, readonly [string, string]>;
 
+const wellnessToolsStrings = {
+  "challenge.eyebrow": ["Today's small challenge", "تحدّي اليوم الصغير"],
+  "challenge.hint": [
+    "Completely optional. Choose only what feels right today.",
+    "اختياري تمامًا. اختر فقط ما يناسبك اليوم.",
+  ],
+  "challenge.done": ["I did it!", "أنجزته!"],
+  "challenge.another": ["Another idea", "فكرة أخرى"],
+  "challenge.complete": [
+    "Nice one, {name}! That small step deserves a celebration.",
+    "أحسنت يا {name}! خطوة صغيرة تستحق الاحتفال.",
+  ],
+  "challenge.water.title": ["Water break", "استراحة ماء"],
+  "challenge.water.body": ["Slow down and enjoy a glass of water.", "اشرب كوبًا من الماء على مهل."],
+  "challenge.stretch.title": ["Two-minute reset", "دقيقتان من الحركة"],
+  "challenge.stretch.body": [
+    "Roll your shoulders and stretch gently if that feels comfortable.",
+    "حرّك كتفيك وتمدد بلطف إذا كان ذلك مريحًا لك.",
+  ],
+  "challenge.walk.title": ["A short walk", "نزهة قصيرة"],
+  "challenge.walk.body": [
+    "Take a ten-minute walk at an easy pace if that suits you.",
+    "امشِ عشر دقائق بوتيرة مريحة إذا كان ذلك مناسبًا لك.",
+  ],
+  "challenge.connect.title": ["A moment of connection", "لحظة تواصل"],
+  "challenge.connect.body": [
+    "Send a quick hello to someone you would enjoy hearing from.",
+    "أرسل تحية قصيرة إلى شخص تحب التواصل معه.",
+  ],
+
+  "focus.nudge.title": ["Work & breaks", "العمل والاستراحات"],
+  "focus.nudge.hours": [
+    "Your hours: {start}–{end}. Track your work and make time for breaks.",
+    "ساعاتك: {start}–{end}. تتبّع عملك واحرص على وقت للاستراحة.",
+  ],
+  "focus.nudge.limit": [
+    "{name}, you've reached your chosen work limit: {minutes} minutes logged. Take a break.",
+    "{name}، تجاوزت حد العمل اليومي الذي اخترته. سُجِّلت {minutes} دقيقة. حان وقت الاستراحة.",
+  ],
+  "focus.nudge.schedule": [
+    "{name}, your planned work hours are over and you're still working. Take a short break.",
+    "{name}، انتهت ساعات عملك المخطط لها وما زلت تعمل. خذ استراحة قصيرة.",
+  ],
+  "focus.nudge.cta": ["Open focus timer", "افتح مؤقت التركيز"],
+
+  "focus.title": ["Focus timer", "مؤقت التركيز"],
+  "focus.subtitle": [
+    "A simple Pomodoro-style timer to help you work in focused bursts and take real breaks.",
+    "مؤقت بسيط على نمط بومودورو يساعدك على العمل في فترات مركّزة وأخذ استراحات حقيقية.",
+  ],
+  "focus.mode.focus": ["Focus", "تركيز"],
+  "focus.mode.shortBreak": ["Short break", "استراحة قصيرة"],
+  "focus.mode.longBreak": ["Long break", "استراحة طويلة"],
+  "focus.start": ["Start", "ابدأ"],
+  "focus.pause": ["Pause", "إيقاف مؤقت"],
+  "focus.reset": ["Reset", "إعادة تعيين"],
+  "focus.workSession.start": ["Start work session", "ابدأ جلسة العمل"],
+  "focus.workSession.stop": ["End work session", "أنهِ جلسة العمل"],
+  "focus.workSession.active": ["Working since {time}", "تعمل منذ {time}"],
+  "focus.settings.title": ["Your work hours", "ساعات عملك"],
+  "focus.settings.start": ["Start time", "وقت البدء"],
+  "focus.settings.end": ["End time", "وقت الانتهاء"],
+  "focus.settings.limit": ["Daily limit (minutes)", "الحد اليومي (بالدقائق)"],
+  "focus.today.logged": ["Logged today", "المسجَّل اليوم"],
+  "focus.completedSessions": ["Focus sessions completed", "جلسات التركيز المكتملة"],
+  "focus.disclaimer": [
+    "A personal timer to support your own rhythm — it is not a productivity tracker shared with anyone.",
+    "مؤقت شخصي لدعم إيقاعك الخاص — وليس أداة تتبّع إنتاجية تُشارَك مع أحد.",
+  ],
+
+  "a11y.listen": ["Listen", "استمع"],
+  "a11y.stop": ["Stop reading", "أوقف القراءة"],
+  "a11y.unavailable": [
+    "No voice for this language is available in this browser.",
+    "لا يتوفر صوت لهذه اللغة في هذا المتصفح.",
+  ],
+  "a11y.dictate": ["Dictate", "أملِ"],
+  "a11y.listening": ["Listening…", "الاستماع جارٍ…"],
+  "a11y.dictateDenied": ["Microphone access was denied.", "تم رفض الوصول إلى الميكروفون."],
+  "a11y.dictateUnavailable": [
+    "Voice dictation is not available in this browser.",
+    "الإملاء الصوتي غير متاح في هذا المتصفح.",
+  ],
+} as const satisfies Record<string, readonly [string, string]>;
+
 const en = {
   "app.name": "Vital ID",
   "app.tagline": "Your portable health identity",
@@ -669,6 +773,7 @@ const en = {
   ...pickLocale(coachStrings, 0),
   ...pickLocale(communityStrings, 0),
   ...pickLocale(profileStrings, 0),
+  ...pickLocale(wellnessToolsStrings, 0),
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -810,6 +915,7 @@ const ar: Record<TranslationKey, string> = {
   ...pickLocale(coachStrings, 1),
   ...pickLocale(communityStrings, 1),
   ...pickLocale(profileStrings, 1),
+  ...pickLocale(wellnessToolsStrings, 1),
 };
 
 export const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, ar };

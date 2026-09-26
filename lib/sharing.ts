@@ -12,6 +12,21 @@ export type ShareDuration = 15 | 60 | 1440; // minutes
 export interface ShareRecipient {
   insurerId: InsurerId;
   sentAt: string;
+  /**
+   * Durable, human-facing reference for this authorization — shown to the
+   * sender as a receipt. There is no outbound transport (no email/EDI) yet:
+   * this records that the insurer was granted access to the secure link,
+   * not that anything was pushed to them.
+   */
+  deliveryRef: string;
+  /** True only when the sender explicitly checked the consent box for this send. */
+  consented: boolean;
+}
+
+/** Short, unique-enough reference for a single insurer authorization. */
+export function createDeliveryRef(shareId: string, insurerId: InsurerId): string {
+  const suffix = Date.now().toString(36).slice(-4);
+  return `VID-${shareId.slice(0, 6)}-${insurerId}-${suffix}`.toUpperCase();
 }
 
 export interface SharePayload {

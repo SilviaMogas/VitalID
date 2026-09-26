@@ -32,6 +32,9 @@ import { PLANS } from "@/lib/plans";
 import { providerName } from "@/lib/connectors-i18n";
 import type { TranslationKey } from "@/lib/i18n";
 import { Choice, Field, NumberInput, StepHeader, SummaryRow, inputClass } from "./ui";
+import { HeightWheel, WeightWheel } from "./WheelPicker";
+import { DiagonalHero } from "@/components/ui/DiagonalHero";
+import { VoiceDictation } from "@/components/voice/VoiceDictation";
 
 const GOAL_ICON: Record<GoalId, string> = {
   sleep: "🌙",
@@ -313,13 +316,33 @@ function StepProfile({ setup, update }: StepProps) {
             <input id="p-city" required value={p.city} onChange={text("city")} className={inputClass} autoComplete="address-level2" />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field id="p-height" label={t("setup.height")}>
-            <NumberInput id="p-height" value={p.heightCm} onChange={(v) => update({ profile: { heightCm: v } })} min={50} max={250} unit="cm" placeholder="170" />
-          </Field>
-          <Field id="p-weight" label={t("setup.weight")}>
-            <NumberInput id="p-weight" value={p.weightKg} onChange={(v) => update({ profile: { weightKg: v } })} min={20} max={400} step={0.1} unit="kg" placeholder="65" />
-          </Field>
+      </div>
+
+      <DiagonalHero
+        compact
+        title={`${t("setup.height")} & ${t("setup.weight")}`}
+        subtitle={t("setup.bodyMetrics.subtitle")}
+      />
+      <div className="card grid grid-cols-1 gap-6 p-5 sm:grid-cols-2">
+        <div>
+          <p id="p-height-label" className="mb-2 text-center text-xs font-medium text-ink-2">
+            {t("setup.height")}
+          </p>
+          <HeightWheel
+            value={p.heightCm}
+            onChange={(v) => update({ profile: { heightCm: v } })}
+            ariaLabel={t("setup.height")}
+          />
+        </div>
+        <div>
+          <p id="p-weight-label" className="mb-2 text-center text-xs font-medium text-ink-2">
+            {t("setup.weight")}
+          </p>
+          <WeightWheel
+            value={p.weightKg}
+            onChange={(v) => update({ profile: { weightKg: v } })}
+            ariaLabel={t("setup.weight")}
+          />
         </div>
       </div>
     </>
@@ -399,6 +422,10 @@ function StepHealth({ setup, update }: StepProps) {
         </div>
         <Field id="h-notes" label={t("setup.notes")} optional={opt}>
           <textarea id="h-notes" rows={3} value={h.notes} onChange={text("notes")} className={`${inputClass} resize-none`} />
+          <VoiceDictation
+            className="mt-2"
+            onFinal={(chunk) => update({ health: { notes: h.notes ? `${h.notes} ${chunk}` : chunk } })}
+          />
         </Field>
       </div>
     </>
