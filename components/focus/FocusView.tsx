@@ -13,6 +13,34 @@ function formatClock(totalSeconds: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+function TimeField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1 block text-xs font-medium text-ink-2">
+        {label}
+      </label>
+      <input
+        id={id}
+        type="time"
+        dir="ltr"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={inputClass}
+      />
+    </div>
+  );
+}
+
 export function FocusView({ identity }: { identity: Identity }) {
   const { t } = useLocale();
   const { state, now, startWork, stopWork, startTimer, pauseTimer, resetTimer, setSchedule } = useWorkFocus(
@@ -87,32 +115,18 @@ export function FocusView({ identity }: { identity: Identity }) {
       <section className="card space-y-4 p-5">
         <h2 className="text-sm font-semibold">{t("focus.settings.title")}</h2>
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label htmlFor="focus-start" className="mb-1 block text-xs font-medium text-ink-2">
-              {t("focus.settings.start")}
-            </label>
-            <input
-              id="focus-start"
-              type="time"
-              dir="ltr"
-              value={state.workStart}
-              onChange={(e) => setSchedule({ workStart: e.target.value })}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="focus-end" className="mb-1 block text-xs font-medium text-ink-2">
-              {t("focus.settings.end")}
-            </label>
-            <input
-              id="focus-end"
-              type="time"
-              dir="ltr"
-              value={state.workEnd}
-              onChange={(e) => setSchedule({ workEnd: e.target.value })}
-              className={inputClass}
-            />
-          </div>
+          <TimeField
+            id="focus-start"
+            label={t("focus.settings.start")}
+            value={state.workStart}
+            onChange={(v) => setSchedule({ workStart: v })}
+          />
+          <TimeField
+            id="focus-end"
+            label={t("focus.settings.end")}
+            value={state.workEnd}
+            onChange={(v) => setSchedule({ workEnd: v })}
+          />
         </div>
         <div>
           <label htmlFor="focus-limit" className="mb-1 block text-xs font-medium text-ink-2">

@@ -114,21 +114,21 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         setSpeaking(null);
         setFailed(error);
       };
+      // Give up and mark failed if the browser never fires onstart/onend/onerror in time.
+      const giveUpAfter = (ms: number) =>
+        setTimeout(() => {
+          stop();
+          setFailed(true);
+        }, ms);
       utterance.onstart = () => {
         if (id !== generation.current) return;
         if (timer.current) clearTimeout(timer.current);
         setSpeaking(owner);
-        timer.current = setTimeout(() => {
-          stop();
-          setFailed(true);
-        }, 120_000);
+        timer.current = giveUpAfter(120_000);
       };
       utterance.onend = () => finish();
       utterance.onerror = () => finish(true);
-      timer.current = setTimeout(() => {
-        stop();
-        setFailed(true);
-      }, 8000);
+      timer.current = giveUpAfter(8000);
       try {
         window.speechSynthesis.speak(utterance);
       } catch {
