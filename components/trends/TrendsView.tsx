@@ -14,6 +14,7 @@ import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { InsightCard } from "@/components/dashboard/InsightCard";
 import { TrendChart } from "@/components/trends/TrendChart";
 import { MascotNote } from "@/components/mascot/MascotNote";
+import { DiagonalHero } from "@/components/ui/DiagonalHero";
 
 export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; insights: Insight[] }) {
   const { t, n } = useLocale();
@@ -31,18 +32,15 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
   if (!metric) {
     return (
       <div className="space-y-6">
-        <section>
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("trends.title")}</h1>
-          <p className="mt-1 text-sm text-muted">{t("trends.subtitle")}</p>
-        </section>
-        <section className="card rounded-[1.75rem] p-6 md:p-8">
-          <h2 className="text-xl font-semibold tracking-tight">{t("empty.trends.title")}</h2>
-          <p className="mt-2 max-w-prose text-sm text-ink-2">{t("empty.trends.body")}</p>
+        <DiagonalHero title={t("trends.title")} subtitle={t("trends.subtitle")} />
+        <section className="alert-banner rounded-[1.75rem] p-6 md:p-8">
+          <h2 className="display-italic text-lg sm:text-xl">{t("empty.trends.title")}</h2>
+          <p className="mt-3 max-w-prose text-sm text-white/90">{t("empty.trends.body")}</p>
           <div className="mt-5 flex flex-wrap gap-2">
-            <Link href="/onboarding?step=4" className="press rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-hero">
+            <Link href="/onboarding?step=4" className="press rounded-full bg-white px-4 py-2 text-sm font-semibold text-alert-deep shadow-card">
               {t("empty.dashboard.manual")}
             </Link>
-            <Link href="/connectors" className="press rounded-full bg-white px-4 py-2 text-sm font-semibold text-brand ring-1 ring-line">
+            <Link href="/connectors" className="press rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/40">
               {t("empty.dashboard.connect")}
             </Link>
           </div>
@@ -59,10 +57,7 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
 
   return (
     <div className="space-y-6">
-      <section>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("trends.title")}</h1>
-        <p className="mt-1 text-sm text-muted">{t("trends.subtitle")}</p>
-      </section>
+      <DiagonalHero title={t("trends.title")} subtitle={t("trends.subtitle")} />
 
       <div className="flex gap-2 overflow-x-auto pb-1">
         {metrics.map((m) => (
@@ -136,7 +131,7 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
 
         <div className="mt-4">
           {available < 2 ? (
-            <p className="rounded-xl bg-canvas p-4 text-sm text-ink-2">{t("empty.trends.single")}</p>
+            <p className="alert-banner-soft rounded-xl p-4 text-sm font-medium">{t("empty.trends.single")}</p>
           ) : (
             <>
               <TrendChart metric={metric} days={range} />

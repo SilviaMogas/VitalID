@@ -218,6 +218,10 @@ const setupStrings = {
   "setup.nationality": ["Nationality", "الجنسية"],
   "setup.height": ["Height", "الطول"],
   "setup.weight": ["Weight", "الوزن"],
+  "setup.bodyMetrics.subtitle": [
+    "Used to personalize your baseline and calorie estimates. Never shared without your permission.",
+    "تُستخدم لتخصيص خط أساسك وتقديرات السعرات الحرارية. لن تُشارَك دون إذنك.",
+  ],
 
   "setup.step2.eyebrow": ["Your goals", "أهدافك"],
   "setup.step2.title": ["What matters most to you?", "ما الأهم بالنسبة لك؟"],
@@ -532,6 +536,91 @@ const profileStrings = {
   "profile.photo.error": ["Could not save the photo. Try a smaller image.", "تعذّر حفظ الصورة. جرّب صورة أصغر."],
 } as const satisfies Record<string, readonly [string, string]>;
 
+const wellnessToolsStrings = {
+  "challenge.eyebrow": ["Today's small challenge", "تحدّي اليوم الصغير"],
+  "challenge.hint": [
+    "Completely optional. Choose only what feels right today.",
+    "اختياري تمامًا. اختر فقط ما يناسبك اليوم.",
+  ],
+  "challenge.done": ["I did it!", "أنجزته!"],
+  "challenge.another": ["Another idea", "فكرة أخرى"],
+  "challenge.complete": [
+    "Nice one, {name}! That small step deserves a celebration.",
+    "أحسنت يا {name}! خطوة صغيرة تستحق الاحتفال.",
+  ],
+  "challenge.water.title": ["Water break", "استراحة ماء"],
+  "challenge.water.body": ["Slow down and enjoy a glass of water.", "اشرب كوبًا من الماء على مهل."],
+  "challenge.stretch.title": ["Two-minute reset", "دقيقتان من الحركة"],
+  "challenge.stretch.body": [
+    "Roll your shoulders and stretch gently if that feels comfortable.",
+    "حرّك كتفيك وتمدد بلطف إذا كان ذلك مريحًا لك.",
+  ],
+  "challenge.walk.title": ["A short walk", "نزهة قصيرة"],
+  "challenge.walk.body": [
+    "Take a ten-minute walk at an easy pace if that suits you.",
+    "امشِ عشر دقائق بوتيرة مريحة إذا كان ذلك مناسبًا لك.",
+  ],
+  "challenge.connect.title": ["A moment of connection", "لحظة تواصل"],
+  "challenge.connect.body": [
+    "Send a quick hello to someone you would enjoy hearing from.",
+    "أرسل تحية قصيرة إلى شخص تحب التواصل معه.",
+  ],
+
+  "focus.nudge.title": ["Work & breaks", "العمل والاستراحات"],
+  "focus.nudge.hours": [
+    "Your hours: {start}–{end}. Track your work and make time for breaks.",
+    "ساعاتك: {start}–{end}. تتبّع عملك واحرص على وقت للاستراحة.",
+  ],
+  "focus.nudge.limit": [
+    "{name}, you've reached your chosen work limit: {minutes} minutes logged. Take a break.",
+    "{name}، تجاوزت حد العمل اليومي الذي اخترته. سُجِّلت {minutes} دقيقة. حان وقت الاستراحة.",
+  ],
+  "focus.nudge.schedule": [
+    "{name}, your planned work hours are over and you're still working. Take a short break.",
+    "{name}، انتهت ساعات عملك المخطط لها وما زلت تعمل. خذ استراحة قصيرة.",
+  ],
+  "focus.nudge.cta": ["Open focus timer", "افتح مؤقت التركيز"],
+
+  "focus.title": ["Focus timer", "مؤقت التركيز"],
+  "focus.subtitle": [
+    "A simple Pomodoro-style timer to help you work in focused bursts and take real breaks.",
+    "مؤقت بسيط على نمط بومودورو يساعدك على العمل في فترات مركّزة وأخذ استراحات حقيقية.",
+  ],
+  "focus.mode.focus": ["Focus", "تركيز"],
+  "focus.mode.shortBreak": ["Short break", "استراحة قصيرة"],
+  "focus.mode.longBreak": ["Long break", "استراحة طويلة"],
+  "focus.start": ["Start", "ابدأ"],
+  "focus.pause": ["Pause", "إيقاف مؤقت"],
+  "focus.reset": ["Reset", "إعادة تعيين"],
+  "focus.workSession.start": ["Start work session", "ابدأ جلسة العمل"],
+  "focus.workSession.stop": ["End work session", "أنهِ جلسة العمل"],
+  "focus.workSession.active": ["Working since {time}", "تعمل منذ {time}"],
+  "focus.settings.title": ["Your work hours", "ساعات عملك"],
+  "focus.settings.start": ["Start time", "وقت البدء"],
+  "focus.settings.end": ["End time", "وقت الانتهاء"],
+  "focus.settings.limit": ["Daily limit (minutes)", "الحد اليومي (بالدقائق)"],
+  "focus.today.logged": ["Logged today", "المسجَّل اليوم"],
+  "focus.completedSessions": ["Focus sessions completed", "جلسات التركيز المكتملة"],
+  "focus.disclaimer": [
+    "A personal timer to support your own rhythm — it is not a productivity tracker shared with anyone.",
+    "مؤقت شخصي لدعم إيقاعك الخاص — وليس أداة تتبّع إنتاجية تُشارَك مع أحد.",
+  ],
+
+  "a11y.listen": ["Listen", "استمع"],
+  "a11y.stop": ["Stop reading", "أوقف القراءة"],
+  "a11y.unavailable": [
+    "No voice for this language is available in this browser.",
+    "لا يتوفر صوت لهذه اللغة في هذا المتصفح.",
+  ],
+  "a11y.dictate": ["Dictate", "أملِ"],
+  "a11y.listening": ["Listening…", "الاستماع جارٍ…"],
+  "a11y.dictateDenied": ["Microphone access was denied.", "تم رفض الوصول إلى الميكروفون."],
+  "a11y.dictateUnavailable": [
+    "Voice dictation is not available in this browser.",
+    "الإملاء الصوتي غير متاح في هذا المتصفح.",
+  ],
+} as const satisfies Record<string, readonly [string, string]>;
+
 const en = {
   "app.name": "Vital ID",
   "app.tagline": "Your portable health identity",
@@ -669,6 +758,7 @@ const en = {
   ...pickLocale(coachStrings, 0),
   ...pickLocale(communityStrings, 0),
   ...pickLocale(profileStrings, 0),
+  ...pickLocale(wellnessToolsStrings, 0),
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -810,6 +900,7 @@ const ar: Record<TranslationKey, string> = {
   ...pickLocale(coachStrings, 1),
   ...pickLocale(communityStrings, 1),
   ...pickLocale(profileStrings, 1),
+  ...pickLocale(wellnessToolsStrings, 1),
 };
 
 export const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, ar };

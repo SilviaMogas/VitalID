@@ -3,6 +3,7 @@ import "./globals.css";
 import { LocaleProvider } from "@/components/providers/LocaleProvider";
 import { MembershipProvider } from "@/components/providers/MembershipProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { VoiceProvider } from "@/components/providers/VoiceProvider";
 import { AppShell } from "@/components/layout/AppShell";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -24,7 +25,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <LocaleProvider>
           <AuthProvider>
             <MembershipProvider>
-              <AppShell>{children}</AppShell>
+              <VoiceProvider>
+                <AppShell>{children}</AppShell>
+              </VoiceProvider>
             </MembershipProvider>
           </AuthProvider>
         </LocaleProvider>
