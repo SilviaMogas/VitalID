@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { startTransition, useEffect, useState, type ReactNode } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
@@ -112,7 +112,7 @@ const NAV: { href: string; key: TranslationKey; icon: ReactNode }[] = [
 /** Mobile floating pill (Thine-style): four tabs + a separate round chat button for the coach. */
 const MOBILE_TABS = ["/", "/trends", "/vital-id", "/more"] as const;
 /** Routes reached from the More hub keep "More" highlighted in the pill. */
-const MORE_CHILDREN = ["/more", "/connectors", "/community", "/share"];
+const MORE_CHILDREN = ["/more", "/connectors", "/community", "/share", "/focus"];
 
 export function openTabIntro() {
   window.dispatchEvent(new Event("vitalid:intro"));
@@ -147,9 +147,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const enter = () => {
     void enterAsFatima().then(() => {
       void refreshMembership();
-      setIntroDone(true);
-      if (pathname === "/welcome") router.push("/");
-      else router.refresh();
+      if (pathname === "/welcome") {
+        setIntroDone(true);
+        router.push("/");
+      } else {
+        // Keep the intro on screen until the refreshed (Fatima) server payload has landed.
+        startTransition(() => {
+          router.refresh();
+          setIntroDone(true);
+        });
+      }
     });
   };
 

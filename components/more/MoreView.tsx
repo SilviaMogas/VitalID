@@ -16,6 +16,17 @@ const ICON = "h-7 w-7";
 
 const ROWS: { href: string; title: TranslationKey; sub: TranslationKey; icon: ReactNode }[] = [
   {
+    href: "/focus",
+    title: "focus.title",
+    sub: "more.focus.sub",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON}>
+        <circle cx="12" cy="13" r="7.5" />
+        <path d="M12 9v4l2.5 2M10 3h4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/connectors",
     title: "nav.connectors",
     sub: "more.connectors.sub",

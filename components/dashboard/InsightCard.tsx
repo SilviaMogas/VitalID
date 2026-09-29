@@ -4,10 +4,12 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import type { Insight } from "@/types";
 import { Broccoli } from "@/components/mascot/Broccoli";
+import { ReadAloud } from "@/components/voice/ReadAloud";
 
 export function InsightCard({ insight, compact = false }: { insight: Insight; compact?: boolean }) {
   const { t } = useLocale();
   const attention = insight.severity === "attention";
+  const insightText = t(insight.key as TranslationKey, insight.params);
 
   if (compact) {
     return (
@@ -19,9 +21,7 @@ export function InsightCard({ insight, compact = false }: { insight: Insight; co
             {t(`metric.${insight.metric}` as TranslationKey)}
           </span>
         </div>
-        <p className="mt-2.5 text-base font-medium leading-snug tracking-tight">
-          {t(insight.key as TranslationKey, insight.params)}
-        </p>
+        <p className="mt-2.5 text-base font-medium leading-snug tracking-tight">{insightText}</p>
       </div>
     );
   }
@@ -47,10 +47,9 @@ export function InsightCard({ insight, compact = false }: { insight: Insight; co
               {t(`metric.${insight.metric}` as TranslationKey)}
             </span>
           </div>
-          <p className="mt-3 text-lg font-semibold leading-snug tracking-tight md:text-xl">
-            {t(insight.key as TranslationKey, insight.params)}
-          </p>
+          <p className="mt-3 text-lg font-semibold leading-snug tracking-tight md:text-xl">{insightText}</p>
           <p className="mt-2 text-xs text-muted">{t("insight.disclaimer")}</p>
+          <ReadAloud text={insightText} owner={`insight-${insight.id}`} className="mt-3" />
         </div>
         <div className="hidden w-40 shrink-0 flex-col items-center sm:flex">
           <Broccoli state={attention ? "alert" : "happy"} size={64} className="anim-float" />

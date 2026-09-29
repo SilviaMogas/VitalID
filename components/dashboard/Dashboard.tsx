@@ -14,6 +14,9 @@ import { CommunityCard, ConnectToolsCard, HeyGreeting, SectionRule, ShareCard, S
 import { WhoopConnectorCard } from "@/components/connectors/WhoopConnectorCard";
 import type { WhoopConnectionPublic } from "@/lib/connectors/whoop/types";
 import type { UserSetup } from "@/lib/onboarding/types";
+import { DailyChallenge } from "./DailyChallenge";
+import { WorkdayNudge } from "./WorkdayNudge";
+import { EmptyDataActions } from "@/components/ui/EmptyDataActions";
 
 export function Dashboard({
   metrics,
@@ -70,20 +73,10 @@ export function Dashboard({
       </div>
 
       {isEmpty ? (
-        <section className="card rise rounded-[1.75rem] p-6 md:p-8" style={{ ["--i" as string]: 1 }}>
-          <p className="eyebrow">{t("home.signals")}</p>
-          <h2 className="mt-2 text-xl font-semibold tracking-tight">{t("empty.dashboard.title")}</h2>
-          <p className="mt-2 max-w-prose text-sm text-ink-2">{t("empty.dashboard.body")}</p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {editable && (
-              <Link href="/onboarding?step=4" className="press rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-hero">
-                {t("empty.dashboard.manual")}
-              </Link>
-            )}
-            <Link href="/connectors" className="press rounded-full bg-white px-4 py-2 text-sm font-semibold text-brand ring-1 ring-line">
-              {t("empty.dashboard.connect")}
-            </Link>
-          </div>
+        <section className="alert-banner rise rounded-[1.75rem] p-6 md:p-8" style={{ ["--i" as string]: 1 }}>
+          <p className="display-italic text-lg text-white/90 sm:text-xl">{t("empty.dashboard.title")}</p>
+          <p className="mt-3 max-w-prose text-sm text-white/90">{t("empty.dashboard.body")}</p>
+          <EmptyDataActions showManual={editable} />
         </section>
       ) : (
         insight && (
@@ -114,18 +107,18 @@ export function Dashboard({
           ))}
           {missingMetrics.length > 0 && (
             <div
-              className="rise flex flex-col justify-between rounded-[1.25rem] border border-dashed border-line bg-white/60 p-4 ps-5"
+              className="alert-banner-soft rise flex flex-col justify-between rounded-[1.25rem] p-4 ps-5"
               style={{ ["--i" as string]: metrics.length + 2 }}
             >
               <div>
-                <p className="text-sm font-medium text-ink-2">{t("empty.metrics.title")}</p>
-                <p className="mt-1.5 text-xs text-muted">
+                <p className="text-sm font-semibold">{t("empty.metrics.title")}</p>
+                <p className="mt-1.5 text-xs opacity-90">
                   {t("empty.metrics.body", {
                     metrics: missingMetrics.map((k) => t(`metric.${k}` as TranslationKey)).join(", "),
                   })}
                 </p>
               </div>
-              <Link href="/connectors" className="press mt-3 text-xs font-semibold text-brand">
+              <Link href="/connectors" className="press mt-3 text-xs font-semibold text-alert-deep underline">
                 {t("empty.dashboard.connect")} <span className="inline-block rtl:-scale-x-100">→</span>
               </Link>
             </div>
@@ -133,6 +126,11 @@ export function Dashboard({
         </div>
       </section>
       )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <DailyChallenge identity={identity} />
+        <WorkdayNudge identity={identity} />
+      </div>
 
       <div className="pt-6">
         <SectionRule>{t("home.section.other")}</SectionRule>

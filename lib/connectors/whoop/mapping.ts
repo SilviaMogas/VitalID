@@ -26,6 +26,16 @@ function localDay(iso: string | undefined, tz: string | undefined): string | nul
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
 
+/**
+ * WHOOP's own documented scales. A malformed or corrupted API response
+ * (wrong units, a bad sensor reading) is nulled out here rather than shown —
+ * a metric silently missing is safer than a garbage number on the dashboard.
+ */
+function clamp(value: number | null | undefined, min: number, max: number): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return value >= min && value <= max ? value : null;
+}
+
 function emptyDay(date: string): WhoopDaily {
   return {
     date,
@@ -63,8 +73,8 @@ export function mapWhoopToDaily(input: {
     cycleDayById.set(c.id, date);
     if (c.score_state !== 'SCORED' || !c.score) continue;
     const d = day(date);
-    d.strain = c.score.strain;
-    d.avgHeartRate = c.score.average_heart_rate;
+    d.strain = clamp(c.score.strain, 0, 21);
+    d.avgHeartRate = clamp(c.score.average_heart_rate, 25, 220);
   }
 
   for (const r of input.recoveries) {
@@ -72,9 +82,9 @@ export function mapWhoopToDaily(input: {
     const date = cycleDayById.get(r.cycle_id) ?? localDay(r.created_at, undefined);
     if (!date) continue;
     const d = day(date);
-    d.recoveryScore = r.score.recovery_score;
-    d.hrvMs = r.score.hrv_rmssd_milli;
-    d.restingHr = r.score.resting_heart_rate;
+    d.recoveryScore = clamp(r.score.recovery_score, 0, 100);
+    d.hrvMs = clamp(r.score.hrv_rmssd_milli, 1, 300);
+    d.restingHr = clamp(r.score.resting_heart_rate, 25, 220);
   }
 
   for (const s of input.sleeps) {
@@ -84,17 +94,20 @@ export function mapWhoopToDaily(input: {
     if (!date) continue;
     const st = s.score.stage_summary;
     const d = day(date);
-    d.sleepHours = round2(
-      (st.total_in_bed_time_milli - st.total_awake_time_milli - st.total_no_data_time_milli) / 3.6e6,
+    d.sleepHours = clamp(
+      round2((st.total_in_bed_time_milli - st.total_awake_time_milli - st.total_no_data_time_milli) / 3.6e6),
+      0,
+      24,
     );
-    d.sleepPerformance = s.score.sleep_performance_percentage ?? null;
+    d.sleepPerformance = clamp(s.score.sleep_performance_percentage ?? null, 0, 100);
   }
 
   for (const w of input.workouts) {
     const date = localDay(w.start, w.timezone_offset);
     if (!date || !w.end) continue;
     const minutes = (new Date(w.end).getTime() - new Date(w.start).getTime()) / 60_000;
-    if (!(minutes > 0)) continue;
+    // A single workout longer than 24h points at a corrupted start/end pair, not real activity.
+    if (!(minutes > 0) || minutes > 1440) continue;
     const d = day(date);
     d.workoutMinutes = (d.workoutMinutes ?? 0) + round2(minutes);
     d.workoutCount = (d.workoutCount ?? 0) + 1;
