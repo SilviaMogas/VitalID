@@ -1,0 +1,40 @@
+# Vital ID
+
+> Your portable health identity. Vital ID turns signals from wearables into a health credential you understand at a glance and share on your own terms: only the fields you choose, through a temporary, revocable link or QR code.
+
+Vital ID is a bilingual (English and Arabic, right-to-left supported) web app, currently in validation.
+
+## What it does
+
+- **Dashboard**: recovery, sleep, heart rate variability, resting heart rate and activity, each with a status (stable, improving, declining or unusual) and its data source.
+- **Trends**: 7-day and 30-day views against your own personal baseline.
+- **Insights and Coach**: deterministic, explainable insights and goal-based recommendations. Insights compare your signals with your own baseline and goals. They are not medical advice.
+- **Vital ID card and Share**: choose a purpose (emergency, doctor, travel, caregiver or custom), pick exactly which fields to share, set an expiry (15 minutes, 1 hour or 24 hours), and share by link or QR code. The recipient sees a read-only view. You can revoke access at any time.
+
+## Wearables
+
+WHOOP is integrated through its official OAuth 2.0 API. Other providers are catalogued for the same connection flow and are not yet live.
+
+## Membership
+
+Free, Plus and Pro tiers. See https://www.vitalid.site/pricing
+
+## Privacy model
+
+- Selective disclosure by design: only the fields you select are copied for a share.
+- Shares are temporary and revocable; an expired or revoked link shows nothing.
+- Shared credential pages are private and excluded from search indexing.
+
+## Important
+
+Vital ID is not a medical device and does not give medical advice. For medical questions, talk to a healthcare professional.
+
+## Pages
+
+- [Home](https://www.vitalid.site/): Product entry point and demo.
+- [Pricing](https://www.vitalid.site/pricing): Membership tiers.
+
+## Machine-readable
+
+- Sitemap: https://www.vitalid.site/sitemap.xml
+- Robots: https://www.vitalid.site/robots.txt
