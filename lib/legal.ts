@@ -33,6 +33,17 @@ const termsLastUpdated: Pair = [
 export const PRIVACY_TITLE: Pair = ["Privacy Policy", "سياسة الخصوصية"];
 export const TERMS_TITLE: Pair = ["Terms of Service", "شروط الخدمة"];
 
+export type LegalDocKind = "privacy" | "terms";
+
+export function isLegalDoc(slug: string): slug is LegalDocKind {
+  return slug === "privacy" || slug === "terms";
+}
+
+/** English doc title for <title>/metadata (page copy itself follows the UI locale). */
+export function legalTitle(kind: LegalDocKind): string {
+  return kind === "privacy" ? PRIVACY_TITLE[0] : TERMS_TITLE[0];
+}
+
 export const PRIVACY_SECTIONS: LegalSection[] = [
   {
     heading: ["1. Who we are", "١. من نحن"],
@@ -345,12 +356,12 @@ export const TERMS_SECTIONS: LegalSection[] = [
   },
 ];
 
-const updatedMap: Record<"privacy" | "terms", Pair> = {
+const updatedMap: Record<LegalDocKind, Pair> = {
   privacy: lastUpdated,
   terms: termsLastUpdated,
 };
 
-export function legalDoc(kind: "privacy" | "terms") {
+export function legalDoc(kind: LegalDocKind) {
   return {
     title: kind === "privacy" ? PRIVACY_TITLE : TERMS_TITLE,
     updated: updatedMap[kind],

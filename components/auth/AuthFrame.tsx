@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { LogoMark } from "@/components/layout/Logo";
 import { Broccoli } from "@/components/mascot/Broccoli";
+import { LegalLinks } from "@/components/legal/LegalLinks";
 
 export const inputClass =
   "w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15";
@@ -83,13 +84,7 @@ export function AuthFrame({
           </div>
         )}
         <div className="rise mt-4 text-center text-xs text-muted" style={{ ["--i" as string]: 5 }}>
-          <Link href="/privacy" className="font-medium text-ink-2 hover:text-brand">
-            {t("legal.privacy")}
-          </Link>
-          <span className="mx-2 text-line" aria-hidden>·</span>
-          <Link href="/terms" className="font-medium text-ink-2 hover:text-brand">
-            {t("legal.terms")}
-          </Link>
+          <LegalLinks />
         </div>
       </main>
     </div>

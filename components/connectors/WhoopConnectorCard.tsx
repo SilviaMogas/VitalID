@@ -137,6 +137,7 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           {status.needsReauth && status.configured && !connectBlocked ? (
+            // eslint-disable-next-line @next/next/no-html-link-for-pages -- server route that 302s to the WHOOP OAuth consent screen
             <a
               href="/api/connectors/whoop/connect"
               className="press rounded-full bg-warn px-3.5 py-1.5 text-center text-xs font-semibold text-white"
@@ -154,6 +155,7 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
                 {t("whoop.connect")}
               </button>
             ) : (
+              // eslint-disable-next-line @next/next/no-html-link-for-pages -- server route that 302s to the WHOOP OAuth consent screen
               <a
                 href="/api/connectors/whoop/connect"
                 className="press rounded-full bg-brand px-3.5 py-1.5 text-center text-xs font-semibold text-white"

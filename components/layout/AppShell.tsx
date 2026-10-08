@@ -15,6 +15,8 @@ import { UserAvatar } from "@/components/layout/UserAvatar";
 import { CONNECTORS_STORAGE_KEY } from "@/lib/connectors-state";
 import { DEMO_IDENTITY } from "@/lib/demo-data";
 import { TabIntro } from "@/components/layout/TabIntro";
+import { DemoBadge } from "@/components/layout/DemoBadge";
+import { LegalLinks } from "@/components/legal/LegalLinks";
 
 /** Routes rendered without the app navigation (auth + setup journey, public share view, legal pages). */
 const BARE_PREFIXES = ["/shared", "/signup", "/signin", "/checkout", "/pricing", "/onboarding", "/privacy", "/terms"];
@@ -228,13 +230,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
         <main className="flex-1 px-5 pb-12 pt-4" key={locale}>{children}</main>
         <footer className="px-5 pb-8 text-center text-xs text-muted">
-          <Link href="/privacy" className="font-medium text-ink-2 hover:text-brand">
-            {t("legal.privacy")}
-          </Link>
-          <span className="mx-2 text-line" aria-hidden>·</span>
-          <Link href="/terms" className="font-medium text-ink-2 hover:text-brand">
-            {t("legal.terms")}
-          </Link>
+          <LegalLinks />
         </footer>
       </div>
     );
@@ -378,21 +374,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </div>
     </div>
-  );
-}
-
-/** Visible DEMO marker shown throughout the app whenever the Fatima demo
- *  session is active — the localStorage shortcut is never mistaken for a real
- *  member session. */
-export function DemoBadge() {
-  const { t } = useLocale();
-  return (
-    <span
-      title={t("app.demoBadge")}
-      className="rounded-full bg-warn-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-warn ring-1 ring-warn/30"
-    >
-      {t("demo.sessionBadge")}
-    </span>
   );
 }
 
