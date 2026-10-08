@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:isolation": "node --experimental-strip-types --no-warnings --import ./scripts/test/register.mjs --test scripts/test/user-data-isolation.test.mjs"
+    "test:isolation": "node --experimental-strip-types --no-warnings --import ./scripts/test/register.mjs --test scripts/test/user-data-isolation.test.mjs scripts/test/consent-isolation.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

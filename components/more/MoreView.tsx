@@ -10,6 +10,7 @@ import { PlanBadge } from "@/components/membership/PlanBadge";
 import { HelpButton, LangButton } from "@/components/layout/AppShell";
 import { PaintedPath } from "@/components/dashboard/HomeHero";
 import { CONNECTORS_STORAGE_KEY } from "@/lib/connectors-state";
+import { HEALTH_CONSENT_STORAGE_KEY } from "@/lib/legal";
 import type { TranslationKey } from "@/lib/i18n";
 
 const ICON = "h-7 w-7";
@@ -99,6 +100,7 @@ export function MoreView() {
   function signOut() {
     try {
       window.localStorage.removeItem(CONNECTORS_STORAGE_KEY);
+      window.localStorage.removeItem(HEALTH_CONSENT_STORAGE_KEY);
     } catch {
       /* ignore */
     }

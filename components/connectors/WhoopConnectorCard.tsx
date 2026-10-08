@@ -3,16 +3,13 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { ConnectorBadge, ProviderMark } from "@/components/connectors/ConnectorBadge";
 import { HealthDataConsent } from "@/components/legal/HealthDataConsent";
-import { PRIVACY_VERSION } from "@/lib/legal";
+import { HEALTH_CONSENT_STORAGE_KEY, PRIVACY_VERSION } from "@/lib/legal";
 import type { ConnectorStatus } from "@/lib/connectors";
 import type { WhoopConnectionPublic } from "@/lib/connectors/whoop/types";
 import type { TranslationKey } from "@/lib/i18n";
-
-/** localStorage flag recording a client-side health-data consent (demo sessions
- *  have no server account; members get a row in vital_id_consents via /api/consent). */
-const CONSENT_LS_KEY = "vitalid.consent.healthData";
 
 const NOTICE_KEY: Record<string, TranslationKey> = {
   connected: "whoop.notice.connected",
@@ -20,6 +17,7 @@ const NOTICE_KEY: Record<string, TranslationKey> = {
   invalid_state: "whoop.notice.invalid_state",
   error: "whoop.notice.error",
   not_configured: "whoop.notConfigured",
+  consent_required: "consent.connectorHint",
 };
 
 /** Reads + clears the ?whoop= notice flag written by the OAuth callback redirect. */
@@ -45,6 +43,7 @@ function WhoopNotice({ onKey }: { onKey: (key: TranslationKey | null, tone: "ok"
 export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }) {
   const { t, d } = useLocale();
   const router = useRouter();
+  const { status: authStatus } = useAuth();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ key: TranslationKey; tone: "ok" | "warn" } | null>(null);
   // null = still probing; the OAuth link stays behind the consent checkbox until
@@ -74,18 +73,22 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
   }
 
   useEffect(() => {
+    if (authStatus === "loading") return;
     let cancelled = false;
     const done = (v: boolean) => {
       if (!cancelled) setConsentOk(v);
     };
-    try {
-      if (window.localStorage.getItem(CONSENT_LS_KEY) === "1") {
-        done(true);
-        return;
+    // The browser flag only stands in for the demo session (no server account);
+    // members are always checked against their own server-side consent record.
+    if (authStatus !== "member") {
+      try {
+        done(window.localStorage.getItem(HEALTH_CONSENT_STORAGE_KEY) === "1");
+      } catch {
+        done(false);
       }
-    } catch {
-      /* storage unavailable — fall through to the server check */
+      return;
     }
+    setConsentOk(null);
     fetch("/api/consent", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => done(Boolean(d?.consents?.health_data)))
@@ -93,22 +96,27 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authStatus]);
 
   const onConsentChange = (checked: boolean) => {
     setConsentOk(checked);
     if (!checked) return;
-    try {
-      window.localStorage.setItem(CONSENT_LS_KEY, "1");
-    } catch {
-      /* ignore */
+    if (authStatus !== "member") {
+      try {
+        window.localStorage.setItem(HEALTH_CONSENT_STORAGE_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+      return;
     }
-    // Audit server-side for member sessions; demo sessions 401 — harmless.
-    void fetch("/api/consent", {
+    setConsentOk(null);
+    fetch("/api/consent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "health_data", policyVersion: PRIVACY_VERSION }),
-    }).catch(() => undefined);
+    })
+      .then((r) => setConsentOk(r.ok))
+      .catch(() => setConsentOk(false));
   };
 
   const connectBlocked = !status.connected && status.configured && consentOk !== true;

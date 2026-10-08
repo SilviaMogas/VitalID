@@ -13,6 +13,7 @@ import { Broccoli } from "@/components/mascot/Broccoli";
 import { Onboarding } from "@/components/onboarding/Onboarding";
 import { UserAvatar } from "@/components/layout/UserAvatar";
 import { CONNECTORS_STORAGE_KEY } from "@/lib/connectors-state";
+import { HEALTH_CONSENT_STORAGE_KEY } from "@/lib/legal";
 import { DEMO_IDENTITY } from "@/lib/demo-data";
 import { TabIntro } from "@/components/layout/TabIntro";
 
@@ -182,6 +183,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const signOut = () => {
     window.localStorage.removeItem(CONNECTORS_STORAGE_KEY);
+    window.localStorage.removeItem(HEALTH_CONSENT_STORAGE_KEY);
     router.push("/welcome");
     void authSignOut().then(() => void refreshMembership());
   };

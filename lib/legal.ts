@@ -10,6 +10,9 @@ import type { Locale } from "@/types";
  */
 
 export const PRIVACY_VERSION = "2026-10-08";
+
+/** Browser flag for the demo session's health-data consent (no server account). */
+export const HEALTH_CONSENT_STORAGE_KEY = "vitalid.consent.healthData";
 export const TERMS_VERSION = "2026-10-08";
 export const LEGAL_CONTACT_EMAIL = "hello@vitalid.site";
 
