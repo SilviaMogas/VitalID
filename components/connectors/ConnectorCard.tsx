@@ -5,6 +5,7 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
 import { useConnectorSelection } from "@/lib/connectors-state";
 import {
+  canSelectProvider,
   categoriesOf,
   initialStatusFor,
   type ProviderDef,
@@ -28,7 +29,9 @@ export function ConnectorCard({
 
   const selected = isSelected(provider.id);
   const locked = planRank(provider.requiredPlan) > planRank(plan);
-  const status = connectors.find((c) => c.provider === provider.id)?.status ?? initialStatusFor(provider.id);
+  const status =
+    connectors.find((c) => c.provider === provider.id)?.status ??
+    (canSelectProvider(provider) ? initialStatusFor(provider.id) : "coming_soon");
   const categories = categoriesOf(provider.id);
 
   return (
@@ -97,7 +100,7 @@ export function ConnectorCard({
         </button>
       ) : locked ? (
         <UpgradeChip plan={provider.requiredPlan as "plus" | "pro"} />
-      ) : provider.announcedOnly ? (
+      ) : !canSelectProvider(provider) ? (
         <button
           type="button"
           disabled

@@ -65,7 +65,8 @@ export function TrendChart({ metric, days }: { metric: HealthMetric; days: 7 | 3
           {t("trends.baselineLine")}
         </span>
         <span className="tabular">
-          {n(min, decimals)} – {n(max, decimals)} {t(`unit.${metric.unit}` as TranslationKey)}
+          {t("trends.usualRange")} {n(bandLow, decimals)} – {n(bandHigh, decimals)}{" "}
+          {t(`unit.${metric.unit}` as TranslationKey)}
         </span>
       </div>
 

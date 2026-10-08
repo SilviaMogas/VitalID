@@ -140,6 +140,16 @@ export interface UserConnector {
   connectedAt: string | null;
 }
 
+/**
+ * Whether the user can select a provider today. Providers without a built
+ * integration and without bundled sample data are presented as "coming soon"
+ * instead of an "Add" that would sit in `waiting_implementation` forever.
+ */
+export function canSelectProvider(def: ProviderDef): boolean {
+  if (def.announcedOnly) return false;
+  return def.integration !== "none" || def.sampleData === true;
+}
+
 /** Status a freshly *selected* provider gets — never `connected` without a real integration. */
 export function initialStatusFor(provider: ProviderId): ConnectorStatus {
   const def = PROVIDERS[provider];

@@ -12,6 +12,7 @@ import { ConnectorBadge, ProviderMark } from "@/components/connectors/ConnectorB
 import {
   CONNECTOR_CATEGORIES,
   PROVIDERS,
+  canSelectProvider,
   initialStatusFor,
   type ConnectorCategory,
   type ProviderId,
@@ -490,8 +491,8 @@ function StepConnectors({ setup, update }: StepProps) {
   const atLimit = connectorLimit !== null && selectedProviders.size >= connectorLimit;
 
   const toggle = (provider: ProviderId, category: ConnectorCategory) => {
-    if (PROVIDERS[provider].announcedOnly) return;
     const exists = setup.connectors.find((c) => c.provider === provider && c.category === category);
+    if (!exists && !canSelectProvider(PROVIDERS[provider])) return;
     if (exists?.status === "connected") return;
     if (!exists && atLimit && !selectedProviders.has(provider)) return;
     const next: UserConnector[] = exists
@@ -516,9 +517,10 @@ function StepConnectors({ setup, update }: StepProps) {
                 const def = PROVIDERS[pid];
                 const selected = isSelected(pid, cat.id);
                 const current = setup.connectors.find((c) => c.provider === pid && c.category === cat.id);
-                const status = current?.status ?? initialStatusFor(pid);
+                const status =
+                  current?.status ?? (canSelectProvider(def) ? initialStatusFor(pid) : "coming_soon");
                 const overLimit = atLimit && !selectedProviders.has(pid);
-                const disabled = Boolean(def.announcedOnly) || overLimit;
+                const disabled = (!selected && !canSelectProvider(def)) || overLimit;
                 return (
                   <button
                     key={pid}

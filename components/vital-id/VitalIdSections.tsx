@@ -105,7 +105,10 @@ export function TrendsSection({ insights }: { insights: Insight[] }) {
                 insight.severity === "attention" ? "bg-warn" : "bg-brand"
               }`}
             />
-            {t(insight.key as TranslationKey, insight.params)}
+            {t(insight.key as TranslationKey, {
+              metric: t(`metric.${insight.metric}` as TranslationKey),
+              ...insight.params,
+            })}
           </li>
         ))}
       </ul>
