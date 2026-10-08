@@ -7,6 +7,8 @@ import { Broccoli } from "@/components/mascot/Broccoli";
 import { Apple, Avocado, Banana } from "@/components/mascot/Crew";
 import { CredentialCard } from "@/components/vital-id/CredentialCard";
 import { DEMO_EMERGENCY, DEMO_IDENTITY } from "@/lib/demo-data";
+import { DemoBadge } from "@/components/layout/DemoBadge";
+import { LegalLinks } from "@/components/legal/LegalLinks";
 
 /** Set NEXT_PUBLIC_DEMO_LOGIN=0 to hide the instant demo login (e.g. production). */
 const DEMO_LOGIN_ENABLED = process.env.NEXT_PUBLIC_DEMO_LOGIN !== "0";
@@ -96,9 +98,7 @@ export function Welcome({
                     F
                   </span>
                   {t("onboarding.demoCta")}
-                  <span className="rounded-full bg-warn-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warn ring-1 ring-warn/30">
-                    {t("demo.sessionBadge")}
-                  </span>
+                  <DemoBadge />
                 </span>
                 <Arrow />
               </button>
@@ -114,13 +114,7 @@ export function Welcome({
         <footer className="rise flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted" style={{ ["--i" as string]: 7 }}>
           <span>{t("onboarding.foot.privacy")}</span>
           <span aria-hidden>·</span>
-          <Link href="/privacy" className="font-medium text-ink-2 hover:text-brand">
-            {t("legal.privacy")}
-          </Link>
-          <span aria-hidden>·</span>
-          <Link href="/terms" className="font-medium text-ink-2 hover:text-brand">
-            {t("legal.terms")}
-          </Link>
+          <LegalLinks />
           <span aria-hidden>·</span>
           <span>{t("onboarding.foot.demo")}</span>
         </footer>
