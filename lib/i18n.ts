@@ -702,6 +702,28 @@ const wellnessToolsStrings = {
   ],
 } as const satisfies Record<string, readonly [string, string]>;
 
+const legalStrings = {
+  "legal.privacy": ["Privacy Policy", "سياسة الخصوصية"],
+  "legal.terms": ["Terms of Service", "شروط الخدمة"],
+  "legal.links": ["Legal", "قانوني"],
+  "legal.contact": ["Contact", "للتواصل"],
+  "consent.label.pre": ["I accept the", "أوافق على"],
+  "consent.label.mid": ["and the", "و"],
+  "consent.label.post": [
+    " and I explicitly consent to the processing of my health data.",
+    " وأوافق صراحةً على معالجة بياناتي الصحية.",
+  ],
+  "consent.error": [
+    "Please accept the privacy policy and consent to health-data processing to continue.",
+    "يرجى قبول سياسة الخصوصية والموافقة على معالجة البيانات الصحية للمتابعة.",
+  ],
+  "consent.connectorHint": [
+    "We only read data from a wearable after your explicit consent.",
+    "لا نقرأ بيانات أي جهاز قابل للارتداء إلا بعد موافقتك الصريحة.",
+  ],
+  "demo.sessionBadge": ["DEMO", "تجريبي"],
+} as const satisfies Record<string, readonly [string, string]>;
+
 const en = {
   "app.name": "Vital ID",
   "app.tagline": "Your portable health identity",
@@ -842,6 +864,7 @@ const en = {
   ...pickLocale(profileStrings, 0),
   ...pickLocale(thineStrings, 0),
   ...pickLocale(wellnessToolsStrings, 0),
+  ...pickLocale(legalStrings, 0),
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -986,6 +1009,7 @@ const ar: Record<TranslationKey, string> = {
   ...pickLocale(profileStrings, 1),
   ...pickLocale(thineStrings, 1),
   ...pickLocale(wellnessToolsStrings, 1),
+  ...pickLocale(legalStrings, 1),
 };
 
 export const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, ar };

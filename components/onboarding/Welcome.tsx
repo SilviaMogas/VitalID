@@ -8,6 +8,9 @@ import { Apple, Avocado, Banana } from "@/components/mascot/Crew";
 import { CredentialCard } from "@/components/vital-id/CredentialCard";
 import { DEMO_EMERGENCY, DEMO_IDENTITY } from "@/lib/demo-data";
 
+/** Set NEXT_PUBLIC_DEMO_LOGIN=0 to hide the instant demo login (e.g. production). */
+const DEMO_LOGIN_ENABLED = process.env.NEXT_PUBLIC_DEMO_LOGIN !== "0";
+
 export function Welcome({
   onEnter,
   onContinue,
@@ -81,28 +84,43 @@ export function Welcome({
             >
               {t("onboarding.signIn")} <Arrow />
             </Link>
-            <button
-              type="button"
-              onClick={onEnter}
-              className="rise press flex w-full items-center justify-between rounded-2xl bg-brand-soft px-5 py-3.5 text-sm font-semibold text-brand-deep ring-1 ring-brand/15 hover:bg-mint/60"
-              style={{ ["--i" as string]: 5 }}
-            >
-              <span className="flex items-center gap-2.5">
-                <span className="grid h-6 w-6 place-items-center rounded-full bg-brand text-[11px] font-bold text-white" dir="ltr">
-                  F
+            {DEMO_LOGIN_ENABLED && (
+              <button
+                type="button"
+                onClick={onEnter}
+                className="rise press flex w-full items-center justify-between rounded-2xl bg-brand-soft px-5 py-3.5 text-sm font-semibold text-brand-deep ring-1 ring-brand/15 hover:bg-mint/60"
+                style={{ ["--i" as string]: 5 }}
+              >
+                <span className="flex items-center gap-2.5">
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-brand text-[11px] font-bold text-white" dir="ltr">
+                    F
+                  </span>
+                  {t("onboarding.demoCta")}
+                  <span className="rounded-full bg-warn-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warn ring-1 ring-warn/30">
+                    {t("demo.sessionBadge")}
+                  </span>
                 </span>
-                {t("onboarding.demoCta")}
-              </span>
-              <Arrow />
-            </button>
+                <Arrow />
+              </button>
+            )}
           </div>
-          <p className="rise mt-3 text-sm text-muted" style={{ ["--i" as string]: 6 }}>
-            {t("onboarding.demoHint")}
-          </p>
+          {DEMO_LOGIN_ENABLED && (
+            <p className="rise mt-3 text-sm text-muted" style={{ ["--i" as string]: 6 }}>
+              {t("onboarding.demoHint")}
+            </p>
+          )}
         </div>
 
-        <footer className="rise flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted" style={{ ["--i" as string]: 7 }}>
+        <footer className="rise flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted" style={{ ["--i" as string]: 7 }}>
           <span>{t("onboarding.foot.privacy")}</span>
+          <span aria-hidden>·</span>
+          <Link href="/privacy" className="font-medium text-ink-2 hover:text-brand">
+            {t("legal.privacy")}
+          </Link>
+          <span aria-hidden>·</span>
+          <Link href="/terms" className="font-medium text-ink-2 hover:text-brand">
+            {t("legal.terms")}
+          </Link>
           <span aria-hidden>·</span>
           <span>{t("onboarding.foot.demo")}</span>
         </footer>

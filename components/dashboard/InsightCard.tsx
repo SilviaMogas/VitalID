@@ -25,6 +25,7 @@ export function InsightCard({ insight, compact = false }: { insight: Insight; co
           </span>
         </div>
         <p className="mt-2.5 text-base font-medium leading-snug tracking-tight">{insightText}</p>
+        <p className="mt-2 text-[11px] text-muted">{t("insight.disclaimer")}</p>
       </div>
     );
   }

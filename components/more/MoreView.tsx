@@ -180,6 +180,13 @@ export function MoreView() {
                 <span className="text-sm font-medium text-ink-2">{t("more.language")}</span>
                 <LangButton />
               </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-ink-2">{t("legal.links")}</span>
+                <span className="flex items-center gap-3 text-sm font-semibold text-brand">
+                  <Link href="/privacy">{t("legal.privacy")}</Link>
+                  <Link href="/terms">{t("legal.terms")}</Link>
+                </span>
+              </div>
               {status === "member" && (
                 <Link href="/onboarding?step=1" className="press block rounded-2xl bg-sage px-4 py-3 text-sm font-semibold text-brand">
                   {t("more.editSetup")}

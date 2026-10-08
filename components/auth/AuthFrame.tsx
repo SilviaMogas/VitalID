@@ -82,6 +82,15 @@ export function AuthFrame({
             {footer}
           </div>
         )}
+        <div className="rise mt-4 text-center text-xs text-muted" style={{ ["--i" as string]: 5 }}>
+          <Link href="/privacy" className="font-medium text-ink-2 hover:text-brand">
+            {t("legal.privacy")}
+          </Link>
+          <span className="mx-2 text-line" aria-hidden>·</span>
+          <Link href="/terms" className="font-medium text-ink-2 hover:text-brand">
+            {t("legal.terms")}
+          </Link>
+        </div>
       </main>
     </div>
   );

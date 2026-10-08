@@ -7,6 +7,8 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
 import { AuthFrame, Field, inputClass } from "@/components/auth/AuthFrame";
+import { HealthDataConsent } from "@/components/legal/HealthDataConsent";
+import { PRIVACY_VERSION } from "@/lib/legal";
 import type { TranslationKey } from "@/lib/i18n";
 
 const ERROR_KEYS: Record<string, TranslationKey> = {
@@ -14,6 +16,7 @@ const ERROR_KEYS: Record<string, TranslationKey> = {
   weak_password: "auth.error.weakPassword",
   invalid_email: "auth.error.invalidEmail",
   not_configured: "auth.error.notConfigured",
+  consent_required: "consent.error",
 };
 
 export function SignupForm() {
@@ -31,6 +34,8 @@ export function SignupForm() {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Required, never pre-ticked: explicit consent to health-data processing.
+  const [consent, setConsent] = useState(false);
 
   // Already signed in: hand off to the routing rules instead of showing the form.
   useEffect(() => {
@@ -48,7 +53,12 @@ export function SignupForm() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          consentPrivacy: consent,
+          consentHealthData: consent,
+          privacyVersion: PRIVACY_VERSION,
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; next?: string };
       if (!res.ok) {
@@ -104,10 +114,11 @@ export function SignupForm() {
             <input id="su-city" required value={form.city} onChange={set("city")} className={inputClass} autoComplete="address-level2" />
           </Field>
         </div>
+        <HealthDataConsent id="su-consent" checked={consent} onChange={setConsent} />
         {error && <p className="text-sm text-bad">{error}</p>}
         <button
           type="submit"
-          disabled={busy}
+          disabled={busy || !consent}
           className="press w-full rounded-2xl bg-brand py-3.5 text-sm font-semibold text-white shadow-hero transition hover:bg-brand-deep disabled:opacity-50"
         >
           {busy ? t("common.loading") : t("signup.continue")}
