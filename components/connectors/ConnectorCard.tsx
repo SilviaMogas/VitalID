@@ -98,8 +98,6 @@ export function ConnectorCard({
         >
           {t("connectors.remove")}
         </button>
-      ) : locked ? (
-        <UpgradeChip plan={provider.requiredPlan as "plus" | "pro"} />
       ) : !canSelectProvider(provider) ? (
         <button
           type="button"
@@ -108,6 +106,8 @@ export function ConnectorCard({
         >
           {t("connectors.status.comingSoon")}
         </button>
+      ) : locked ? (
+        <UpgradeChip plan={provider.requiredPlan as "plus" | "pro"} />
       ) : atLimit ? (
         <Link
           href="/pricing"

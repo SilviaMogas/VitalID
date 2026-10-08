@@ -222,14 +222,15 @@ export function insightsFromMetrics(metrics: HealthMetric[]): Insight[] {
   for (const m of offBaseline.filter((x) => x.status === "unusual")) {
     insights.push(offBaselineInsight(m, "attention"));
   }
-  for (const m of offBaseline.filter((x) => x.status === "declining")) {
+  for (const m of offBaseline.filter((x) => x.status !== "unusual")) {
     insights.push(offBaselineInsight(m, "info"));
   }
-  if (insights.length === 0) {
-    for (const m of offBaseline) {
-      insights.push(offBaselineInsight(m, "info"));
-    }
-  }
+
+  // Today's insight should be the most urgent one, not the first rule that
+  // happened to fire (e.g. a stable-activity note masking an unusual signal).
+  insights.sort((a, b) =>
+    a.severity === b.severity ? 0 : a.severity === "attention" ? -1 : 1,
+  );
 
   if (insights.length === 0) {
     insights.push({
