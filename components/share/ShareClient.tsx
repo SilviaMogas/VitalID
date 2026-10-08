@@ -211,6 +211,55 @@ export default function ShareClient() {
     refreshShares();
   }
 
+  const activeShares = shares.filter((s) => statusOf(s) === "active");
+  const pastShares = shares.filter((s) => statusOf(s) !== "active");
+
+  function renderShareRow(s: ShareSummary) {
+    const st = statusOf(s);
+    return (
+      <div
+        key={s.id}
+        className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-line"
+      >
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">
+            {t(`share.purpose.${s.purpose}` as TranslationKey)}
+            {!!s.sentTo?.length && (
+              <span className="ms-2 inline-flex -space-x-1 align-middle">
+                {resolveRecipients(s.sentTo).map(({ recipient, insurer }) => (
+                  <span key={recipient.insurerId} title={locale === "ar" ? insurer.nameAr : insurer.name}>
+                    <InsurerMonogram insurer={insurer} className="h-5 w-5 text-[9px] ring-2 ring-white" />
+                  </span>
+                ))}
+              </span>
+            )}
+            <span className="ms-2 font-mono text-xs text-muted" dir="ltr">
+              {s.id}
+            </span>
+          </p>
+          <p className="mt-0.5 text-xs text-muted">
+            {t("share.validUntil")}{" "}
+            {d(s.expiresAt, { year: "numeric", hour: "2-digit", minute: "2-digit" })}
+          </p>
+        </div>
+        <span className="flex shrink-0 items-center gap-2">
+          <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_BADGE[st]}`}>
+            {t(`share.status.${st}` as TranslationKey)}
+          </span>
+          {st === "active" && (
+            <button
+              type="button"
+              onClick={() => revoke(s.id)}
+              className="press rounded-full bg-white px-3 py-1 text-xs font-medium text-bad ring-1 ring-bad/40 transition hover:bg-bad-soft"
+            >
+              {t("share.revoke")}
+            </button>
+          )}
+        </span>
+      </div>
+    );
+  }
+
   const pill = (on: boolean) =>
     `press rounded-2xl px-4 py-1.5 text-sm font-medium transition ${
       on
@@ -507,51 +556,18 @@ export default function ShareClient() {
         <SectionTitle>{t("share.activeShares")}</SectionTitle>
         <div className="mt-3 space-y-2">
           {shares.length === 0 && <p className="py-1 text-sm text-muted">{t("share.noShares")}</p>}
-          {shares.map((s) => {
-            const st = statusOf(s);
-            return (
-              <div
-                key={s.id}
-                className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-line"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">
-                    {t(`share.purpose.${s.purpose}` as TranslationKey)}
-                    {!!s.sentTo?.length && (
-                      <span className="ms-2 inline-flex -space-x-1 align-middle">
-                        {resolveRecipients(s.sentTo).map(({ recipient, insurer }) => (
-                          <span key={recipient.insurerId} title={locale === "ar" ? insurer.nameAr : insurer.name}>
-                            <InsurerMonogram insurer={insurer} className="h-5 w-5 text-[9px] ring-2 ring-white" />
-                          </span>
-                        ))}
-                      </span>
-                    )}
-                    <span className="ms-2 font-mono text-xs text-muted" dir="ltr">
-                      {s.id}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted">
-                    {t("share.validUntil")}{" "}
-                    {d(s.expiresAt, { year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                  </p>
-                </div>
-                <span className="flex shrink-0 items-center gap-2">
-                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_BADGE[st]}`}>
-                    {t(`share.status.${st}` as TranslationKey)}
-                  </span>
-                  {st === "active" && (
-                    <button
-                      type="button"
-                      onClick={() => revoke(s.id)}
-                      className="press rounded-full bg-white px-3 py-1 text-xs font-medium text-bad ring-1 ring-bad/40 transition hover:bg-bad-soft"
-                    >
-                      {t("share.revoke")}
-                    </button>
-                  )}
+          {activeShares.map(renderShareRow)}
+          {pastShares.length > 0 && (
+            <details className="group">
+              <summary className="cursor-pointer list-none py-1 text-sm font-medium text-muted transition hover:text-ink-2 [&::-webkit-details-marker]:hidden">
+                {t("share.history", { count: pastShares.length })}
+                <span aria-hidden className="ms-1 inline-block transition group-open:rotate-90">
+                  ›
                 </span>
-              </div>
-            );
-          })}
+              </summary>
+              <div className="mt-2 space-y-2">{pastShares.map(renderShareRow)}</div>
+            </details>
+          )}
         </div>
       </div>
 

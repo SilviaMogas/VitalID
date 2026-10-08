@@ -9,7 +9,10 @@ import { ReadAloud } from "@/components/voice/ReadAloud";
 export function InsightCard({ insight, compact = false }: { insight: Insight; compact?: boolean }) {
   const { t } = useLocale();
   const attention = insight.severity === "attention";
-  const insightText = t(insight.key as TranslationKey, insight.params);
+  const insightText = t(insight.key as TranslationKey, {
+    metric: t(`metric.${insight.metric}` as TranslationKey),
+    ...insight.params,
+  });
 
   if (compact) {
     return (

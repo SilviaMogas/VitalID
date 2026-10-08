@@ -215,6 +215,22 @@ export function insightsFromMetrics(metrics: HealthMetric[]): Insight[] {
     });
   }
 
+  // Metrics the rules above did not cover still deserve an honest note when
+  // they sit outside the usual range — never claim "all stable" for them.
+  const covered = new Set(insights.map((i) => i.metric));
+  const offBaseline = withHistory.filter((m) => !covered.has(m.metric) && m.status !== "stable");
+  for (const m of offBaseline.filter((x) => x.status === "unusual")) {
+    insights.push(offBaselineInsight(m, "attention"));
+  }
+  for (const m of offBaseline.filter((x) => x.status === "declining")) {
+    insights.push(offBaselineInsight(m, "info"));
+  }
+  if (insights.length === 0) {
+    for (const m of offBaseline) {
+      insights.push(offBaselineInsight(m, "info"));
+    }
+  }
+
   if (insights.length === 0) {
     insights.push({
       id: "all-stable",
@@ -225,6 +241,16 @@ export function insightsFromMetrics(metrics: HealthMetric[]): Insight[] {
     });
   }
   return insights;
+}
+
+function offBaselineInsight(m: HealthMetric, severity: Insight["severity"]): Insight {
+  return {
+    id: `${m.metric}-off-baseline`,
+    key: m.deltaPercent >= 0 ? "insight.metricAbove" : "insight.metricBelow",
+    params: { percent: Math.abs(m.deltaPercent) },
+    metric: m.metric,
+    severity,
+  };
 }
 
 export function generateInsight(records: DailyRecord[] = getDailyRecords()): Insight {
