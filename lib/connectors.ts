@@ -151,7 +151,11 @@ export function canSelectProvider(def: ProviderDef): boolean {
   return !def.announcedOnly;
 }
 
-/** Dashboard metric a provider data kind can feed when sample data exists. */
+/**
+ * Dashboard metric a provider data kind can feed when sample data exists.
+ * Only kinds whose units/semantics match the bundled series map to a metric —
+ * steps, distance or workouts are not interchangeable with active minutes.
+ */
 export const KIND_TO_METRIC: Partial<Record<ConnectorDataKind, MetricKey>> = {
   sleep: "sleep",
   recovery: "recovery",
@@ -159,9 +163,6 @@ export const KIND_TO_METRIC: Partial<Record<ConnectorDataKind, MetricKey>> = {
   hrv: "hrv",
   restingHeartRate: "restingHeartRate",
   activity: "activity",
-  steps: "activity",
-  workouts: "activity",
-  distance: "activity",
 };
 
 /** Status a freshly *selected* provider gets — never `connected` without a real integration. */

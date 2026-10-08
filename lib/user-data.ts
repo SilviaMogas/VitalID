@@ -105,7 +105,7 @@ interface MetricInputs {
   whoop: WhoopConnectionPublic;
   whoopDaily: WhoopDaily[];
   /** Provider sample rows explicitly assigned to this user (Fatima's Circular Ring export). */
-  sampleSeries: ((metric: MetricKey) => SeriesPoint[]) | null;
+  sampleSeries: ((metric: MetricKey) => { points: SeriesPoint[]; source: DataSource }) | null;
 }
 
 function resolveMetric(metric: MetricKey, input: MetricInputs): HealthMetric | null {
@@ -115,7 +115,8 @@ function resolveMetric(metric: MetricKey, input: MetricInputs): HealthMetric | n
   }
   if (input.sampleSeries) {
     const sample = input.sampleSeries(metric);
-    if (sample.length > 0) return buildMetricFromSeries(metric, sample, METRIC_SOURCE[metric]);
+    if (sample.points.length > 0)
+      return buildMetricFromSeries(metric, sample.points, sample.source);
   }
   const manual = manualValue(input.setup, metric);
   if (manual !== null) {
@@ -259,7 +260,10 @@ function fatimaData(whoop: WhoopConnectionPublic, whoopDaily: WhoopDaily[], body
     profile: withWhoopBody(DEMO_PROFILE, body),
     whoop,
     whoopDaily,
-    sampleSeries: (metric) => records.map((r) => ({ date: r.date, value: r[metric] })),
+    sampleSeries: (metric) => ({
+      points: records.map((r) => ({ date: r.date, value: r[metric] })),
+      source: METRIC_SOURCE[metric],
+    }),
   });
 }
 
@@ -272,14 +276,23 @@ function memberData(
 ): ResolvedUserData {
   // Selected providers with bundled sample data feed the shared demo series
   // for the metrics their data kinds cover — same behaviour as Circular Ring.
-  const sampleMetrics = new Set<MetricKey>(
-    setup.connectors
-      .filter((c) => PROVIDERS[c.provider].sampleData)
-      .flatMap((c) => PROVIDERS[c.provider].data)
-      .map((kind) => KIND_TO_METRIC[kind])
-      .filter((m): m is MetricKey => m !== undefined),
-  );
-  const records = sampleMetrics.size > 0 ? getDailyRecords() : null;
+  // First selected provider wins a metric so attribution is deterministic.
+  const metricProvider = new Map<MetricKey, DataSource>();
+  for (const connector of setup.connectors) {
+    const def = PROVIDERS[connector.provider];
+    if (!def?.sampleData) continue;
+    for (const kind of def.data) {
+      const metric = KIND_TO_METRIC[kind];
+      if (metric && !metricProvider.has(metric)) {
+        // Provider ids are valid sources; Circular Ring reuses its existing label.
+        metricProvider.set(
+          metric,
+          def.id === "circular_ring" ? "circularRing" : def.id,
+        );
+      }
+    }
+  }
+  const records = metricProvider.size > 0 ? getDailyRecords() : null;
   return assemble({
     owner: "member",
     identity: memberIdentity(userId, setup),
@@ -289,10 +302,12 @@ function memberData(
     whoop,
     whoopDaily,
     sampleSeries: records
-      ? (metric) =>
-          sampleMetrics.has(metric)
+      ? (metric) => ({
+          points: metricProvider.has(metric)
             ? records.map((r) => ({ date: r.date, value: r[metric] }))
-            : []
+            : [],
+          source: metricProvider.get(metric) ?? "demo",
+        })
       : null,
   });
 }
