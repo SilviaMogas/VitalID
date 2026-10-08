@@ -37,7 +37,11 @@ export function EmergencySection({ info }: { info: EmergencyInfo }) {
           {info.allergies.length === 0
             ? t("vitalId.none")
             : info.allergies
-                .map((a) => t(`vitalId.allergy.${a}` as TranslationKey))
+                .map((a) => {
+                  const key = `vitalId.allergy.${a.toLowerCase()}` as TranslationKey;
+                  const tr = t(key);
+                  return tr === key ? a : tr;
+                })
                 .join(listSep)}
         </Row>
         <Row label={t("vitalId.conditions")}>

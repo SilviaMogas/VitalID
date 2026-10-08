@@ -56,7 +56,9 @@ test('share snapshot from a member carries no demo data, owner key or tokens', a
   const d = await as(A);
   const snap = buildSnapshot(d.snapshot, ['currentSignals', 'recentTrends', 'identity']);
   assert.ok(!(snap.sources ?? []).some((s) => SYNTHETIC_SOURCES.has(s)));
-  assert.ok(!(snap.currentSignals ?? []).some((m) => SYNTHETIC_SOURCES.has(m.source)));
+  // Member A only has manual readings; any other source means borrowed data.
+  assert.deepEqual([...new Set((snap.currentSignals ?? []).map((m) => m.source))], ['manual']);
+  assert.ok(!(snap.sources ?? []).some((s) => s !== 'manual' && s !== 'manualProfile'));
   assert.doesNotMatch(JSON.stringify(snap), /ownerKey|token|Fatima/i);
 });
 
