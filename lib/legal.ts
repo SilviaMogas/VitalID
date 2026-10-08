@@ -185,7 +185,7 @@ Vital ID is not a medical device and does not provide medical advice, diagnosis 
 You must provide accurate signup information, keep your credentials confidential and be legally able to consent to health-data processing. // TODO-LEGAL: confirm minimum age per market.
 
 ## 4. Health data and consent
-Creating an account means you accept these Terms. Consent to health-data processing is a separate, explicit choice — given through its own checkbox and recorded with a timestamp and the policy version you consented to. You can withdraw it at any time via the contact above; features that need health data stop working without it.
+Creating an account means you accept these Terms. Consent to health-data processing is a separate, explicit choice — given through its own checkbox and recorded with a timestamp and the policy version you consented to. You can withdraw it at any time via the contact above; withdrawal handling and the affected features must be finalized before launch. // TODO-LEGAL
 
 ## 5. Demo and sample data
 The "Login as Fatima" demo and providers marked "sample data" are for demonstration only and show synthetic data. The demo login can be disabled per deployment.
@@ -225,7 +225,7 @@ Vital ID ليس جهازًا طبيًا ولا يقدّم استشارة أو ت
 يجب أن تقدّم معلومات تسجيل دقيقة وأن تحافظ على سرية بيانات اعتمادك وأن تكون مؤهلًا قانونًا للموافقة على معالجة البيانات الصحية. // TODO-LEGAL: تأكيد الحد الأدنى للعمر لكل سوق.
 
 ## ٤. البيانات الصحية والموافقة
-إنشاء الحساب يعني قبولك هذه الشروط. أما الموافقة على معالجة البيانات الصحية فهي خيار منفصل وصريح — تُمنح عبر خانة خاصة وتُسجَّل بختم زمني وإصدار السياسة التي وافقت عليها. يمكنك سحبها في أي وقت عبر جهة الاتصال أعلاه؛ وتتوقف الميزات التي تحتاج بيانات صحية عن العمل دونها.
+إنشاء الحساب يعني قبولك هذه الشروط. أما الموافقة على معالجة البيانات الصحية فهي خيار منفصل وصريح — تُمنح عبر خانة خاصة وتُسجَّل بختم زمني وإصدار السياسة التي وافقت عليها. يمكنك سحبها في أي وقت عبر جهة الاتصال أعلاه؛ ويجب تحديد آلية السحب والميزات المتأثرة قبل الإطلاق. // TODO-LEGAL
 
 ## ٥. البيانات التجريبية والنموذجية
 الدخول التجريبي «كفاطمة» والمزودون الموسومون «بيانات نموذجية» مخصصان للعرض فقط ويعرضان بيانات اصطناعية. ويمكن تعطيل الدخول التجريبي لكل عملية نشر.

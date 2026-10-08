@@ -724,8 +724,8 @@ const legalStrings = {
     "لا نقرأ بيانات أي جهاز قابل للارتداء إلا بعد موافقتك الصريحة.",
   ],
   "consent.auditFailed": [
-    "Your account was created but the consent record could not be saved. Please sign in — you will be asked to consent again before health data is used.",
-    "تم إنشاء حسابك لكن تعذّر حفظ سجل الموافقة. سجّل الدخول — سيُطلب منك الموافقة مجددًا قبل استخدام بياناتك الصحية.",
+    "Your account was created but the consent record could not be saved. Please sign in and consent again before connecting WHOOP.",
+    "تم إنشاء حسابك لكن تعذّر حفظ سجل الموافقة. سجّل الدخول ووافق مجددًا قبل ربط WHOOP.",
   ],
   "legal.draftBanner": [
     "Draft — not approved for production use; controller details and legal review pending.",

@@ -113,6 +113,9 @@ test('callback without session or with a different user never exchanges the code
   globalThis.__testCookies = { vitalid_whoop_state: `${A.id}:deadbeef` };
   as(null);
   assert.match((await callback.GET(callbackReq('code=x&state=deadbeef'))).headers.get('location') ?? '', /invalid_state/);
+  // consumeState deletes the cookie on every attempt — re-issue a valid state
+  // so B's rejection is for identity mismatch, not for a missing state.
+  globalThis.__testCookies = { vitalid_whoop_state: `${A.id}:deadbeef` };
   as(B);
   assert.match((await callback.GET(callbackReq('code=x&state=deadbeef'))).headers.get('location') ?? '', /invalid_state/);
   assert.equal(globalThis.__fetchUrls.length, 0, `token exchange fired: ${globalThis.__fetchUrls.join(',')}`);

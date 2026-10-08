@@ -15,7 +15,7 @@ banner until that review lands.
 | Explicit health-data consent | `HealthDataConsent` checkbox at `/signup` and before the first WHOOP connect | Separate act from terms acceptance; never pre-ticked. |
 | Consent audit | `vital_id_consents` table + `/api/consent` | Append-only rows stamped with the **server-owned** current version per type (`CONSENT_POLICY_VERSIONS` in `lib/legal.ts`). RLS on, no public policies — server-only. |
 | Wearable gate | `/api/connectors/whoop/connect` + `/callback` | Connect requires member + current `health_data` consent; anonymous/demo sessions never reach the provider. Callback re-checks member+consent **before** `exchangeCode` and the OAuth state is bound to the initiating user id. |
-| Signup audit integrity | `app/api/auth/signup` | Returns `503 consent_audit_failed` when the audit write fails — success is never announced without a consent record. Recovery: sign in again → the WHOOP checkbox re-offers consent before any health data is read (the account is NOT deleted). |
+| Signup audit integrity | `app/api/auth/signup` | Returns `503 consent_audit_failed` when the audit write fails — success is never announced without a consent record. Recovery: sign in again → WHOOP asks for consent before connecting (the account is NOT deleted). Other health-data endpoints still require the launch-gate work below. |
 | Demo labeling | `DemoBadge` when the Fatima demo session is active; "DEMO" chip on the welcome CTA | Demo keeps synthetic data and cannot connect a real wearable. |
 | Medical disclaimer | `insight.disclaimer` on every insight card; `coach.notMedical` on the coach page | |
 
