@@ -13,17 +13,30 @@ tienen poca presencia directa. Eso es lo que se vende.
 
 ---
 
-## 1. Las tres palancas (y en qué orden)
+## 1. Prioridad comercial actualizada (8 de octubre de 2026)
+
+**Decisión de Silvia:** conseguir dispositivos sin coste y cobrar por su promoción. La afiliación es complementaria. No esperar a tener ventas para proponer un piloto pagado por entregables concretos.
+
+Oferta inicial propuesta, pendiente de negociación: **piloto de 30 días por 1.500 EUR + 1–2 dispositivos en propiedad + 12 meses de suscripción cuando sea necesaria + comisión adicional por ventas**. Es un precio interno de salida, no una tarifa de mercado verificada ni un acuerdo cerrado.
+
+Entregables: una demostración grabada del dispositivo y su caso de uso, un post de LinkedIn y un informe breve con las métricas reales de la campaña. Si la integración no existe, mostrar únicamente el dispositivo y el concepto; no prometer una integración en producción dentro del piloto. El desarrollo de integración se presupuesta aparte tras revisar API y alcance.
+
+Negociación:
+- Solicitar primero hardware, suscripción y fee fijo juntos.
+- Si solo ofrecen producto, aceptar únicamente una evaluación acotada, sin campaña completa ni obligación de valoración positiva.
+- Cobrar el fee completo antes de comenzar. Acordar envío, aduanas y propiedad del dispositivo por escrito.
+- Uso en anuncios, reutilización del contenido y exclusividad se negocian y cobran aparte.
+- La colocación pagada se etiqueta como patrocinada. El patrocinio no compra una recomendación clínica ni altera puntuaciones de salud.
+
+### Las tres palancas
 
 | Palanca | Qué conseguimos | Qué damos | Velocidad |
 |---|---|---|---|
 | **A. Afiliación** | Comisión por cada dispositivo vendido desde Vital ID | Un botón "Consigue este dispositivo" en cada tarjeta de conector y en el onboarding | Días. Solicitud online, sin negociar |
 | **B. Partner de integración** | Unidades gratis (dev kit / seeding), acceso a API de partner, aparecer en su directorio de apps | Integración nativa + QA real con hardware + logo en nuestra pantalla de conectores | Semanas. Hay que hablar con una persona |
-| **C. Co-marketing pagado** | Fee fijo por lanzamiento, colocación destacada, campaña en Golfo | Puesto "Recomendado", contenido EN/AR, demo con aseguradoras, datos agregados de adopción (nunca datos de salud) | Meses. Requiere tracción demostrable |
+| **C. Co-marketing pagado** | Fee fijo por lanzamiento, colocación destacada, campaña en Golfo | Espacio etiquetado como patrocinado, contenido acordado y métricas de campaña sin datos de salud | Piloto desde el inicio; alcance y audiencia deben demostrarse |
 
-El orden importa: **A primero** (es gratis, se consigue solo y da un link con tracking desde el día uno),
-**B en paralelo** con las marcas prioritarias, y **C solo cuando haya números** de clics y conversiones
-que enseñar.
+El orden comercial es **B + C desde el primer contacto**: hardware para evaluación y un piloto remunerado por producción y promoción. **A en paralelo**, cuando se confirme elegibilidad y condiciones. Las métricas de conversión sirven para ampliar el acuerdo, no son un requisito para proponer contenido pagado.
 
 ## 2. Lo que ofrecemos (la moneda de cambio)
 
@@ -34,9 +47,7 @@ Esto es lo que va en cada pitch. Nada de "nos encanta vuestro producto".
 2. **Integración técnica real.** Ya tenemos OAuth 2.0, rotación de refresh tokens, sync diario y
    mapeo de métricas hecho para WHOOP (`lib/connectors/whoop/`). Replicar el flujo para otra marca es
    trabajo acotado. Eso les ahorra a ellos una integración y nos da una razón legítima para pedir hardware.
-3. **Mercado Golfo.** UI árabe RTL nativa, envío de credenciales a nueve aseguradoras de EAU
-   (Daman, GIG Gulf, Sukoon, ADNIC, Orient, Bupa, Allianz Care, Cigna, MetLife). Las marcas de
-   wearables venden en EAU pero casi ninguna tiene presencia de producto localizada.
+3. **Enfoque Golfo.** La interfaz EN/AR y los casos de uso previstos para EAU son capacidades de producto y una hipótesis comercial. Un listado de aseguradoras no acredita acuerdos, usuarios asegurados, distribución ni recepción efectiva de credenciales. No afirmar baja presencia local de las marcas sin investigación específica.
 4. **Caso de uso que no compite con su app.** Vital ID no sustituye la app de la marca. Toma sus datos
    y los convierte en una credencial compartible. La marca sigue siendo la fuente y así se etiqueta
    en pantalla ("fuente: WHOOP").
@@ -85,31 +96,22 @@ Pedir cosas concretas y pequeñas. Una marca dice que sí a tres unidades y a un
 - **Comisión por encima de la pública** una vez haya volumen. Se pide en la segunda conversación, no en la primera.
 
 **Para la palanca C (pagado):**
-- Fee fijo por "featured launch": puesto Recomendado en el catálogo durante X semanas + onboarding
-  destacado + contenido EN/AR.
-- Campaña Golfo: la marca paga por entrar en una región donde no tiene canal propio.
-- Esto solo se pide con datos: clics por semana, tasa de conexión, ventas atribuidas.
+- Fee fijo por un piloto de contenido y demostraciones, más dispositivos y suscripciones.
+- Colocación patrocinada en producto solo cuando exista el espacio y haya alcance verificable; no vender el puesto "Recomendado".
+- Proponer el piloto desde la primera conversación. Adjuntar únicamente audiencia y resultados documentados; no garantizar ventas.
 
-## 5. Secuencia de outreach (90 días)
+## 5. Ejecución comercial
 
-**Semana 1–2: afiliación, en bloque.**
-Solicitar en todas las redes a la vez. No esperar respuesta de una para pedir otra.
-Mientras tanto, preparar el producto (sección 6) para que los links tengan dónde vivir.
+| Plazo | Acción | Resultado buscado |
+|---|---|---|
+| Días 1–3 | Preparar demo, audiencia documentada y propuesta de una página | Oferta con precio, entregables y estado real de integraciones |
+| Días 4–7 | Localizar y verificar responsables de partnerships/creator marketing de WHOOP, Oura, Ultrahuman y Circular | Cuatro borradores personalizados; enviar solo con autorización de Silvia |
+| Día 7 tras cada envío | Primer seguimiento | Conversación sobre hardware y presupuesto de piloto |
+| Día 14 tras cada envío | Segundo seguimiento | Respuesta, siguiente paso o cierre del contacto |
+| Días 15–30 | Negociar un piloto; documentar alcance, derechos, envío y prepago | Objetivo interno: un piloto pagado y hardware recibido |
+| Días 30–90 | Ejecutar y medir el piloto; evaluar ampliación y afiliación | Resultados reales para renovar el acuerdo |
 
-**Semana 2–4: partner de integración, dos marcas.**
-WHOOP (ya integrados, pedir reconocimiento formal + membresías de cortesía) y Oura (el directorio
-de 800 apps). Email a partnerships / developer relations, no al formulario de afiliados.
-
-**Semana 4–8: rings competidores.**
-Ultrahuman y Circular. El mensaje incluye, sin mentir, que Oura está en conversación. Las marcas
-pequeñas se mueven más rápido cuando saben que la grande ya está en la mesa.
-
-**Semana 8–12: cerrar seeding y preparar C.**
-Con las unidades en mano, integrar y publicar. Recoger métricas reales de clics y conexiones.
-Con eso se escribe la propuesta pagada.
-
-Regla: **no publicar ningún logo como "integrado" hasta que lo esté.** El catálogo ya distingue
-`integration: "oauth"` de `"none"` y `announcedOnly`. Mantenerlo así.
+No afirmar conversaciones con competidores hasta que existan. No publicar ningún logo como integrado hasta validar la integración. Las solicitudes y acuerdos no se consideran enviados o cerrados hasta que haya evidencia.
 
 ## 6. Qué necesita el producto para que esto funcione
 
@@ -144,59 +146,34 @@ Nada de esto toca el modelo de privacidad: el tracking es de clic saliente, no d
 
 ## 8. Plantillas de email (en inglés, que es como se escribe a estas marcas)
 
-### 8.1 Partner de integración (WHOOP, Oura)
+### 8.1 Primer contacto: hardware + piloto remunerado
 
-> **Subject:** Vital ID × {Brand}: native integration live / in progress, Gulf market
+> **Subject:** {Brand} × Vital ID: device evaluation and paid content pilot
 >
 > Hi {name},
 >
-> I'm Silvia, founder of Vital ID, a bilingual (English / Arabic) health-credential app. Users connect
-> their wearables, see their recovery, sleep and HRV with the data source labelled, and share only
-> selected fields with a doctor, insurer or caregiver through a temporary, revocable link.
+> I'm Silvia Mogas, founder of Vital ID, a healthtech project focused on portable health credentials. I'm exploring a partnership with {Brand} combining hands-on device evaluation with a paid content and demonstration pilot.
 >
-> {Brand} is one of the first providers in our connector catalogue. {WHOOP: our OAuth 2.0 integration
-> with API v2 is already in production with daily sync and rotating refresh tokens.} {Oura: we are
-> building the integration now, following the same flow we shipped for WHOOP.}
+> {WHOOP only: Our repository includes a WHOOP OAuth integration, which I can demonstrate.} {Other brands: Your device is a candidate for a future integration, subject to API access and technical validation.}
 >
-> Two things I'd like to ask:
-> 1. Partner-level API access so we can move past the test-user limit and complete QA.
-> 2. Two or three units for the team, so the integration is tested against real data before launch.
+> For an initial 30-day pilot, I'd propose one or two devices with any required subscription, alongside a fixed fee covering a recorded demonstration, a LinkedIn post and a short campaign report. Affiliate commission could sit alongside the fixed fee.
 >
-> In return: {Brand} is listed and labelled as the data source across the app, surfaced in onboarding
-> to every new user, and we can share aggregated adoption numbers (never individual health data).
-> We also send health credentials to nine UAE insurers, which puts {Brand} in front of a market where
-> you have little localised presence today.
->
-> Happy to walk you through the live product in 15 minutes.
+> I can share the product demo, verified audience figures and a one-page proposal. Would you be the right person to discuss partnerships and paid creator collaborations?
 >
 > Silvia Mogas
-> Vital ID · {link to /partners}
+> Founder, Vital ID
 
-### 8.2 Afiliación + seeding (Ultrahuman, Circular, Garmin, Fitbit)
+### 8.2 Seguimiento, siete días después
 
-> **Subject:** Affiliate + integration partnership, Vital ID (UAE / Gulf, EN/AR)
->
 > Hi {name},
 >
-> We've applied to your affiliate programme on {network}. Beyond the standard link, I'd like to
-> propose something more useful to both sides: {Brand} appears in the connector catalogue of Vital ID
-> with a "Get this device" placement shown to every new user who hasn't got a wearable yet.
->
-> To ship the integration and test it properly we need two to three units. In exchange you get a
-> native integration, placement in onboarding, bilingual EN/AR content and an exclusive discount code
-> for our users that you can track separately.
->
-> {If true: We are in conversations with {other brand} for the same slot in the smart-ring category.}
->
-> Silvia Mogas · Vital ID
+> Following up on my proposal for a {Brand} × Vital ID pilot combining device evaluation and paid content. I'd be happy to share a short demo and the proposed deliverables. Is this something your partnerships or creator marketing team would consider?
 
-### 8.3 Co-marketing pagado (solo con datos)
+### 8.3 Si ofrecen únicamente afiliación o producto
 
-> **Subject:** Featured launch for {Brand} in Vital ID: {N} connector clicks / week, {X}% connect rate
+> Thank you for sharing the options. Affiliate commission could complement the partnership. For the content and demonstration work, my proposal includes a fixed production fee alongside the devices and required subscription.
 >
-> Over the last {period}, {Brand}'s connector card received {N} clicks and {X}% of users who clicked
-> went on to connect a device. We can give {Brand} the Recommended slot in the catalogue and onboarding
-> for {weeks} weeks, with bilingual content and a Gulf-focused campaign. Proposal attached.
+> If there is no campaign budget at this stage, we could explore a limited device evaluation with no commitment to a full promotional campaign.
 
 ## 9. KPIs
 
@@ -206,7 +183,7 @@ Nada de esto toca el modelo de privacidad: el tracking es de clic saliente, no d
 | Unidades conseguidas gratis | 6 (dos marcas × 3) |
 | Integraciones nuevas en producción | 1 (Oura o Ultrahuman) |
 | Clics en "Consigue este dispositivo" | Medidos desde el día uno; sin cifra objetivo hasta tener base |
-| Primer acuerdo pagado | Propuesta enviada, no necesariamente cerrada |
+| Primer acuerdo pagado | Objetivo interno: un piloto firmado y prepagado; no garantizado |
 
 ## 10. Fuentes consultadas (8 de octubre de 2026)
 
