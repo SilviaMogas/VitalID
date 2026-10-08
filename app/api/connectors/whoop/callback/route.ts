@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { getCurrentUserKey } from '@/lib/membership/session';
+import { getConsentStore } from '@/lib/consent';
 import { getOnboardingStore } from '@/lib/onboarding/store';
 import {
   consumeState,
@@ -26,6 +27,14 @@ export async function GET(req: NextRequest) {
   const state = params.get('state');
   if (!(await consumeState(state))) return home(req, 'invalid_state');
   if (!code) return home(req, 'error');
+
+  // OAuth state is not bound to a session, so re-check the member's own
+  // health-data consent here (the flow may have started while logged out).
+  const user = await getCurrentUser();
+  if (user) {
+    const consents = await getConsentStore().latest(user.id).catch(() => null);
+    if (!consents?.health_data) return home(req, 'consent_required');
+  }
 
   const env = readWhoopEnv();
   if (!env) return home(req, 'not_configured');
@@ -62,7 +71,6 @@ export async function GET(req: NextRequest) {
     });
 
     // Members also get the onboarding connector preference flipped to connected.
-    const user = await getCurrentUser();
     if (user) {
       await getOnboardingStore().setConnectorStatus(
         user.id,

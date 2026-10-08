@@ -13,6 +13,8 @@ const B = { id: '00000000-0000-4000-8000-0000000000b1', email: 'b@example.test' 
 const consent = await import('@/app/api/consent/route');
 const connect = await import('@/app/api/connectors/whoop/connect/route');
 const signup = await import('@/app/api/auth/signup/route');
+const callback = await import('@/app/api/connectors/whoop/callback/route');
+const { getWhoopStore } = await import('@/lib/connectors/whoop');
 
 const json = (url, body) => new Request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const as = (u) => { globalThis.__testUser = u; };
@@ -62,4 +64,15 @@ test('member A with their own consent can start WHOOP OAuth; demo flow unchanged
   assert.match((await connect.GET(connectReq())).headers.get('location') ?? '', /localhost:4010\/oauth\/oauth2\/auth/);
   as(null);
   assert.match((await connect.GET(connectReq())).headers.get('location') ?? '', /localhost:4010\/oauth\/oauth2\/auth/);
+});
+
+test('OAuth started logged-out cannot complete into a member account without consent', async () => {
+  as(null);
+  const loc = new URL((await connect.GET(connectReq())).headers.get('location'));
+  const state = loc.searchParams.get('state');
+  as(B);
+  const url = `http://localhost:3000/api/connectors/whoop/callback?code=mock&state=${state}`;
+  const r = await callback.GET(Object.assign(new Request(url), { nextUrl: new URL(url) }));
+  assert.match(r.headers.get('location') ?? '', /whoop=consent_required/);
+  assert.equal(await getWhoopStore().get(B.id), null);
 });

@@ -14,7 +14,7 @@ const STUBS = {
   'server-only': 'export {};',
   react: 'export const cache = (fn) => fn;',
   'next/headers':
-    'export async function cookies(){ return { get(){ return undefined; }, set(){}, delete(){} }; }',
+    'export async function cookies(){ const j = (globalThis.__cookieJar ??= new Map()); return { get(n){ return j.has(n) ? { value: j.get(n) } : undefined; }, set(n, v){ j.set(n, v); }, delete(n){ j.delete(n); } }; }',
   '@/lib/auth/server':
     'export async function getCurrentUser(){ return globalThis.__testUser ?? null; } export function isAuthConfigured(){ return false; } export async function signUpWithPassword(i){ return { ok: true, user: { id: globalThis.__signupId, email: i.email } }; }',
 };
