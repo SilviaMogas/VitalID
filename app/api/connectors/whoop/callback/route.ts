@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
-import { getCurrentUserKey } from '@/lib/membership/session';
+import { getConsentStore } from '@/lib/consent';
+import { CONSENT_POLICY_VERSIONS } from '@/lib/legal';
 import { getOnboardingStore } from '@/lib/onboarding/store';
 import {
   consumeState,
@@ -24,11 +25,22 @@ export async function GET(req: NextRequest) {
 
   const code = params.get('code');
   const state = params.get('state');
-  if (!(await consumeState(state))) return home(req, 'invalid_state');
+  const stateUserId = await consumeState(state);
+  if (!stateUserId) return home(req, 'invalid_state');
   if (!code) return home(req, 'error');
 
   const env = readWhoopEnv();
   if (!env) return home(req, 'not_configured');
+
+  // Re-validate before exchanging the code: the session must still belong to
+  // the member who initiated the flow and still hold a current health-data
+  // consent — otherwise no tokens are ever requested.
+  const user = await getCurrentUser();
+  if (!user || user.id !== stateUserId) return home(req, 'invalid_state');
+  const consents = await getConsentStore().latest(user.id).catch(() => null);
+  if (consents?.health_data?.policyVersion !== CONSENT_POLICY_VERSIONS.health_data) {
+    return home(req, 'consent_required');
+  }
 
   try {
     const tokens = await exchangeCode(code, whoopRedirectUri(req));
@@ -44,10 +56,9 @@ export async function GET(req: NextRequest) {
       /* profile lookup is best-effort; sync fills it in later */
     }
 
-    const userKey = await getCurrentUserKey();
     const store = getWhoopStore();
     await store.upsert({
-      userKey,
+      userKey: user.id,
       whoopUserId,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -61,19 +72,15 @@ export async function GET(req: NextRequest) {
       lastSyncError: null,
     });
 
-    // Members also get the onboarding connector preference flipped to connected.
-    const user = await getCurrentUser();
-    if (user) {
-      await getOnboardingStore().setConnectorStatus(
-        user.id,
-        'whoop',
-        'connected',
-        new Date().toISOString(),
-      );
-    }
+    await getOnboardingStore().setConnectorStatus(
+      user.id,
+      'whoop',
+      'connected',
+      new Date().toISOString(),
+    );
 
     // Best-effort first sync — the dashboard reads stored rows afterwards.
-    await syncWhoop(userKey).catch(() => undefined);
+    await syncWhoop(user.id).catch(() => undefined);
 
     return home(req, 'connected');
   } catch {

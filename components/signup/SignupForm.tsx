@@ -7,8 +7,7 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
 import { AuthFrame, Field, inputClass } from "@/components/auth/AuthFrame";
-import { HealthDataConsent } from "@/components/legal/HealthDataConsent";
-import { PRIVACY_VERSION } from "@/lib/legal";
+import { HealthDataConsent, TermsConsent } from "@/components/legal/HealthDataConsent";
 import type { TranslationKey } from "@/lib/i18n";
 
 const ERROR_KEYS: Record<string, TranslationKey> = {
@@ -17,6 +16,7 @@ const ERROR_KEYS: Record<string, TranslationKey> = {
   invalid_email: "auth.error.invalidEmail",
   not_configured: "auth.error.notConfigured",
   consent_required: "consent.error",
+  consent_audit_failed: "consent.auditFailed",
 };
 
 export function SignupForm() {
@@ -34,8 +34,10 @@ export function SignupForm() {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Required, never pre-ticked: explicit consent to health-data processing.
-  const [consent, setConsent] = useState(false);
+  // Required, never pre-ticked: accepting the legal docs and consenting to
+  // health-data processing are two independent acts.
+  const [consentTerms, setConsentTerms] = useState(false);
+  const [consentHealth, setConsentHealth] = useState(false);
 
   // Already signed in: hand off to the routing rules instead of showing the form.
   useEffect(() => {
@@ -55,9 +57,8 @@ export function SignupForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          consentPrivacy: consent,
-          consentHealthData: consent,
-          privacyVersion: PRIVACY_VERSION,
+          consentTerms,
+          consentHealthData: consentHealth,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; next?: string };
@@ -114,11 +115,12 @@ export function SignupForm() {
             <input id="su-city" required value={form.city} onChange={set("city")} className={inputClass} autoComplete="address-level2" />
           </Field>
         </div>
-        <HealthDataConsent id="su-consent" checked={consent} onChange={setConsent} />
+        <TermsConsent id="su-terms" checked={consentTerms} onChange={setConsentTerms} />
+        <HealthDataConsent id="su-consent" checked={consentHealth} onChange={setConsentHealth} />
         {error && <p className="text-sm text-bad">{error}</p>}
         <button
           type="submit"
-          disabled={busy || !consent}
+          disabled={busy || !consentTerms || !consentHealth}
           className="press w-full rounded-2xl bg-brand py-3.5 text-sm font-semibold text-white shadow-hero transition hover:bg-brand-deep disabled:opacity-50"
         >
           {busy ? t("common.loading") : t("signup.continue")}

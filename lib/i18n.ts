@@ -707,12 +707,14 @@ const legalStrings = {
   "legal.terms": ["Terms of Service", "شروط الخدمة"],
   "legal.links": ["Legal", "قانوني"],
   "legal.contact": ["Contact", "للتواصل"],
-  "consent.label.pre": ["I accept the", "أوافق على"],
-  "consent.label.mid": ["and the", "و"],
-  "consent.label.post": [
-    " and I explicitly consent to the processing of my health data.",
-    " وأوافق صراحةً على معالجة بياناتي الصحية.",
+  "consent.accept.pre": ["I accept the", "أوافق على"],
+  "consent.accept.mid": ["and the", "و"],
+  "consent.accept.post": [".", "."],
+  "consent.health.pre": [
+    "I explicitly consent to the processing of my health data as described in the",
+    "أوافق صراحةً على معالجة بياناتي الصحية كما هو موصوف في",
   ],
+  "consent.health.post": [".", "."],
   "consent.error": [
     "Please accept the privacy policy and consent to health-data processing to continue.",
     "يرجى قبول سياسة الخصوصية والموافقة على معالجة البيانات الصحية للمتابعة.",
@@ -720,6 +722,14 @@ const legalStrings = {
   "consent.connectorHint": [
     "We only read data from a wearable after your explicit consent.",
     "لا نقرأ بيانات أي جهاز قابل للارتداء إلا بعد موافقتك الصريحة.",
+  ],
+  "consent.auditFailed": [
+    "Your account was created but the consent record could not be saved. Please sign in — you will be asked to consent again before health data is used.",
+    "تم إنشاء حسابك لكن تعذّر حفظ سجل الموافقة. سجّل الدخول — سيُطلب منك الموافقة مجددًا قبل استخدام بياناتك الصحية.",
+  ],
+  "legal.draftBanner": [
+    "Draft — not approved for production use; controller details and legal review pending.",
+    "مسودة — غير معتمدة للاستخدام الإنتاجي؛ تفاصيل الجهة المتحكمة والمراجعة القانونية قيد الانتظار.",
   ],
   "demo.sessionBadge": ["DEMO", "تجريبي"],
 } as const satisfies Record<string, readonly [string, string]>;

@@ -19,6 +19,9 @@ export function LegalDocument({ kind }: { kind: LegalDocKind }) {
       <header className="rise" style={{ ["--i" as string]: 0 }}>
         <h1 className="display text-4xl md:text-5xl">{doc.title}</h1>
         <p className="mt-2 text-sm text-muted">{doc.updated}</p>
+        <p className="mt-3 rounded-2xl bg-warn-soft px-4 py-2.5 text-xs font-semibold text-warn ring-1 ring-warn/30">
+          {t("legal.draftBanner")}
+        </p>
       </header>
 
       <div className="space-y-5">

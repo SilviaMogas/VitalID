@@ -91,7 +91,16 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
     setConsentOk(null);
     fetch("/api/consent", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => done(Boolean(d?.consents?.health_data)))
+      .then((d) =>
+        // Consent only counts when recorded against the current policy version;
+        // an older record means the user must re-consent.
+        done(
+          Boolean(
+            d?.consents?.health_data &&
+              d.consents.health_data.policyVersion === (d.versions?.health_data ?? PRIVACY_VERSION),
+          ),
+        ),
+      )
       .catch(() => done(false));
     return () => {
       cancelled = true;
@@ -113,7 +122,8 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
     fetch("/api/consent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "health_data", policyVersion: PRIVACY_VERSION }),
+      // Version is stamped server-side; the client only declares the type.
+      body: JSON.stringify({ type: "health_data" }),
     })
       .then((r) => setConsentOk(r.ok))
       .catch(() => setConsentOk(false));

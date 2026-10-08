@@ -25,16 +25,16 @@ export async function POST(req: Request) {
   const country = field(body.country, 80);
   const city = field(body.city, 80);
 
-  // Explicit, unbundled consent is required before an account that will hold
-  // health data can be created (GDPR Art. 9(2)(a)). The client checkbox is
-  // never pre-ticked; this check is the server-side enforcement.
-  const consentPrivacy = body.consentPrivacy === true;
+  // Two separate acts: accepting the legal documents AND explicitly
+  // consenting to health-data processing (GDPR Art. 9(2)(a)). The client
+  // checkboxes are never pre-ticked; this check is the server-side enforcement.
+  const consentTerms = body.consentTerms === true;
   const consentHealthData = body.consentHealthData === true;
 
   if (!firstName || !lastName || !country || !city) {
     return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
   }
-  if (!consentPrivacy || !consentHealthData) {
+  if (!consentTerms || !consentHealthData) {
     return NextResponse.json({ error: 'consent_required' }, { status: 400 });
   }
   if (!EMAIL_RE.test(email)) return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
@@ -53,16 +53,20 @@ export async function POST(req: Request) {
     getOnboardingStore().patch(result.user.id, { profile: { firstName, lastName, country, city } }),
   ]);
 
-  // Audit the consent (timestamped, append-only). If the consents table is not
-  // migrated yet we still let signup succeed — the consent act itself was
-  // enforced above — and log so the gap is visible server-side.
+  // Audit the consents (timestamped, append-only). Signup MUST NOT report
+  // success without the audit: on failure the account exists but the user is
+  // told to sign in and re-consent — the health gates keep them out of
+  // wearable data until a health_data row persists. Deliberately no
+  // compensating delete of the fresh account.
   try {
     const store = getConsentStore();
     await store.record(result.user.id, 'privacy_policy', PRIVACY_VERSION);
     await store.record(result.user.id, 'terms_of_service', TERMS_VERSION);
+    // health_data last: it is the consent the gates actually check.
     await store.record(result.user.id, 'health_data', PRIVACY_VERSION);
   } catch (err) {
     console.error('[signup] consent audit write failed — run supabase/migrations/20261008_vital_id_consents.sql', err);
+    return NextResponse.json({ error: 'consent_audit_failed' }, { status: 503 });
   }
   return NextResponse.json(
     { userId: result.user.id, plan: membership.plan, next: '/pricing' },

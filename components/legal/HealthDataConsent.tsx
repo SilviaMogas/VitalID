@@ -1,23 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 
-/**
- * Explicit, un-checked-by-default consent checkbox (GDPR Art. 9):
- * privacy policy + terms acceptance and explicit consent to health-data
- * processing. Reused at signup and before the first real wearable connect.
- */
-export function HealthDataConsent({
-  id,
-  checked,
-  onChange,
-}: {
+interface ConsentProps {
   id: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
-}) {
-  const { t } = useLocale();
+}
+
+/** Shared unchecked-by-default checkbox shell (GDPR Art. 9 explicit consent). */
+function LegalCheckbox({ id, checked, onChange, children }: ConsentProps & { children: ReactNode }) {
   return (
     <label
       htmlFor={id}
@@ -32,16 +26,44 @@ export function HealthDataConsent({
         aria-describedby={`${id}-text`}
       />
       <span id={`${id}-text`} className="text-xs leading-relaxed text-ink-2">
-        {t("consent.label.pre")}{" "}
-        <Link href="/privacy" className="font-semibold text-brand underline">
-          {t("legal.privacy")}
-        </Link>{" "}
-        {t("consent.label.mid")}{" "}
-        <Link href="/terms" className="font-semibold text-brand underline">
-          {t("legal.terms")}
-        </Link>
-        {t("consent.label.post")}
+        {children}
       </span>
     </label>
+  );
+}
+
+/** Accept the privacy policy + terms of service (no health-data consent). */
+export function TermsConsent(props: ConsentProps) {
+  const { t } = useLocale();
+  return (
+    <LegalCheckbox {...props}>
+      {t("consent.accept.pre")}{" "}
+      <Link href="/privacy" className="font-semibold text-brand underline">
+        {t("legal.privacy")}
+      </Link>{" "}
+      {t("consent.accept.mid")}{" "}
+      <Link href="/terms" className="font-semibold text-brand underline">
+        {t("legal.terms")}
+      </Link>
+      {t("consent.accept.post")}
+    </LegalCheckbox>
+  );
+}
+
+/**
+ * Explicit health-data consent only — links to the privacy policy, records
+ * `health_data` server-side. Used at signup and before the first real wearable
+ * connect; it never implies acceptance of terms.
+ */
+export function HealthDataConsent(props: ConsentProps) {
+  const { t } = useLocale();
+  return (
+    <LegalCheckbox {...props}>
+      {t("consent.health.pre")}{" "}
+      <Link href="/privacy" className="font-semibold text-brand underline">
+        {t("legal.privacy")}
+      </Link>
+      {t("consent.health.post")}
+    </LegalCheckbox>
   );
 }
