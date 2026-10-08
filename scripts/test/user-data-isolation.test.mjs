@@ -75,3 +75,47 @@ test('server drops Pro-only connectors for a free plan', () => {
   );
   assert.deepEqual(kept, []);
 });
+
+test('every sample provider stays outside a member profile and share', async () => {
+  for (const provider of ['oura', 'fitbit', 'garmin', 'apple_health', 'strava', 'circular_ring']) {
+    await store.patch(B.id, { connectors: [{ provider, category: 'wearables', status: 'sample_data', connectedAt: null }] });
+    const d = await as(B);
+    assert.deepEqual(d.metrics, [], provider);
+    assert.deepEqual(buildSnapshot(d.snapshot, ['currentSignals', 'recentTrends']).currentSignals, []);
+  }
+});
+
+test('demo previews are labelled synthetic and cannot enter a share', async () => {
+  const { connectorDemo } = await import('@/lib/connector-demo');
+  for (const provider of ['oura', 'fitbit', 'garmin', 'apple_health', 'strava', 'circular_ring']) {
+    const preview = connectorDemo(provider);
+    assert.ok(preview.length > 0);
+    assert.ok(preview.every((metric) => metric.source === 'demoWearable'));
+    const member = await as(A);
+    assert.throws(() => buildSnapshot({ ...member.snapshot, currentSignals: preview }, ['currentSignals']), /Demo data/);
+    assert.deepEqual(member.metrics.map((m) => m.source), ['manual', 'manual']);
+  }
+  assert.deepEqual(connectorDemo('whoop'), []);
+});
+
+test('Fatima demo cannot become a recipient snapshot', async () => {
+  const d = await as(null);
+  assert.throws(() => buildSnapshot(d.snapshot, ['currentSignals', 'identity']), /Demo data/);
+});
+
+test('share API rejects a demo before persistence and allows own member readings', async () => {
+  const { POST } = await import('@/app/api/share/route');
+  const request = () => new Request('https://example.test/api/share', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ purpose: 'doctor', selectedFields: ['identity', 'currentSignals'], durationMinutes: 60 }),
+  });
+  globalThis.__createdShare = null;
+  globalThis.__testUser = null;
+  assert.equal((await POST(request())).status, 403);
+  assert.equal(globalThis.__createdShare, null);
+  globalThis.__testUser = A;
+  const response = await POST(request());
+  assert.equal(response.status, 201);
+  assert.equal(globalThis.__createdShare.ownerKey, A.id);
+  assert.deepEqual(globalThis.__createdShare.snapshot.currentSignals.map((m) => m.source), ['manual', 'manual']);
+});

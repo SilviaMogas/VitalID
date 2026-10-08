@@ -7,6 +7,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const STUBS = {
+  'next/server': 'export const NextResponse = { json: (body, init) => Response.json(body, init) };',
+  '@/lib/membership/session': 'export const DEMO_USER_KEY = "fatima"; export async function getCurrentUserKey(){ return globalThis.__testUser?.id ?? DEMO_USER_KEY; }',
+  '@/lib/share-store': 'export async function createShare(p){ globalThis.__createdShare = p; } export async function listShares(){ return []; }',
   'server-only': 'export {};',
   react: 'export const cache = (fn) => fn;',
   'next/headers':

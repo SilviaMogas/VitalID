@@ -143,9 +143,9 @@ export interface UserConnector {
 
 /**
  * Whether the user can select a provider today. Everything announced is
- * selectable: providers with bundled sample data (like Circular Ring) start
- * feeding the demo dataset right away, others are saved as a preference with
- * an honest `waiting_implementation` badge until their integration ships.
+ * selectable. Sample data is explored in a separate, read-only demo; selecting
+ * a provider never injects sample measurements into a member's profile.
+ * Providers without integrations are saved as preferences.
  */
 export function canSelectProvider(def: ProviderDef): boolean {
   return !def.announcedOnly;

@@ -65,7 +65,10 @@ export async function POST(req: Request) {
   }
 
   const now = new Date();
-  const [{ snapshot: full }, ownerKey] = await Promise.all([resolveUserData(), getCurrentUserKey()]);
+  const [{ snapshot: full, owner }, ownerKey] = await Promise.all([resolveUserData(), getCurrentUserKey()]);
+  if (owner !== 'member' || ownerKey === DEMO_USER_KEY) {
+    return NextResponse.json({ error: 'Demo data cannot be shared. Sign in to share your own readings.' }, { status: 403 });
+  }
   const payload: SharePayload = {
     id: randomId(),
     createdAt: now.toISOString(),
