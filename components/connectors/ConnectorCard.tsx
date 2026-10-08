@@ -88,6 +88,12 @@ export function ConnectorCard({
         )}
       </div>
 
+      {provider.sampleData && (
+        <Link href={`/demo/connectors/${provider.id}`} className="mt-3 text-sm font-medium text-brand">
+          {t("connectors.exploreDemo")}
+        </Link>
+      )}
+
       <div className="mt-4 flex-1" />
 
       {selected ? (

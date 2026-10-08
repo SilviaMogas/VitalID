@@ -326,6 +326,7 @@ const setupStrings = {
   "dashboard.manageTools": ["Manage", "إدارة"],
   "vitalId.sex.other": ["Other", "آخر"],
   "insight.manualBaseline": ["Your dashboard is running on the baseline you entered. Connect a tool to unlock live trends.", "تعمل لوحتك على خط الأساس الذي أدخلته. اربط أداة لفتح الاتجاهات المباشرة."],
+  "connectors.exploreDemo": ["Explore demo (sample data)", "استكشف العرض التجريبي (بيانات توضيحية)"],
   "source.whoop": ["WHOOP", "WHOOP"],
   "source.oura": ["Oura sample data", "بيانات Oura التجريبية"],
   "source.fitbit": ["Fitbit sample data", "بيانات Fitbit التجريبية"],

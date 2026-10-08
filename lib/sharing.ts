@@ -79,6 +79,10 @@ export function buildSnapshot(
   full: VitalIdSnapshot,
   fields: ShareField[],
 ): Partial<VitalIdSnapshot> {
+  // Defence in depth: a demo must never become a recipient health report.
+  if (full.currentSignals.some((m) => m.source === "demoWearable" || m.source === "circularRing" || m.source === "demo")) {
+    throw new Error("Demo data cannot be shared as health measurements");
+  }
   const out: Partial<VitalIdSnapshot> = {
     sources: full.sources,
     lastUpdated: full.lastUpdated,
