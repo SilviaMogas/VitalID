@@ -14,7 +14,6 @@ import {
 import { DEMO_USER_KEY } from "@/lib/membership/constants";
 import { getOnboardingStore } from "@/lib/onboarding/store";
 import { emptySetup, type UserSetup } from "@/lib/onboarding/types";
-import { KIND_TO_METRIC, PROVIDERS } from "@/lib/connectors";
 import { getWhoopBody, getWhoopDaily, getWhoopStatus } from "@/lib/connectors/whoop";
 import type { WhoopConnectionPublic, WhoopDaily } from "@/lib/connectors/whoop/types";
 import {
@@ -34,7 +33,7 @@ import {
  *
  * Priority, per metric and per user:
  *   1. real connected provider data   (WHOOP OAuth sync)            → source "whoop"
- *   2. provider sample data           (selected sample providers + Fatima) → "circularRing" / "demoWearable"
+ *   2. provider sample data assigned  (Circular Ring, Fatima only)  → "circularRing" / "demoWearable"
  *   3. manual onboarding baseline     (Step 4 of setup)             → source "manual"
  *   4. nothing                        → metric is omitted (UI renders an empty state)
  *
@@ -270,16 +269,6 @@ function memberData(
   whoopDaily: WhoopDaily[],
   body: WhoopBody | null,
 ): ResolvedUserData {
-  // Selected providers with bundled sample data feed the shared demo series
-  // for the metrics their data kinds cover — same behaviour as Circular Ring.
-  const sampleMetrics = new Set<MetricKey>(
-    setup.connectors
-      .filter((c) => PROVIDERS[c.provider].sampleData)
-      .flatMap((c) => PROVIDERS[c.provider].data)
-      .map((kind) => KIND_TO_METRIC[kind])
-      .filter((m): m is MetricKey => m !== undefined),
-  );
-  const records = sampleMetrics.size > 0 ? getDailyRecords() : null;
   return assemble({
     owner: "member",
     identity: memberIdentity(userId, setup),
@@ -288,12 +277,7 @@ function memberData(
     profile: memberProfile(setup, body),
     whoop,
     whoopDaily,
-    sampleSeries: records
-      ? (metric) =>
-          sampleMetrics.has(metric)
-            ? records.map((r) => ({ date: r.date, value: r[metric] }))
-            : []
-      : null,
+    sampleSeries: null,
   });
 }
 
