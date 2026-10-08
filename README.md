@@ -253,6 +253,7 @@ Everything landed through reviewed pull requests with lint + type-check + build 
 | [`docs/BILLING.md`](docs/BILLING.md) | Stripe membership flow |
 | [`docs/CONNECTORS.md`](docs/CONNECTORS.md) | WHOOP integration & data mapping |
 | [`docs/DESIGN_PASS.md`](docs/DESIGN_PASS.md) | Visual system, mascot, splash |
+| [`docs/DEVICE_PARTNERSHIPS.md`](docs/DEVICE_PARTNERSHIPS.md) | Device-maker partnerships: free hardware, affiliate links, paid placement |
 | [`docs/Vital_ID_Organized_Deck.pdf`](docs/Vital_ID_Organized_Deck.pdf) | Pitch deck |
 
 ## License
