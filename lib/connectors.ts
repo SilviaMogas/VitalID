@@ -16,6 +16,7 @@
  * the onboarding store — no UI redesign needed.
  */
 import { getConnectorLimit, planRank, type PlanId } from "@/lib/plans";
+import type { MetricKey } from "@/types";
 
 export type ConnectorStatus =
   | "connected"
@@ -99,16 +100,16 @@ export interface ProviderDef {
 
 export const PROVIDERS: Record<ProviderId, ProviderDef> = {
   whoop: { id: "whoop", name: "WHOOP", mark: "W", tint: "#111111", integration: "oauth", data: ["sleep", "recovery", "hrv", "restingHeartRate", "activity"], requiredPlan: "free", website: "https://www.whoop.com" },
-  oura: { id: "oura", name: "Oura", mark: "O", tint: "#2b2b2b", integration: "none", data: ["sleep", "readiness", "hrv", "restingHeartRate", "activity"], requiredPlan: "free", website: "https://ouraring.com" },
+  oura: { id: "oura", name: "Oura", mark: "O", tint: "#2b2b2b", integration: "none", data: ["sleep", "readiness", "hrv", "restingHeartRate", "activity"], requiredPlan: "free", sampleData: true, website: "https://ouraring.com" },
   circular_ring: { id: "circular_ring", name: "Circular Ring", mark: "C", tint: "#1f8a70", integration: "none", data: ["sleep", "hrv", "restingHeartRate", "recovery"], requiredPlan: "free", sampleData: true, website: "https://www.circular.xyz" },
-  fitbit: { id: "fitbit", name: "Fitbit", mark: "fb", tint: "#00B0B9", integration: "none", data: ["sleep", "steps", "activity", "restingHeartRate"], requiredPlan: "free", website: "https://www.fitbit.com" },
-  garmin: { id: "garmin", name: "Garmin", mark: "G", tint: "#007CC3", integration: "none", data: ["activity", "workouts", "hrv", "sleep"], requiredPlan: "free", website: "https://www.garmin.com" },
-  apple_health: { id: "apple_health", name: "Apple Health", mark: "♥", tint: "#FF2D55", integration: "none", data: ["sleep", "activity", "steps", "hydration", "medicalRecords", "restingHeartRate"], requiredPlan: "free", website: "https://www.apple.com/health" },
+  fitbit: { id: "fitbit", name: "Fitbit", mark: "fb", tint: "#00B0B9", integration: "none", data: ["sleep", "steps", "activity", "restingHeartRate"], requiredPlan: "free", sampleData: true, website: "https://www.fitbit.com" },
+  garmin: { id: "garmin", name: "Garmin", mark: "G", tint: "#007CC3", integration: "none", data: ["activity", "workouts", "hrv", "sleep"], requiredPlan: "free", sampleData: true, website: "https://www.garmin.com" },
+  apple_health: { id: "apple_health", name: "Apple Health", mark: "♥", tint: "#FF2D55", integration: "none", data: ["sleep", "activity", "steps", "hydration", "medicalRecords", "restingHeartRate"], requiredPlan: "free", sampleData: true, website: "https://www.apple.com/health" },
   myfitnesspal: { id: "myfitnesspal", name: "MyFitnessPal", mark: "MFP", tint: "#0066EE", integration: "none", data: ["calories", "protein", "carbs", "fat", "macros"], requiredPlan: "free", website: "https://www.myfitnesspal.com" },
   cronometer: { id: "cronometer", name: "Cronometer", mark: "C", tint: "#F5A623", integration: "none", data: ["calories", "macros", "micronutrients", "hydration"], requiredPlan: "free", website: "https://cronometer.com" },
   macrofactor: { id: "macrofactor", name: "MacroFactor", mark: "MF", tint: "#6C4BF4", integration: "none", data: ["calories", "macros", "protein"], requiredPlan: "free", website: "https://macrofactorapp.com" },
   lifesum: { id: "lifesum", name: "Lifesum", mark: "L", tint: "#E94E3D", integration: "none", data: ["calories", "macros", "hydration", "habits"], requiredPlan: "free", website: "https://lifesum.com" },
-  strava: { id: "strava", name: "Strava", mark: "S", tint: "#FC4C02", integration: "none", data: ["workouts", "distance", "activity"], requiredPlan: "free", website: "https://www.strava.com" },
+  strava: { id: "strava", name: "Strava", mark: "S", tint: "#FC4C02", integration: "none", data: ["workouts", "distance", "activity"], requiredPlan: "free", sampleData: true, website: "https://www.strava.com" },
   medical_records: { id: "medical_records", name: "Generic Medical Records", nameKey: "connectors.provider.medicalRecords", mark: "MR", tint: "#3B7A57", integration: "none", data: ["medicalRecords", "labResults"], requiredPlan: "pro" },
   uae_health: { id: "uae_health", name: "UAE health integrations", nameKey: "connectors.provider.uaeHealth", mark: "UAE", tint: "#00732F", integration: "none", data: ["medicalRecords"], requiredPlan: "pro", announcedOnly: true },
   calm: { id: "calm", name: "Calm", mark: "C", tint: "#3E7CB1", integration: "none", data: ["meditation", "mindfulness"], requiredPlan: "free", website: "https://www.calm.com" },
@@ -141,14 +142,28 @@ export interface UserConnector {
 }
 
 /**
- * Whether the user can select a provider today. Providers without a built
- * integration and without bundled sample data are presented as "coming soon"
- * instead of an "Add" that would sit in `waiting_implementation` forever.
+ * Whether the user can select a provider today. Everything announced is
+ * selectable: providers with bundled sample data (like Circular Ring) start
+ * feeding the demo dataset right away, others are saved as a preference with
+ * an honest `waiting_implementation` badge until their integration ships.
  */
 export function canSelectProvider(def: ProviderDef): boolean {
-  if (def.announcedOnly) return false;
-  return def.integration !== "none" || def.sampleData === true;
+  return !def.announcedOnly;
 }
+
+/**
+ * Dashboard metric a provider data kind can feed when sample data exists.
+ * Only kinds whose units/semantics match the bundled series map to a metric —
+ * steps, distance or workouts are not interchangeable with active minutes.
+ */
+export const KIND_TO_METRIC: Partial<Record<ConnectorDataKind, MetricKey>> = {
+  sleep: "sleep",
+  recovery: "recovery",
+  readiness: "recovery",
+  hrv: "hrv",
+  restingHeartRate: "restingHeartRate",
+  activity: "activity",
+};
 
 /** Status a freshly *selected* provider gets — never `connected` without a real integration. */
 export function initialStatusFor(provider: ProviderId): ConnectorStatus {
