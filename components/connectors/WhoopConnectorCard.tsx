@@ -3,7 +3,10 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { ConnectorBadge, ProviderMark } from "@/components/connectors/ConnectorBadge";
+import { HealthDataConsent } from "@/components/legal/HealthDataConsent";
+import { HEALTH_CONSENT_STORAGE_KEY, PRIVACY_VERSION } from "@/lib/legal";
 import type { ConnectorStatus } from "@/lib/connectors";
 import type { WhoopConnectionPublic } from "@/lib/connectors/whoop/types";
 import type { TranslationKey } from "@/lib/i18n";
@@ -14,6 +17,7 @@ const NOTICE_KEY: Record<string, TranslationKey> = {
   invalid_state: "whoop.notice.invalid_state",
   error: "whoop.notice.error",
   not_configured: "whoop.notConfigured",
+  consent_required: "consent.connectorHint",
 };
 
 /** Reads + clears the ?whoop= notice flag written by the OAuth callback redirect. */
@@ -39,8 +43,12 @@ function WhoopNotice({ onKey }: { onKey: (key: TranslationKey | null, tone: "ok"
 export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }) {
   const { t, d } = useLocale();
   const router = useRouter();
+  const { status: authStatus } = useAuth();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ key: TranslationKey; tone: "ok" | "warn" } | null>(null);
+  // null = still probing; the OAuth link stays behind the consent checkbox until
+  // an explicit health-data consent is confirmed (server record or local flag).
+  const [consentOk, setConsentOk] = useState<boolean | null>(null);
   const onNotice = useCallback((key: TranslationKey | null, tone: "ok" | "warn") => {
     if (key) setNotice({ key, tone });
   }, []);
@@ -63,6 +71,65 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
       router.refresh();
     }
   }
+
+  useEffect(() => {
+    if (authStatus === "loading") return;
+    let cancelled = false;
+    const done = (v: boolean) => {
+      if (!cancelled) setConsentOk(v);
+    };
+    // The browser flag only stands in for the demo session (no server account);
+    // members are always checked against their own server-side consent record.
+    if (authStatus !== "member") {
+      try {
+        done(window.localStorage.getItem(HEALTH_CONSENT_STORAGE_KEY) === "1");
+      } catch {
+        done(false);
+      }
+      return;
+    }
+    setConsentOk(null);
+    fetch("/api/consent", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) =>
+        // Consent only counts when recorded against the current policy version;
+        // an older record means the user must re-consent.
+        done(
+          Boolean(
+            d?.consents?.health_data &&
+              d.consents.health_data.policyVersion === (d.versions?.health_data ?? PRIVACY_VERSION),
+          ),
+        ),
+      )
+      .catch(() => done(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [authStatus]);
+
+  const onConsentChange = (checked: boolean) => {
+    setConsentOk(checked);
+    if (!checked) return;
+    if (authStatus !== "member") {
+      try {
+        window.localStorage.setItem(HEALTH_CONSENT_STORAGE_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    setConsentOk(null);
+    fetch("/api/consent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      // Version is stamped server-side; the client only declares the type.
+      body: JSON.stringify({ type: "health_data" }),
+    })
+      .then((r) => setConsentOk(r.ok))
+      .catch(() => setConsentOk(false));
+  };
+
+  const connectBlocked = !status.connected && status.configured && consentOk !== true;
 
   const onSync = () => void post("/api/connectors/whoop/sync");
   const onDisconnect = () => {
@@ -87,7 +154,8 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
           )}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          {status.needsReauth && status.configured ? (
+          {status.needsReauth && status.configured && !connectBlocked ? (
+            // eslint-disable-next-line @next/next/no-html-link-for-pages -- server route that 302s to the WHOOP OAuth consent screen
             <a
               href="/api/connectors/whoop/connect"
               className="press rounded-full bg-warn px-3.5 py-1.5 text-center text-xs font-semibold text-white"
@@ -95,12 +163,24 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
               {t("whoop.reconnect")}
             </a>
           ) : status.configured && !status.connected ? (
-            <a
-              href="/api/connectors/whoop/connect"
-              className="press rounded-full bg-brand px-3.5 py-1.5 text-center text-xs font-semibold text-white"
-            >
-              {t("whoop.connect")}
-            </a>
+            connectBlocked ? (
+              <button
+                type="button"
+                disabled
+                title={t("consent.connectorHint")}
+                className="cursor-not-allowed rounded-full bg-sand px-3.5 py-1.5 text-xs font-semibold text-muted"
+              >
+                {t("whoop.connect")}
+              </button>
+            ) : (
+              // eslint-disable-next-line @next/next/no-html-link-for-pages -- server route that 302s to the WHOOP OAuth consent screen
+              <a
+                href="/api/connectors/whoop/connect"
+                className="press rounded-full bg-brand px-3.5 py-1.5 text-center text-xs font-semibold text-white"
+              >
+                {t("whoop.connect")}
+              </a>
+            )
           ) : !status.configured ? (
             <button
               type="button"
@@ -155,6 +235,9 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
         )}
         {!status.configured && <p className="text-xs text-muted">{t("whoop.notConfigured")}</p>}
         {status.connected && <p className="text-xs text-muted">{t("whoop.liveData")}</p>}
+        {connectBlocked && (
+          <HealthDataConsent id="whoop-consent" checked={Boolean(consentOk)} onChange={onConsentChange} />
+        )}
       </div>
     </section>
   );

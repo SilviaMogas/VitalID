@@ -10,6 +10,7 @@ import { PlanBadge } from "@/components/membership/PlanBadge";
 import { HelpButton, LangButton } from "@/components/layout/AppShell";
 import { PaintedPath } from "@/components/dashboard/HomeHero";
 import { CONNECTORS_STORAGE_KEY } from "@/lib/connectors-state";
+import { HEALTH_CONSENT_STORAGE_KEY } from "@/lib/legal";
 import type { TranslationKey } from "@/lib/i18n";
 
 const ICON = "h-7 w-7";
@@ -99,6 +100,7 @@ export function MoreView() {
   function signOut() {
     try {
       window.localStorage.removeItem(CONNECTORS_STORAGE_KEY);
+      window.localStorage.removeItem(HEALTH_CONSENT_STORAGE_KEY);
     } catch {
       /* ignore */
     }
@@ -179,6 +181,13 @@ export function MoreView() {
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm font-medium text-ink-2">{t("more.language")}</span>
                 <LangButton />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-ink-2">{t("legal.links")}</span>
+                <span className="flex items-center gap-3 text-sm font-semibold text-brand">
+                  <Link href="/privacy">{t("legal.privacy")}</Link>
+                  <Link href="/terms">{t("legal.terms")}</Link>
+                </span>
               </div>
               {status === "member" && (
                 <Link href="/onboarding?step=1" className="press block rounded-2xl bg-sage px-4 py-3 text-sm font-semibold text-brand">

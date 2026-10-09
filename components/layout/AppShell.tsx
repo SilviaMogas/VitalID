@@ -13,11 +13,17 @@ import { Broccoli } from "@/components/mascot/Broccoli";
 import { Onboarding } from "@/components/onboarding/Onboarding";
 import { UserAvatar } from "@/components/layout/UserAvatar";
 import { CONNECTORS_STORAGE_KEY } from "@/lib/connectors-state";
+import { HEALTH_CONSENT_STORAGE_KEY } from "@/lib/legal";
 import { DEMO_IDENTITY } from "@/lib/demo-data";
 import { TabIntro } from "@/components/layout/TabIntro";
+import { DemoBadge } from "@/components/layout/DemoBadge";
+import { LegalLinks } from "@/components/legal/LegalLinks";
 
-/** Routes rendered without the app navigation (auth + setup journey, public share view). */
-const BARE_PREFIXES = ["/shared", "/signup", "/signin", "/checkout", "/pricing", "/onboarding"];
+/** Routes rendered without the app navigation (auth + setup journey, public share view, legal pages). */
+const BARE_PREFIXES = ["/shared", "/signup", "/signin", "/checkout", "/pricing", "/onboarding", "/privacy", "/terms"];
+
+/** Bare routes that get the brand + language header. */
+const BARE_HEADER_PREFIXES = ["/shared", "/pricing", "/onboarding", "/privacy", "/terms"];
 
 const NAV: { href: string; key: TranslationKey; icon: ReactNode }[] = [
   {
@@ -179,6 +185,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const signOut = () => {
     window.localStorage.removeItem(CONNECTORS_STORAGE_KEY);
+    window.localStorage.removeItem(HEALTH_CONSENT_STORAGE_KEY);
     router.push("/welcome");
     void authSignOut().then(() => void refreshMembership());
   };
@@ -198,10 +205,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     return (
       <div
         className={`mx-auto flex min-h-dvh w-full max-w-md flex-col ${
-          pathname.startsWith("/pricing") ? "md:max-w-5xl" : "md:max-w-2xl"
+          pathname.startsWith("/pricing")
+            ? "md:max-w-5xl"
+            : pathname === "/privacy" || pathname === "/terms"
+              ? "md:max-w-3xl"
+              : "md:max-w-2xl"
         }`}
       >
-        {["/shared", "/pricing", "/onboarding"].some((p) => pathname.startsWith(p)) && (
+        {BARE_HEADER_PREFIXES.some((p) => pathname.startsWith(p)) && (
           <header className="flex items-center justify-between px-5 pt-5">
             <Brand compact />
             <div className="flex items-center gap-2">
@@ -220,6 +231,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           </header>
         )}
         <main className="flex-1 px-5 pb-12 pt-4" key={locale}>{children}</main>
+        <footer className="px-5 pb-8 text-center text-xs text-muted">
+          <LegalLinks />
+        </footer>
       </div>
     );
   }
@@ -271,6 +285,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mt-auto space-y-4 pt-6">
           <div className="flex items-center gap-2">
             <PlanBadge />
+            {status === "fatima" && <DemoBadge />}
             <LangButton />
             <button
               type="button"
@@ -306,6 +321,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="flex items-center justify-between px-5 pt-5 md:hidden">
           <Brand compact />
           <div className="flex items-center gap-2">
+            {status === "fatima" && <DemoBadge />}
             <Link href="/vital-id" aria-label={t("profile.viewData")}>
               <UserAvatar name={avatarName} photoUrl={avatarPhoto} size={40} />
             </Link>

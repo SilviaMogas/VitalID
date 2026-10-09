@@ -7,15 +7,16 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const STUBS = {
-  'next/server': 'export const NextResponse = { json: (body, init) => Response.json(body, init) };',
+  'next/server':
+    'export const NextResponse = { json: (body, init) => Response.json(body, init), redirect: (url, status = 307) => Response.redirect(String(url), status) }; export class NextRequest extends Request {}',
   '@/lib/membership/session': 'export const DEMO_USER_KEY = "fatima"; export async function getCurrentUserKey(){ return globalThis.__testUser?.id ?? DEMO_USER_KEY; }',
   '@/lib/share-store': 'export async function createShare(p){ globalThis.__createdShare = p; } export async function listShares(){ return []; }',
   'server-only': 'export {};',
   react: 'export const cache = (fn) => fn;',
   'next/headers':
-    'export async function cookies(){ return { get(){ return undefined; }, set(){}, delete(){} }; }',
+    'const jar = () => (globalThis.__testCookies ??= {}); export async function cookies(){ return { get(n){ const v = jar()[n]; return v === undefined ? undefined : { value: v }; }, set(n, v){ jar()[n] = v; }, delete(n){ delete jar()[n]; } }; }',
   '@/lib/auth/server':
-    'export async function getCurrentUser(){ return globalThis.__testUser ?? null; } export function isAuthConfigured(){ return false; }',
+    'export async function getCurrentUser(){ return globalThis.__testUser ?? null; } export function isAuthConfigured(){ return false; } export async function signUpWithPassword(i){ return { ok: true, user: { id: globalThis.__signupId, email: i.email } }; }',
 };
 
 function tryFile(base) {
