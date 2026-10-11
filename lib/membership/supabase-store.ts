@@ -14,6 +14,9 @@ interface Row {
   stripe_customer_id: string | null;
   stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null;
+  stripe_subscription_id: string | null;
+  subscription_status: string | null;
+  subscription_period_end: string | null;
   activated_at: string | null;
   plan_chosen_at: string | null;
   onboarding_completed_at: string | null;
@@ -30,6 +33,9 @@ function toRecord(row: Row): MembershipRecord {
     stripeCustomerId: row.stripe_customer_id,
     stripeCheckoutSessionId: row.stripe_checkout_session_id,
     stripePaymentIntentId: row.stripe_payment_intent_id,
+    stripeSubscriptionId: row.stripe_subscription_id,
+    subscriptionStatus: row.subscription_status,
+    subscriptionPeriodEnd: row.subscription_period_end,
     activatedAt: row.activated_at,
     planChosenAt: row.plan_chosen_at,
     onboardingCompletedAt: row.onboarding_completed_at,
@@ -47,6 +53,9 @@ function toRow(record: MembershipRecord): Row {
     stripe_customer_id: record.stripeCustomerId,
     stripe_checkout_session_id: record.stripeCheckoutSessionId,
     stripe_payment_intent_id: record.stripePaymentIntentId,
+    stripe_subscription_id: record.stripeSubscriptionId,
+    subscription_status: record.subscriptionStatus,
+    subscription_period_end: record.subscriptionPeriodEnd,
     activated_at: record.activatedAt,
     plan_chosen_at: record.planChosenAt,
     onboarding_completed_at: record.onboardingCompletedAt,
@@ -64,6 +73,9 @@ function blank(userKey: string, now: string): MembershipRecord {
     stripeCustomerId: null,
     stripeCheckoutSessionId: null,
     stripePaymentIntentId: null,
+    stripeSubscriptionId: null,
+    subscriptionStatus: null,
+    subscriptionPeriodEnd: null,
     activatedAt: null,
     planChosenAt: null,
     onboardingCompletedAt: null,
@@ -121,6 +133,9 @@ export class SupabaseMembershipStore implements MembershipStore {
     stripeCustomerId?: string | null;
     stripeCheckoutSessionId: string;
     stripePaymentIntentId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionStatus?: string | null;
+    subscriptionPeriodEnd?: string | null;
   }) {
     const existing = await this.get(input.userKey);
     if (existing?.stripeCheckoutSessionId === input.stripeCheckoutSessionId) {
@@ -134,8 +149,48 @@ export class SupabaseMembershipStore implements MembershipStore {
       stripeCustomerId: input.stripeCustomerId ?? base.stripeCustomerId,
       stripeCheckoutSessionId: input.stripeCheckoutSessionId,
       stripePaymentIntentId: input.stripePaymentIntentId ?? base.stripePaymentIntentId,
+      stripeSubscriptionId: input.stripeSubscriptionId ?? base.stripeSubscriptionId,
+      subscriptionStatus: input.subscriptionStatus ?? base.subscriptionStatus,
+      subscriptionPeriodEnd: input.subscriptionPeriodEnd ?? base.subscriptionPeriodEnd,
       activatedAt: now,
       planChosenAt: base.planChosenAt ?? now,
+      updatedAt: now,
+    });
+  }
+
+  private async findOne(column: 'stripe_subscription_id' | 'stripe_customer_id', value: string) {
+    const { data, error } = await getSupabaseServerClient()
+      .from(TABLE)
+      .select('*')
+      .eq(column, value)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new Error(`membership lookup failed: ${error.message}`);
+    return data ? toRecord(data as Row) : null;
+  }
+
+  async syncSubscription(input: {
+    stripeSubscriptionId: string;
+    stripeCustomerId?: string | null;
+    userKey?: string | null;
+    plan: Exclude<PlanId, 'free'> | null;
+    status: string;
+    periodEnd?: string | null;
+  }) {
+    let existing = await this.findOne('stripe_subscription_id', input.stripeSubscriptionId);
+    if (!existing && input.userKey) existing = await this.get(input.userKey);
+    if (!existing && input.stripeCustomerId) {
+      existing = await this.findOne('stripe_customer_id', input.stripeCustomerId);
+    }
+    if (!existing) return null;
+    const now = new Date().toISOString();
+    return this.write({
+      ...existing,
+      plan: input.plan ?? 'free',
+      stripeCustomerId: input.stripeCustomerId ?? existing.stripeCustomerId,
+      stripeSubscriptionId: input.stripeSubscriptionId,
+      subscriptionStatus: input.status,
+      subscriptionPeriodEnd: input.periodEnd ?? existing.subscriptionPeriodEnd,
       updatedAt: now,
     });
   }

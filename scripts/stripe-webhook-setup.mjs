@@ -19,7 +19,12 @@ if (existing) {
 } else {
   const endpoint = await stripe.webhookEndpoints.create({
     url,
-    enabled_events: ['checkout.session.completed', 'checkout.session.async_payment_succeeded'],
+    enabled_events: [
+      'checkout.session.completed',
+      'checkout.session.async_payment_succeeded',
+      'customer.subscription.updated',
+      'customer.subscription.deleted',
+    ],
     description: 'Vital ID membership',
   });
   console.log(`created endpoint: ${endpoint.id} url=${endpoint.url}`);

@@ -64,7 +64,7 @@ Golden path: **Dashboard → Trends → Insight → Vital ID → Share → Link 
 - **Guided onboarding** — goals, providers, baseline metrics and profile photo; persisted per user.
 - **Coach & Community** — goal-based recommendations and hobby-based community matching.
 - **A friendly face** — an animated broccoli mascot and "produce crew" that react to your data.
-- **Try-it-now demo** — "Login as Fatima" loads a deterministic, fully synthetic demo profile.
+- **Try-it-now demo** — "Login as Fatima" loads a deterministic, fully synthetic demo profile (off by default; enable with `NEXT_PUBLIC_DEMO_LOGIN=1`).
 
 ## Demo in 60 seconds
 
@@ -73,7 +73,7 @@ npm install
 npm run dev            # → http://localhost:3000
 ```
 
-1. Open `/` → splash → **Login as Fatima**.
+1. Open `/` → splash → **Login as Fatima** (requires `NEXT_PUBLIC_DEMO_LOGIN=1` in `.env.local`).
 2. **Dashboard** — today's signals and insight.  **Trends** — switch 7D / 30D.
 3. **Vital ID** — the health credential card.
 4. **Share** → purpose *Doctor* → expiry *1 h* → **Generate secure link** → scan the QR or open the link in another tab.
@@ -174,7 +174,7 @@ Every number on screen is labelled with where it came from.
 | Onboarding | `GET / PUT /api/onboarding` |
 | Sharing | `POST / GET /api/share` · `GET /api/share/:id` · `POST /api/share/:id/revoke` · `POST /api/share/:id/send` · `POST /api/share/reset` · `GET /api/share/health` |
 | Membership | `GET /api/membership` · `POST /api/membership/choose-free` · `POST /api/membership/reset` |
-| Payments | `POST /api/stripe/checkout` · `POST /api/stripe/webhook` |
+| Payments | `POST /api/stripe/checkout` · `POST /api/stripe/webhook` · `POST /api/stripe/portal` |
 | WHOOP | `/api/connectors/whoop/{connect, callback, status, sync, disconnect}` |
 
 ## Project structure
@@ -220,14 +220,14 @@ npm run dev                  # http://localhost:3000
 | `node scripts/supabase-smoke.mjs` | Share-store smoke test against Supabase |
 | `node scripts/membership-smoke.mjs` | Membership-store smoke test |
 | `node scripts/whoop-mock-server.mjs` | Local WHOOP OAuth/API mock for end-to-end tests |
-| `node scripts/stripe-setup.mjs` | Creates the Stripe demo products / prices |
+| `node scripts/stripe-setup.mjs` | Creates the Stripe products / recurring prices |
 
 ### Optional integrations (`.env.local`)
 
 | Variables | Enables | Docs |
 |---|---|---|
 | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | Real accounts + persistent storage | [`docs/SUPABASE.md`](docs/SUPABASE.md) |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_{PLUS,PRO}_DEMO_PRICE_ID` | Paid plans | [`docs/BILLING.md`](docs/BILLING.md) |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_{PLUS,PRO}_{MONTHLY,ANNUAL}` | Paid plans | [`docs/BILLING.md`](docs/BILLING.md) |
 | `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET` | Live WHOOP connection | [`docs/CONNECTORS.md`](docs/CONNECTORS.md) |
 
 ## How it was built

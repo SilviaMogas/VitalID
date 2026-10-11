@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe/server';
-import { verifyAndActivate } from '@/lib/stripe/verify';
+import { syncSubscriptionFromStripe, verifyAndActivate } from '@/lib/stripe/verify';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -29,6 +29,18 @@ export async function POST(req: Request) {
     const result = await verifyAndActivate(session.id);
     if (!result.ok) {
       console.warn(`[stripe webhook] verify failed for ${session.id}: ${result.reason}`);
+    }
+  }
+
+  if (
+    event.type === 'customer.subscription.updated' ||
+    event.type === 'customer.subscription.deleted'
+  ) {
+    const subscription = event.data.object;
+    // Never trust payload fields — re-retrieve the subscription from Stripe.
+    const updated = await syncSubscriptionFromStripe(subscription.id);
+    if (!updated) {
+      console.warn(`[stripe webhook] subscription ${subscription.id} matched no member`);
     }
   }
 

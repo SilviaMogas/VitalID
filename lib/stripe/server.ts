@@ -1,6 +1,6 @@
 import 'server-only';
 import Stripe from 'stripe';
-import { PLANS, type PlanId } from '@/lib/plans';
+import { PLANS, type BillingInterval, type PlanId } from '@/lib/plans';
 
 interface StripeGlobal {
   __vitalIdStripe?: Stripe;
@@ -34,12 +34,19 @@ export function isStripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY);
 }
 
-/** The raw configured demo id for a paid plan — a `price_…` or `prod_…` id. */
-export function getDemoPriceId(plan: PlanId): string {
-  const envKey = PLANS[plan].demoPriceEnvKey;
-  if (!envKey) throw new Error(`Plan "${plan}" has no demo price.`);
+/** Env var candidates for a paid plan + billing interval, in priority order. */
+function priceEnvCandidates(plan: PlanId, interval: BillingInterval): string[] {
+  const keys = PLANS[plan].priceEnvKey;
+  if (!keys) return [];
   const upper = plan.toUpperCase();
-  const candidates = [`STRIPE_PRICE_${upper}`, envKey, `STRIPE_PRODUCT_${upper}`];
+  const suffix = interval.toUpperCase();
+  return [keys[interval], `STRIPE_PRODUCT_${upper}_${suffix}`];
+}
+
+/** The raw configured id for a plan + interval — a `price_…` or `prod_…` id. */
+export function getPriceId(plan: PlanId, interval: BillingInterval): string {
+  const candidates = priceEnvCandidates(plan, interval);
+  if (candidates.length === 0) throw new Error(`Plan "${plan}" has no subscription prices.`);
   const priceId = candidates.map((k) => process.env[k]).find(Boolean);
   if (!priceId) {
     throw new StripeConfigError(
@@ -50,13 +57,21 @@ export function getDemoPriceId(plan: PlanId): string {
   return priceId;
 }
 
+/** Every configured `price_…`/`prod_…` reference for a plan (both intervals). */
+export function getConfiguredPriceRefs(plan: PlanId): string[] {
+  return ['monthly', 'annual']
+    .flatMap((interval) => priceEnvCandidates(plan, interval as BillingInterval))
+    .map((k) => process.env[k])
+    .filter((v): v is string => Boolean(v));
+}
+
 /**
  * Resolves the configured id to an actual Price ID. A `prod_…` value maps to
  * the product's `default_price`; a `price_…` value is returned as-is.
  * Fetches the product on every call — one call per checkout, never cached.
  */
-export async function resolveDemoPriceId(plan: PlanId): Promise<string> {
-  const configured = getDemoPriceId(plan);
+export async function resolvePriceId(plan: PlanId, interval: BillingInterval): Promise<string> {
+  const configured = getPriceId(plan, interval);
   if (!configured.startsWith("prod_")) return configured;
 
   const product = await getStripe().products.retrieve(configured);

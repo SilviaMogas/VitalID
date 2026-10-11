@@ -38,6 +38,9 @@ export class MemoryMembershipStore implements MembershipStore {
       stripeCustomerId: null,
       stripeCheckoutSessionId: null,
       stripePaymentIntentId: null,
+      stripeSubscriptionId: null,
+      subscriptionStatus: null,
+      subscriptionPeriodEnd: null,
       activatedAt: null,
       planChosenAt: null,
       onboardingCompletedAt: null,
@@ -72,6 +75,9 @@ export class MemoryMembershipStore implements MembershipStore {
     stripeCustomerId?: string | null;
     stripeCheckoutSessionId: string;
     stripePaymentIntentId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionStatus?: string | null;
+    subscriptionPeriodEnd?: string | null;
   }) {
     const now = new Date().toISOString();
     const existing = this.map.get(input.userKey);
@@ -85,11 +91,53 @@ export class MemoryMembershipStore implements MembershipStore {
       stripeCustomerId: input.stripeCustomerId ?? base.stripeCustomerId,
       stripeCheckoutSessionId: input.stripeCheckoutSessionId,
       stripePaymentIntentId: input.stripePaymentIntentId ?? base.stripePaymentIntentId,
+      stripeSubscriptionId: input.stripeSubscriptionId ?? base.stripeSubscriptionId,
+      subscriptionStatus: input.subscriptionStatus ?? base.subscriptionStatus,
+      subscriptionPeriodEnd: input.subscriptionPeriodEnd ?? base.subscriptionPeriodEnd,
       activatedAt: now,
       planChosenAt: base.planChosenAt ?? now,
       updatedAt: now,
     };
     this.map.set(input.userKey, record);
+    return structuredClone(record);
+  }
+
+  async syncSubscription(input: {
+    stripeSubscriptionId: string;
+    stripeCustomerId?: string | null;
+    userKey?: string | null;
+    plan: Exclude<PlanId, "free"> | null;
+    status: string;
+    periodEnd?: string | null;
+  }) {
+    let existing: MembershipRecord | undefined;
+    for (const record of this.map.values()) {
+      if (record.stripeSubscriptionId === input.stripeSubscriptionId) {
+        existing = record;
+        break;
+      }
+    }
+    if (!existing && input.userKey) existing = this.map.get(input.userKey);
+    if (!existing && input.stripeCustomerId) {
+      for (const record of this.map.values()) {
+        if (record.stripeCustomerId === input.stripeCustomerId) {
+          existing = record;
+          break;
+        }
+      }
+    }
+    if (!existing) return null;
+    const now = new Date().toISOString();
+    const record: MembershipRecord = {
+      ...existing,
+      plan: input.plan ?? "free",
+      stripeCustomerId: input.stripeCustomerId ?? existing.stripeCustomerId,
+      stripeSubscriptionId: input.stripeSubscriptionId,
+      subscriptionStatus: input.status,
+      subscriptionPeriodEnd: input.periodEnd ?? existing.subscriptionPeriodEnd,
+      updatedAt: now,
+    };
+    this.map.set(existing.userKey, record);
     return structuredClone(record);
   }
 
