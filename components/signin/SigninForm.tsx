@@ -8,6 +8,8 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
 import { AuthFrame, Field, inputClass } from "@/components/auth/AuthFrame";
 
+const DEMO_LOGIN_ENABLED = process.env.NEXT_PUBLIC_DEMO_LOGIN === "1";
+
 export function SigninForm() {
   const { t } = useLocale();
   const router = useRouter();
@@ -62,10 +64,14 @@ export function SigninForm() {
           <Link href="/signup" className="font-medium text-brand">
             {t("onboarding.signUp")}
           </Link>
-          <span className="mx-2 text-line">·</span>
-          <Link href="/welcome" className="font-medium text-brand">
-            {t("signup.exploreDemo")}
-          </Link>
+          {DEMO_LOGIN_ENABLED && (
+            <>
+              <span className="mx-2 text-line">·</span>
+              <Link href="/welcome" className="font-medium text-brand">
+                {t("signup.exploreDemo")}
+              </Link>
+            </>
+          )}
         </>
       }
     >

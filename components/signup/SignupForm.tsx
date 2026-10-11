@@ -10,6 +10,8 @@ import { AuthFrame, Field, inputClass } from "@/components/auth/AuthFrame";
 import { HealthDataConsent, TermsConsent } from "@/components/legal/HealthDataConsent";
 import type { TranslationKey } from "@/lib/i18n";
 
+const DEMO_LOGIN_ENABLED = process.env.NEXT_PUBLIC_DEMO_LOGIN === "1";
+
 const ERROR_KEYS: Record<string, TranslationKey> = {
   email_taken: "auth.error.emailTaken",
   weak_password: "auth.error.weakPassword",
@@ -85,10 +87,14 @@ export function SignupForm() {
           <Link href="/signin" className="font-medium text-brand">
             {t("onboarding.signIn")}
           </Link>
-          <span className="mx-2 text-line">·</span>
-          <Link href="/welcome" className="font-medium text-brand">
-            {t("signup.exploreDemo")}
-          </Link>
+          {DEMO_LOGIN_ENABLED && (
+            <>
+              <span className="mx-2 text-line">·</span>
+              <Link href="/welcome" className="font-medium text-brand">
+                {t("signup.exploreDemo")}
+              </Link>
+            </>
+          )}
         </>
       }
     >
