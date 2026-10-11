@@ -133,8 +133,10 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
   // must always see the checkbox to (re-)consent, even when already connected
   // — otherwise a reconnect after a policy-version bump deadlocks on the
   // server-side gate with no way to fix it client-side.
+  // consentOk is null while the server probe runs — keep OAuth links disabled
+  // until it resolves so a member without consent can't hit a dead redirect.
   const needsConsent = status.configured && consentOk === false;
-  const connectBlocked = !status.connected && needsConsent;
+  const connectBlocked = !status.connected && status.configured && consentOk !== true;
 
   const onSync = () => void post("/api/connectors/whoop/sync");
   const onDisconnect = () => {
@@ -159,7 +161,7 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
           )}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          {status.needsReauth && status.configured && !needsConsent ? (
+          {status.needsReauth && status.configured && consentOk === true ? (
             // eslint-disable-next-line @next/next/no-html-link-for-pages -- server route that 302s to the WHOOP OAuth consent screen
             <a
               href="/api/connectors/whoop/connect"
