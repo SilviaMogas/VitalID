@@ -129,7 +129,12 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
       .catch(() => setConsentOk(false));
   };
 
-  const connectBlocked = !status.connected && status.configured && consentOk !== true;
+  // Stale/missing consent blocks connect AND hides the OAuth link: a member
+  // must always see the checkbox to (re-)consent, even when already connected
+  // — otherwise a reconnect after a policy-version bump deadlocks on the
+  // server-side gate with no way to fix it client-side.
+  const needsConsent = status.configured && consentOk === false;
+  const connectBlocked = !status.connected && needsConsent;
 
   const onSync = () => void post("/api/connectors/whoop/sync");
   const onDisconnect = () => {
@@ -154,7 +159,7 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
           )}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          {status.needsReauth && status.configured && !connectBlocked ? (
+          {status.needsReauth && status.configured && !needsConsent ? (
             // eslint-disable-next-line @next/next/no-html-link-for-pages -- server route that 302s to the WHOOP OAuth consent screen
             <a
               href="/api/connectors/whoop/connect"
@@ -235,7 +240,7 @@ export function WhoopConnectorCard({ status }: { status: WhoopConnectionPublic }
         )}
         {!status.configured && <p className="text-xs text-muted">{t("whoop.notConfigured")}</p>}
         {status.connected && <p className="text-xs text-muted">{t("whoop.liveData")}</p>}
-        {connectBlocked && (
+        {needsConsent && (
           <HealthDataConsent id="whoop-consent" checked={Boolean(consentOk)} onChange={onConsentChange} />
         )}
       </div>
