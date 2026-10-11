@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { isBillingInterval, PAID_PLANS } from '@/lib/plans';
 import { getStripe, isStripeConfigured, resolvePriceId, StripeConfigError } from '@/lib/stripe/server';
 import { assertSubscriptionPrice } from '@/lib/stripe/verify';
-import { getCurrentUserKey } from '@/lib/membership/session';
+import { DEMO_USER_KEY, getCurrentUserKey } from '@/lib/membership/session';
 import { getMembershipStore } from '@/lib/membership/store';
 
 export const dynamic = 'force-dynamic';
@@ -51,6 +51,9 @@ export async function POST(req: Request) {
   let stage: Stage = 'auth';
   try {
     const userKey = await getCurrentUserKey();
+    if (userKey === DEMO_USER_KEY) {
+      return NextResponse.json({ error: 'demo_not_allowed' }, { status: 403 });
+    }
     stage = 'membership_store';
     const membership = await getMembershipStore().upsert({ userKey });
     stage = 'price_config';

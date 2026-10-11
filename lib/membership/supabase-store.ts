@@ -1,7 +1,7 @@
 import 'server-only';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { isPlanId, planRank, type PlanId } from '@/lib/plans';
-import { DEMO_USER_KEY } from './constants';
+import { ACTIVE_SUBSCRIPTION_STATUSES, DEMO_USER_KEY } from './constants';
 import type { MembershipRecord, MembershipStore } from './types';
 
 const TABLE = 'vital_id_memberships';
@@ -181,6 +181,15 @@ export class SupabaseMembershipStore implements MembershipStore {
     if (!existing && input.userKey) existing = await this.get(input.userKey);
     if (!existing && input.stripeCustomerId) {
       existing = await this.findOne('stripe_customer_id', input.stripeCustomerId);
+    }
+    // A member bound to a different, still-active subscription keeps it: a late
+    // or replayed event for an old subscription must not downgrade or rebind them.
+    if (
+      existing?.stripeSubscriptionId &&
+      existing.stripeSubscriptionId !== input.stripeSubscriptionId &&
+      ACTIVE_SUBSCRIPTION_STATUSES.has(existing.subscriptionStatus ?? '')
+    ) {
+      return null;
     }
     if (!existing) return null;
     const now = new Date().toISOString();
