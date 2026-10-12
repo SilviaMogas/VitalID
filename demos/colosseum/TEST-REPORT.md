@@ -61,6 +61,33 @@ Preview-browser enrollment remained untested because that browser reached the
 Devin sign-in screen. The local recording is not preview-browser E2E evidence.
 Restarting discarded all previous demo sessions as designed.
 
+## Real local Supabase member-sharing verification
+
+The main application (not the isolated proof lab) was exercised on local
+Supabase Auth/Postgres/PostgREST with synthetic accounts and manual readings.
+No production Supabase, WHOOP, Stripe or real health records were used.
+
+At `dc06806`, independent owner, recipient, outsider and anonymous browser
+sessions verified signup/onboarding, persisted readings, exact selected-field
+preview, recipient-account lookup rejection, consent reset, creation and
+recipient access. Identity was deselected: the recipient saw only sleep
+7.2 hours, resting heart rate 61 bpm and the manual source. Its snapshot matched
+the preview; internal owner/recipient metadata was absent. Anonymous access
+returned 401 and outsider access 404.
+
+At `73b3213`, a focused repeat verified creation, recipient access, revocation
+and recipient denial with real local database persistence. The owner result
+and past-links row both showed revoked without a manual refresh; the recipient
+automatically cleared previously displayed readings. This fixes the transient
+owner result/list mismatch observed during asynchronous list refresh, not a
+proven server-side revocation failure.
+
+These are local integration results, not evidence of production RLS/security
+or on-chain operation. Error-response bodies remain incompletely captured;
+statuses and visible denial were verified. Captured browser traffic was local
+and no insurer-send request was observed, but this is not an exhaustive egress
+or response-body privacy audit.
+
 ## Real devnet evidence
 
 No devnet success is implied by the source, local tests, SBF build, or injected
@@ -80,20 +107,28 @@ Devnet setup blocked: Solana CLI airdrop failed (exit 1): Error: airdrop request
 
 A subsequent read-only balance check for the disposable payer returned `0 SOL`.
 The CLI message says rate limiting *can* cause this error; the cause was not
-established. No retry, paid endpoint, deployment, transaction, or smoke run was
-attempted.
+established. A later faucet retry also failed. No paid endpoint, deployment,
+transaction, or smoke run was attempted.
 `npm run devnet:smoke` was not run because there is no deployment receipt; no
 `evidence/devnet.json` was created. Consequently there is no deployed program ID
 or chain receipt to report. Both generated private key files are mode `600` and
 remain under the ignored `.local/` directory.
+
+The user subsequently selected public devnet address
+`CLEkAv9zNZRHqgCQmtt3RuzUnkr3XVWH9Wnq4Rmo4WUP`; a read-only balance check
+observed 10 devnet SOL there. It is not the generated local payer, and no signer
+for that address is available in this environment. A public address and balance
+do not authorize signing. Deployment remains blocked pending an authorized
+signing method; the old payer has not been substituted for the selected wallet.
 
 ## Limits
 
 - Positive browser BBS derivation/verification, transaction signing, successful
   authorized summary access and on-chain revocation remain untested without a
   deployed program and funded devnet sponsor. There are no confirmed receipts.
-- The native-browser Ed25519 path, complete browser error-body audit and real
-  Supabase-authenticated member-sharing paths remain untested.
+- The native-browser Ed25519 path, complete browser error-body audit and
+  production Supabase member-sharing configuration remain untested. Local
+  Supabase member-sharing was verified separately as described above.
 - Synthetic assertion semantics and issuer computation are not independently
   audited; BBS proves a signed statement, not the truth of the data.
 - In-memory server state is single-process and is not durable across restarts.

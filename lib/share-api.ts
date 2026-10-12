@@ -15,7 +15,13 @@ export function isSameOrigin(req: Request): boolean {
   const origin = req.headers.get("origin");
   if (!origin) return true;
   try {
-    return new URL(origin).origin === new URL(req.url).origin;
+    const target = new URL(req.url);
+    const host = req.headers.get("host");
+    // NextURL rewrites loopback IPs to localhost; preserve the browser's actual host.
+    const expected = target.hostname === "localhost" && host && /^(127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(host)
+      ? new URL(`${target.protocol}//${host}`).origin
+      : target.origin;
+    return new URL(origin).origin === expected;
   } catch {
     return false;
   }
