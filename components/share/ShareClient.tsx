@@ -70,6 +70,8 @@ export default function ShareClient() {
   const [previewError, setPreviewError] = useState(false);
   const [disclosureConsent, setDisclosureConsent] = useState(false);
   const sharesRequestVersion = useRef(0);
+  const latestAppliedSharesVersion = useRef(0);
+  const confirmedRevokedShareIds = useRef(new Set<string>());
   const fieldKey = SHARE_FIELDS.filter((field) => fields.has(field)).join(",");
 
   useEffect(() => {
@@ -107,8 +109,12 @@ export default function ShareClient() {
     try {
       const res = await fetch("/api/share", { cache: "no-store" });
       if (res.ok) {
-        const nextShares = await res.json();
-        if (requestVersion === sharesRequestVersion.current) setShares(nextShares);
+        const nextShares = (await res.json()) as ShareSummary[];
+        if (requestVersion <= latestAppliedSharesVersion.current) return;
+        latestAppliedSharesVersion.current = requestVersion;
+        setShares(nextShares.map((share) =>
+          confirmedRevokedShareIds.current.has(share.id) ? { ...share, revoked: true } : share,
+        ));
       }
     } catch {
       /* keep current list */
@@ -174,6 +180,7 @@ export default function ShareClient() {
     try {
       const response = await fetch(`/api/share/${id}/revoke`, { method: "POST" });
       if (!response.ok) throw new Error("Revocation not confirmed");
+      confirmedRevokedShareIds.current.add(id);
       if (result?.id === id) setResult({ ...result, revoked: true });
       setShares((current) => current.map((share) => share.id === id ? { ...share, revoked: true } : share));
       refreshShares();
@@ -245,6 +252,8 @@ export default function ShareClient() {
   async function resetDemo() {
     if (!window.confirm(t("share.resetConfirm"))) return;
     await fetch("/api/share/reset", { method: "POST" });
+    const resetBarrier = ++sharesRequestVersion.current;
+    latestAppliedSharesVersion.current = resetBarrier;
     setResult(null);
     setShares([]);
     setFields(new Set());
