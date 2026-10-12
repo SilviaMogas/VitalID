@@ -50,9 +50,11 @@ Observed passes:
   This is bounded observation, not a memory-security audit.
 - Holder and recipient views were usable at 390×844 without horizontal overflow.
 
-**Incomplete capture:** error-response bodies timed out after three seconds in
-the browser observer. Their 503/404 statuses and denial UI were checked, but
-complete browser response-body privacy coverage is not claimed.
+**Historical capture gap (superseded for the cases in “Bounded denial-body
+verification — 2026-10-12” below):** error-response bodies timed out after three
+seconds in the initial browser observer; that run checked status and denial UI
+only. A later bounded run captured complete bodies for the listed cases. Other
+error cases remain untested.
 
 After recording, the unchanged server was restarted with the exact HTTPS preview
 origin. Direct server checks passed: matching Origin → 200 and a Secure,
@@ -83,10 +85,41 @@ owner result/list mismatch observed during asynchronous list refresh, not a
 proven server-side revocation failure.
 
 These are local integration results, not evidence of production RLS/security
-or on-chain operation. Error-response bodies remain incompletely captured;
-statuses and visible denial were verified. Captured browser traffic was local
-and no insurer-send request was observed, but this is not an exhaustive egress
-or response-body privacy audit.
+or on-chain operation. **Historical capture gap (superseded for the three
+member-sharing denials in the bounded verification below):** the original run
+verified statuses and visible denial but did not retain complete response
+bodies. Captured browser traffic was local and no insurer-send request was
+observed, but this is not an exhaustive egress or response-body privacy audit.
+
+## Bounded denial-body verification — 2026-10-12
+
+This follow-up used Chrome 137 at revision
+`9499dd132d7c05a6dfd589835f5475450dab8ee0`, independent sessions and real local
+Supabase. It supersedes the earlier incomplete-body-capture statements only
+for the cases below.
+
+The lab body **D** is exactly `{"error":"unavailable"}` (23 UTF-8 bytes);
+member-sharing body **M** is exactly `{"status":"unavailable"}` (24 UTF-8
+bytes). Every response had `Cache-Control: no-store`.
+
+| Case | Activation | Status | Complete body |
+|---|---|---:|---|
+| Proof preparation | Native UI | 503 | D |
+| Summary preparation | Native UI | 503 | D |
+| Recipient challenge | Native UI | 404 | D |
+| Recipient summary | Native UI | 404 | D |
+| Authenticated outsider | Clearly labeled in-page fetch probe | 404 | D |
+| Anonymous lab session | Clearly labeled in-page fetch probe | 401 | D |
+| Different Origin | Browser-generated form from another local port; browser listener | 403 | D |
+| Anonymous member sharing | Native UI | 401 | M |
+| Outsider against active share | Native UI | 404 | M |
+| Recipient after UI revocation | Native UI | 404 | M |
+
+Complete bodies were read with `Response.clone().arrayBuffer()` while returning
+the original response untouched. The 403 body was captured by a browser
+listener on the navigation response; no CORS bypass was used. No private data
+or stack details were observed in these bodies. The capture timeouts resolved
+in this bounded run only; this is not an exhaustive privacy audit.
 
 ## Real devnet evidence
 
@@ -121,13 +154,26 @@ for that address is available in this environment. A public address and balance
 do not authorize signing. Deployment remains blocked pending an authorized
 signing method; the old payer has not been substituted for the selected wallet.
 
+**Funding update:** A read-only RPC check reconfirmed the official devnet
+genesis and balances of 0 SOL at disposable payer
+`8wU9Y36gQ6yx3SSZjyoM3HUyFyukbkWmoSeTNv2YuUNA` versus 10 SOL at the
+user-designated `CLEkAv9zNZRHqgCQmtt3RuzUnkr3XVWH9Wnq4Rmo4WUP`. The user chose
+to retain wallet signing keys; no signer for the personal address is available.
+An authorized one-shot setup using the existing disposable payer stopped when
+the official CLI airdrop failed with the error above, before deployment. The
+alternative-payer exploration was not a substitution or deployment: the
+QuickNode UI required a mainnet balance despite its FAQ, and Pine required
+GitHub login. No paid SOL or bypass was attempted, and no faucet was rerun for
+this documentation follow-up.
+
 ## Limits
 
 - Positive browser BBS derivation/verification, transaction signing, successful
   authorized summary access and on-chain revocation remain untested without a
   deployed program and funded devnet sponsor. There are no confirmed receipts.
-- The native-browser Ed25519 path, complete browser error-body audit and
-  production Supabase member-sharing configuration remain untested. Local
+- The native-browser Ed25519 path, error cases outside the bounded table above,
+  and production Supabase member-sharing configuration remain untested. The
+  bounded body capture is not a complete browser error-body audit. Local
   Supabase member-sharing was verified separately as described above.
 - Synthetic assertion semantics and issuer computation are not independently
   audited; BBS proves a signed statement, not the truth of the data.
