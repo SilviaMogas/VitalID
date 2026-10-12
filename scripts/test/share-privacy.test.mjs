@@ -248,7 +248,7 @@ test('create requires a valid recipient account id and returns the same safe sna
   assert.equal('sentTo' in result, false);
 });
 
-test('create rejects a valid-looking recipient id when the account does not exist', async () => {
+async function createIdentityShareFor(recipientUserId) {
   globalThis.__testShares = new Map();
   globalThis.__createdShare = null;
   globalThis.__testUser = owner;
@@ -258,43 +258,28 @@ test('create rejects a valid-looking recipient id when the account does not exis
     body: JSON.stringify({selectedFields: ['identity']}),
   }));
   const {snapshot} = await previewResponse.json();
-  const response = await createShare(new Request('https://example.test/api/share', {
+  return createShare(new Request('https://example.test/api/share', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
       purpose: 'doctor',
       selectedFields: ['identity'],
       durationMinutes: 60,
-      recipientUserId: '00000000-0000-4000-8000-00000000000c',
+      recipientUserId,
       expectedSnapshot: snapshot,
     }),
   }));
+}
+
+test('create rejects a valid-looking recipient id when the account does not exist', async () => {
+  const response = await createIdentityShareFor('00000000-0000-4000-8000-00000000000c');
   assert.equal(response.status, 404);
   assert.equal(globalThis.__createdShare, null);
 });
 
 test('create fails closed when recipient account lookup errors', async () => {
-  globalThis.__testShares = new Map();
-  globalThis.__createdShare = null;
-  globalThis.__testUser = owner;
   globalThis.__recipientAccountLookup = () => { throw new Error('lookup unavailable'); };
-  const previewResponse = await previewShare(new Request('https://example.test/api/share/preview', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({selectedFields: ['identity']}),
-  }));
-  const {snapshot} = await previewResponse.json();
-  const response = await createShare(new Request('https://example.test/api/share', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      purpose: 'doctor',
-      selectedFields: ['identity'],
-      durationMinutes: 60,
-      recipientUserId: recipient.id,
-      expectedSnapshot: snapshot,
-    }),
-  }));
+  const response = await createIdentityShareFor(recipient.id);
   assert.equal(response.status, 404);
   assert.equal(globalThis.__createdShare, null);
   globalThis.__recipientAccountLookup = (id) => id === recipient.id;
