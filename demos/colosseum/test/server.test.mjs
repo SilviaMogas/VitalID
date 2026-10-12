@@ -486,6 +486,27 @@ test('create preparation/submission failures never grant access or permit create
   })).status, 404);
 });
 
+test('terminal failed preparations are pruned so a recovered adapter can prepare again', async t => {
+  const adapter = new FakeAdapter();
+  const {holder, receiver} = await authenticatedPair(t, {adapter});
+  adapter.failCreatePrepare = true;
+  for (let index = 0; index < 21; index += 1) {
+    assert.equal((await holder.post('/api/prepare', {
+      receiverId: receiver.session.id,
+      mode: 'proof',
+      fields: [],
+      consent: true,
+    })).status, 503);
+  }
+  adapter.failCreatePrepare = false;
+  assert.equal((await holder.post('/api/prepare', {
+    receiverId: receiver.session.id,
+    mode: 'proof',
+    fields: [],
+    consent: true,
+  })).status, 200);
+});
+
 test('expired enrollment and challenge state fail closed', async t => {
   let clock = Date.now();
   const {client, holder, receiver} = await authenticatedPair(t, {now: () => clock});

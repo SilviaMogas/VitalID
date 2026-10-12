@@ -1,5 +1,6 @@
-import type { EmergencyInfo, HealthMetric, HealthProfile, Identity, Insight, VitalIdSnapshot } from "@/types";
+import type { DataSource, EmergencyInfo, HealthMetric, HealthProfile, Identity, Insight, VitalIdSnapshot } from "@/types";
 import type { InsurerId } from "@/lib/insurers";
+import { PROVIDERS } from "@/lib/connectors";
 
 export type ShareField =
   | "identity"
@@ -130,6 +131,14 @@ function projectSignal(signal: HealthMetric): Omit<HealthMetric, "history"> {
   };
 }
 
+const PROJECTED_SOURCE_IDS = new Set(["manual", "manualProfile", "demo", "demoWearable", "circularRing"]);
+
+function isProjectedSource(value: unknown): value is DataSource {
+  return typeof value === "string" && (
+    PROJECTED_SOURCE_IDS.has(value) || Object.hasOwn(PROVIDERS, value)
+  );
+}
+
 function projectInsight(insight: Insight): Insight {
   const allowedParams = new Set(["days", "minutes", "percent"]);
   const params = Object.fromEntries(
@@ -173,6 +182,10 @@ export function projectSnapshot(
   }
   if (selected.has("currentSignals") && Array.isArray(snapshot.currentSignals)) {
     out.currentSignals = snapshot.currentSignals.map(projectSignal) as never;
+    const sources = [...new Set(
+      (out.currentSignals as HealthMetric[]).map((signal) => signal.source).filter(isProjectedSource),
+    )];
+    if (sources.length) out.sources = sources;
   }
   if (selected.has("recentTrends") && Array.isArray(snapshot.recentTrends)) {
     out.recentTrends = snapshot.recentTrends.map(projectInsight);

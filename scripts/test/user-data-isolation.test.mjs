@@ -14,6 +14,7 @@ const { applyPlanToConnectors } = await import('@/lib/connectors');
 const SYNTHETIC_SOURCES = new Set(['circularRing', 'demoWearable']);
 const A = { id: '00000000-0000-4000-8000-00000000000a', email: 'a@example.test' };
 const B = { id: '00000000-0000-4000-8000-00000000000b', email: 'b@example.test' };
+globalThis.__recipientAccountLookup = (id) => id === B.id;
 
 const store = getOnboardingStore();
 await store.patch(A.id, {
@@ -60,6 +61,22 @@ test('share snapshot from a member carries no demo data, owner key or tokens', a
   assert.deepEqual([...new Set((snap.currentSignals ?? []).map((m) => m.source))], ['manual']);
   assert.ok(!(snap.sources ?? []).some((s) => s !== 'manual' && s !== 'manualProfile'));
   assert.doesNotMatch(JSON.stringify(snap), /ownerKey|token|Fatima/i);
+});
+
+test('share projection derives only selected, allowlisted signal sources', async () => {
+  const d = await as(A);
+  const signals = [
+    {...d.snapshot.currentSignals[0], source: 'manual'},
+    {...d.snapshot.currentSignals[0], source: 'manualProfile'},
+    {...d.snapshot.currentSignals[0], source: 'whoop'},
+    {...d.snapshot.currentSignals[0], source: 'toString'},
+    {...d.snapshot.currentSignals[0], source: '__proto__'},
+  ];
+  assert.deepEqual(
+    buildSnapshot({...d.snapshot, currentSignals: signals}, ['currentSignals']).sources,
+    ['manual', 'manualProfile', 'whoop'],
+  );
+  assert.equal('sources' in buildSnapshot({...d.snapshot, currentSignals: signals}, ['identity']), false);
 });
 
 test('Fatima demo (no session) keeps the bundled sample dataset', async () => {

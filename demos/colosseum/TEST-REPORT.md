@@ -6,22 +6,22 @@ test passing is not an on-chain deployment or browser demonstration.
 
 ## Local tests
 
-Verification completed 2026-10-12. For the browser compatibility update, the
-nested lock was regenerated, then the focused crypto test, isolated-demo suite,
-demo build and root lint were run. Root privacy and isolation checks cover the
-preview comparison fix; the root production build was intentionally not repeated.
+Verification completed 2026-10-12. This follow-up validates the reviewed Sonar,
+account-existence, source-projection and preparation-quota fixes. Browser-flow
+verification remains pending; this report does not claim a full UI pass.
 
 | Area | Evidence |
 |---|---|
 | Dependency lock | `npm install --package-lock-only` added direct `@noble/curves@2.4.0`; all other locked versions were unchanged. npm reported four moderate transitive advisories. A nested `npm ci` had succeeded in the previous verification. |
 | Portable controller and real BBS | `node --test test/crypto.test.mjs`: 9 passed, 0 failed. Includes independent native WebCrypto verification of a Noble signature and real BBS proof authorization, plus sign/derive/verify, tampering and insufficient-assertion cases. |
-| HTTP/API lifecycle | Focused final-chain challenge-expiry race test: 1 passed in the prior run. `npm test`: 28 passed, 0 failed. Ephemeral Node listeners exercise session, cookie, origin, preview, permission, challenge, proof, summary and denial paths. |
+| HTTP/API lifecycle | Focused final-chain challenge-expiry race test: 1 passed in the prior run. `npm test`: 30 passed, 0 failed. Includes 21 failed create preparations followed by successful preparation after adapter recovery. Ephemeral Node listeners exercise session, cookie, origin, preview, permission, challenge, proof, summary and denial paths. |
+| Solana CLI path | `node --test test/devnet-setup.test.mjs`: 1 passed, 0 failed; validates absolute executable resolution and rejects relative, non-executable, directory and group/other-writable paths. `npm run devnet:keys` (`--prepare-only`) passed without faucet or deployment operations. |
 | Simulated Solana dependency | The server suite injects a fake adapter; the adapter suite injects a stub connection. These are negative-path/control-flow tests, not real RPC evidence. |
 | Demo bundle | `npm run build`: passed. |
 | Native permission program | `cargo test --manifest-path program/Cargo.toml`: 2 passed, 0 failed; doc tests 0/0. Rust unit tests only; no validator execution or deployment. The existing Solana API deprecation warnings were non-fatal. |
 | SBF artifact | `cargo build-sbf --manifest-path program/Cargo.toml --sbf-out-dir .local/sbf`: passed. Artifact: 67,272 bytes, SHA-256 `e541154cc717db0673dc8c035d34e6672abf18b8c3f7f20619f537254e65712e`. The CLI kept its generated program keypair in ignored `.local/sbf/`; no keypair remained under `program/target/deploy/`. |
-| Root privacy fix | Focused privacy regression: 7 passed. Root isolation suite: 26 passed. No root production build was run. |
-| Root static checks | `npm run lint`: passed with no warnings in this verification. `npx tsc --noEmit -p .` passed in the previous verification; not rerun for this JavaScript-only update. |
+| Root privacy fix | Focused privacy regression: 9 passed. Root isolation suite: 29 passed, 0 failed. Covers missing recipient accounts, lookup failure, and source allowlisting. |
+| Root static checks | `npm run lint`, `npx tsc --noEmit -p .` and `npm run build`: passed. |
 
 ## Real devnet evidence
 

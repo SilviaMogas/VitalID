@@ -49,6 +49,16 @@ sh "$HOME/anza-install.sh" --no-modify-path -d "$HOME/.local/share/solana/instal
 export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
 ```
 
+The setup script does not trust `PATH` to locate Solana. It resolves the
+default executable at
+`$HOME/.local/share/solana/install/active_release/bin/solana` and validates
+that it is an absolute, executable regular file that is not group- or
+other-writable. An alternative may be supplied only as an absolute path:
+
+```bash
+export SOLANA_CLI_PATH="/absolute/path/to/solana"
+```
+
 Prepare a new disposable fee payer under the ignored `.local/` directory, then
 build into that same private directory. `cargo build-sbf` creates the program
 keypair there; no default CLI keypair or config is used:

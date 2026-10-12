@@ -423,6 +423,15 @@ export async function createDemoServer({
     }
 
     if (request.method === 'POST' && pathname === '/api/prepare') {
+      for (const [reference, permission] of permissions) {
+        if (
+          permission.holderId === session.id
+          && permission.createState === 'failed'
+          && !permission.createSubmitted
+          && !permission.createReceipt
+          && !permission.preparedCreate
+        ) permissions.delete(reference);
+      }
       if (!exactKeys(body, ['receiverId', 'mode', 'fields', 'consent', 'expectedSnapshot'])) fail(400);
       if (typeof body.receiverId !== 'string' || body.receiverId.length !== 64 || body.consent !== true) fail(400);
       if (body.mode !== 'proof' && body.mode !== 'summary') fail(400);

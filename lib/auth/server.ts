@@ -141,6 +141,15 @@ export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   return toAuthUser(data.user);
 });
 
+export async function recipientAccountExists(userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await getSupabaseServerClient().auth.admin.getUserById(userId);
+    return !error && data.user?.id === userId;
+  } catch {
+    return false;
+  }
+}
+
 /** True when any member session cookie is present, even if the access token has expired. */
 export async function hasMemberCookies(): Promise<boolean> {
   const store = await cookies();
