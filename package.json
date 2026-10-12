@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:isolation": "node --experimental-strip-types --no-warnings --import ./scripts/test/register.mjs --test scripts/test/user-data-isolation.test.mjs scripts/test/consent-isolation.test.mjs scripts/test/share-privacy.test.mjs"
+    "test:isolation": "node --experimental-strip-types --no-warnings --import ./scripts/test/register.mjs --test scripts/test/user-data-isolation.test.mjs scripts/test/consent-isolation.test.mjs scripts/test/share-privacy.test.mjs scripts/test/share-client-refresh-race.test.mjs",
+    "test:share-client-race": "node --experimental-strip-types --no-warnings --import ./scripts/test/register.mjs --test scripts/test/share-client-refresh-race.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
@@ -27,6 +28,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.26",
+    "react-test-renderer": "19.1.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
