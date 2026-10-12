@@ -24,6 +24,17 @@ Solana adapter for API lifecycle/error tests. The separate adapter suite exercis
 Solana transaction serialization and signatures against an injected connection.
 Those injected-RPC tests are simulations, not evidence of a chain transaction.
 
+The browser controller uses native WebCrypto Ed25519 with a non-extractable key
+when supported. Browser testing found Chrome 137 lacked native Ed25519; the
+portable fallback uses pinned `@noble/curves@2.4.0` and keeps the private bytes
+in a page-memory closure without persisting or transmitting them. This fallback
+is not a non-extractable WebCrypto or hardware-backed key; page compromise
+remains a risk. The full browser flow still needs a post-change retest.
+
+Latest local verification (2026-10-12): the focused crypto test passed 9/9, the
+demo suite passed 28/28, the demo build passed, and root lint passed. These
+results do not imply devnet deployment or end-to-end browser success.
+
 ## Build and attempt the devnet deployment
 
 Read the [official Solana installation](https://solana.com/docs/cli/install),

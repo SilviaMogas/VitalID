@@ -100,8 +100,13 @@ contain the source fixture or issuer secret.
 
 ## Binding and replay model
 
-Each browser creates a non-extractable Ed25519 private key and authenticates by
-signing an enrollment challenge. A separate random HttpOnly cookie identifies the
+Each browser creates an Ed25519 private key and authenticates by signing an
+enrollment challenge. Native WebCrypto uses a non-extractable key when supported.
+Browsers without native Ed25519 use the already-depended-on Noble curves library
+(directly pinned to 2.4.0), with private bytes held only in a page-memory closure.
+This portable key is not hardware-backed or non-extractable; compromised page
+JavaScript remains a threat. Neither path persists or transmits the private key.
+A separate random HttpOnly cookie identifies the
 authenticated session. The public recipient ID is not that cookie and grants no
 access on its own. This proves possession of a demo key, not a verified real-world
 person, doctor, insurer or email address.

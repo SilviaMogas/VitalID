@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as bbs from '@digitalbazaar/bbs-signatures';
+import {createController} from '../src/controller.mjs';
 import {
   assessRecords, issuerKey, issueCredential, derivePresentation, verifyPresentation,
   hex, unhex, utf8, SCHEMA, CIPHERSUITE, authorizationBytes,
@@ -29,6 +30,18 @@ const credential = await issueCredential({keys, records, name: 'Fatima Al Mansoo
 const presentation = await derivePresentation(credential, context, holder.privateKey);
 const verify = (p = presentation, c = context, permissionOverride = permission, key = keys.publicKey, time = now) =>
   verifyPresentation({presentation: p, context: c, trustedPublicKey: key, permission: permissionOverride, now: time});
+
+test('portable browser controller produces native-verifiable Ed25519 and real BBS authorization', async () => {
+  const portable = await createController({portable: true});
+  const message = utf8('independent verification');
+  const publicKey = await crypto.subtle.importKey('raw', portable.publicKey, 'Ed25519', false, ['verify']);
+  assert.equal(await crypto.subtle.verify('Ed25519', publicKey, await portable.sign(message), message), true);
+  const boundPermission = {...permission, controller: hex(portable.publicKey)};
+  const credential = await issueCredential({keys, records, name: 'Synthetic', permission: boundPermission, now});
+  const proof = await derivePresentation(credential, context, portable);
+  assert.equal(await verify(proof, context, boundPermission), true);
+  assert.equal(Object.hasOwn(portable, 'privateKey'), false);
+});
 
 test('issuer signature, real BBS selective proof and independent verification', async () => {
   assert.equal(await bbs.verifySignature({

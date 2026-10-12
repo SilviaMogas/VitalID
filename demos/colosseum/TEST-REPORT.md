@@ -6,22 +6,22 @@ test passing is not an on-chain deployment or browser demonstration.
 
 ## Local tests
 
-Verification completed 2026-10-12. The focused BBS test ran first after a clean
-nested `npm ci`, followed by the isolated-demo suite and build. Root privacy and
-isolation checks cover the preview comparison fix; the root production build was
-intentionally not repeated.
+Verification completed 2026-10-12. For the browser compatibility update, the
+nested lock was regenerated, then the focused crypto test, isolated-demo suite,
+demo build and root lint were run. Root privacy and isolation checks cover the
+preview comparison fix; the root production build was intentionally not repeated.
 
 | Area | Evidence |
 |---|---|
-| Dependency lock | `npm ci` succeeded from the nested lockfile; it installed 62 packages. npm reported four moderate transitive advisories. |
-| Real BBS primitive | `node --test test/crypto.test.mjs`: 8 passed, 0 failed. It uses the pinned Digital Bazaar library for sign/derive/verify, tampering and insufficient-assertion cases. |
-| HTTP/API lifecycle | Focused final-chain challenge-expiry race test: 1 passed. `npm test`: 27 passed, 0 failed. Ephemeral Node listeners exercise session, cookie, origin, preview, permission, challenge, proof, summary and denial paths. |
+| Dependency lock | `npm install --package-lock-only` added direct `@noble/curves@2.4.0`; all other locked versions were unchanged. npm reported four moderate transitive advisories. A nested `npm ci` had succeeded in the previous verification. |
+| Portable controller and real BBS | `node --test test/crypto.test.mjs`: 9 passed, 0 failed. Includes independent native WebCrypto verification of a Noble signature and real BBS proof authorization, plus sign/derive/verify, tampering and insufficient-assertion cases. |
+| HTTP/API lifecycle | Focused final-chain challenge-expiry race test: 1 passed in the prior run. `npm test`: 28 passed, 0 failed. Ephemeral Node listeners exercise session, cookie, origin, preview, permission, challenge, proof, summary and denial paths. |
 | Simulated Solana dependency | The server suite injects a fake adapter; the adapter suite injects a stub connection. These are negative-path/control-flow tests, not real RPC evidence. |
 | Demo bundle | `npm run build`: passed. |
 | Native permission program | `cargo test --manifest-path program/Cargo.toml`: 2 passed, 0 failed; doc tests 0/0. Rust unit tests only; no validator execution or deployment. The existing Solana API deprecation warnings were non-fatal. |
 | SBF artifact | `cargo build-sbf --manifest-path program/Cargo.toml --sbf-out-dir .local/sbf`: passed. Artifact: 67,272 bytes, SHA-256 `e541154cc717db0673dc8c035d34e6672abf18b8c3f7f20619f537254e65712e`. The CLI kept its generated program keypair in ignored `.local/sbf/`; no keypair remained under `program/target/deploy/`. |
 | Root privacy fix | Focused privacy regression: 7 passed. Root isolation suite: 26 passed. No root production build was run. |
-| Root static checks | `npm run lint`: passed with no warnings. `npx tsc --noEmit -p .`: passed. |
+| Root static checks | `npm run lint`: passed with no warnings in this verification. `npx tsc --noEmit -p .` passed in the previous verification; not rerun for this JavaScript-only update. |
 
 ## Real devnet evidence
 
@@ -51,7 +51,9 @@ remain under the ignored `.local/` directory.
 
 ## Limits
 
-- Browser verification pending; requested but not yet run.
+- Browser testing found Chrome 137 lacked native Ed25519, prompting the Noble
+  fallback. The independent native-verification/BBS test now passes locally;
+  full browser-flow retest after this change remains pending.
 - Synthetic assertion semantics and issuer computation are not independently
   audited; BBS proves a signed statement, not the truth of the data.
 - In-memory server state is single-process and is not durable across restarts.

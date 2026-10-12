@@ -1,6 +1,7 @@
 import {Buffer} from 'buffer';
 import {Transaction, PublicKey} from '@solana/web3.js';
 import {derivePresentation, enrollmentBytes, hex, unhex} from './crypto.mjs';
+import {createController} from './controller.mjs';
 
 const $ = id => document.getElementById(id);
 let keys, session, activeChallenge, pendingPresentation, previewSnapshot, displayedReference;
@@ -42,7 +43,7 @@ async function run(fn) {
 async function signTransaction(base64) {
   if (!keys) throw new Error('Start a new browser-held session first.');
   const tx = Transaction.from(Buffer.from(base64, 'base64'));
-  const signature = await crypto.subtle.sign('Ed25519', keys.privateKey, tx.serializeMessage());
+  const signature = await keys.sign(tx.serializeMessage());
   tx.addSignature(new PublicKey(unhex(session.publicKey)), Buffer.from(signature));
   return tx.serialize({requireAllSignatures: false, verifySignatures: false}).toString('base64');
 }
@@ -167,14 +168,14 @@ async function refresh() {
 }
 
 on('start', async () => {
+  keys = await createController();
   const challenge = await api('start', {});
-  keys = await crypto.subtle.generateKey('Ed25519', false, ['sign', 'verify']);
-  const publicKey = hex(new Uint8Array(await crypto.subtle.exportKey('raw', keys.publicKey)));
-  const signature = hex(new Uint8Array(await crypto.subtle.sign('Ed25519', keys.privateKey, enrollmentBytes(challenge, publicKey))));
+  const publicKey = hex(keys.publicKey);
+  const signature = hex(await keys.sign(enrollmentBytes(challenge, publicKey)));
   const result = await api('auth', {publicKey, signature});
   session = result.session;
   $('receiver-code').value = session.id;
-  text('key-info', `Public control key: ${publicKey} · Private key stays in this page. Refreshing loses it.`);
+  text('key-info', `Public control key: ${publicKey} · ${keys.implementation}. Private key stays in this page. Refreshing loses it.`);
   show('identity', true); show('workspace', true); show('start', false);
   await refresh(); await preview();
 });
@@ -207,7 +208,7 @@ on('present', async () => {
   show('send-presentation', false);
   const {context, credential} = await api('credential', {challengeId: $('challenge').value.trim()});
   text('holder-result', 'Checking issuer signature and deriving real BBS proof in this browser…');
-  const presentation = await derivePresentation(credential, context, keys.privateKey);
+  const presentation = await derivePresentation(credential, context, keys);
   pendingPresentation = {challengeId: context.id, presentation};
   text('holder-result', json({note: 'Exact presentation preview — NOT sent yet. Name and records are excluded.', presentation}));
   show('send-presentation', true);

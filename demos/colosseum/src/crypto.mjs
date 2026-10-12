@@ -1,4 +1,5 @@
 import * as bbs from '@digitalbazaar/bbs-signatures';
+import {signController} from './controller.mjs';
 
 export const CIPHERSUITE = 'BLS12-381-SHA-256';
 export const SCHEMA = 'VitalID Demo BBS messages v1';
@@ -80,9 +81,7 @@ export async function derivePresentation(credential, context, privateKey) {
     publicKey, signature, header, messages, ciphersuite: CIPHERSUITE,
     presentationHeader: contextBytes(context), disclosedMessageIndexes: DISCLOSED,
   }));
-  const authorization = hex(new Uint8Array(await crypto.subtle.sign(
-    'Ed25519', privateKey, await authorizationBytes(context, proof),
-  )));
+  const authorization = hex(await signController(privateKey, await authorizationBytes(context, proof)));
   return {schema: SCHEMA, issuer: 'VitalID Demo', publicKey: credential.publicKey, claims: credential.claims, proof, authorization};
 }
 
