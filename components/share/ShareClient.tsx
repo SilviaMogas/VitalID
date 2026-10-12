@@ -69,7 +69,7 @@ export default function ShareClient() {
   const [preview, setPreview] = useState<{ snapshot: SharePayload["snapshot"] } | null>(null);
   const [previewError, setPreviewError] = useState(false);
   const [disclosureConsent, setDisclosureConsent] = useState(false);
-  const fieldKey = Array.from(fields).sort().join(",");
+  const fieldKey = SHARE_FIELDS.filter((field) => fields.has(field)).join(",");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -398,8 +398,8 @@ export default function ShareClient() {
         <SectionTitle>{locale === "ar" ? "المستلم والمعاينة الدقيقة" : "Recipient and exact disclosure preview"}</SectionTitle>
         <p className="text-sm text-muted">
           {locale === "ar"
-            ? "اطلب معرّف حساب المستلم مباشرةً. الرابط وحده لا يمنح الوصول. هذا لا يتحقق من الهوية المهنية."
-            : "Ask the recipient directly for their VitalID account ID. They must sign in to that exact account; the link alone grants no access. This does not verify their professional identity."}
+            ? "تحقق من معرّف حساب المستلم عبر قناة مستقلة موثوقة. يجب تسجيل الدخول إلى ذلك الحساب تحديداً؛ الرابط وحده لا يمنح الوصول. الأسماء وعناوين البريد والهوية المهنية غير موثقة هنا."
+            : "Verify the recipient’s account ID through a trusted independent channel. They must sign in to that exact account; the link alone grants no access. Names, emails and professional identities are not verified here."}
         </p>
         {account && (
           <p className="break-all text-xs text-muted">

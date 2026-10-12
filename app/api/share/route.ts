@@ -14,6 +14,7 @@ import {
 import { resolveUserData } from '@/lib/user-data';
 import { createShare, listShares } from '@/lib/share-store';
 import { getShareApiUser, isSameOrigin, shareJson } from '@/lib/share-api';
+import { recipientAccountExists } from '@/lib/auth/server';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -95,6 +96,9 @@ export async function POST(req: Request) {
       canonicalJson(expectedSnapshot) !== canonicalJson(snapshot)
     ) {
       return shareJson({ error: 'unavailable' }, 409);
+    }
+    if (!(await recipientAccountExists(normalizedRecipientUserId))) {
+      return shareJson({ error: 'unavailable' }, 404);
     }
     const now = new Date();
     const payload: SharePayload = {

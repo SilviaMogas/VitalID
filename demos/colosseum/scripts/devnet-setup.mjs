@@ -1,10 +1,12 @@
 import {createHash} from 'node:crypto';
 import {chmod, lstat, mkdir, open, readFile, writeFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
+import {homedir} from 'node:os';
 import {dirname, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Connection, Keypair, PublicKey} from '@solana/web3.js';
 import {GENESIS, RPC} from '../src/solana.mjs';
+import {resolveSolanaCli} from './solana-cli.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const demo = resolve(here, '..');
@@ -16,13 +18,15 @@ const markerFile = resolve(local, 'generated-keys.json');
 const deploymentFile = resolve(local, 'deployment.json');
 const artifact = resolve(sbfOutput, 'vitalid_permission.so');
 const INSTALL_MARKER = 'vitalid-colosseum-disposable-devnet-keys-v1';
+const CHILD_ENV = {HOME: homedir(), PATH: '/usr/bin:/bin', LANG: 'C.UTF-8'};
+let solanaCli;
 
 function runSolana(args, timeout = 120000) {
-  const result = spawnSync('solana', args, {
+  const result = spawnSync(solanaCli, args, {
     cwd: demo,
     encoding: 'utf8',
     timeout,
-    env: process.env,
+    env: CHILD_ENV,
   });
   if (result.error) throw new Error(`Solana CLI could not run: ${result.error.message}`);
   if (result.status !== 0) {
@@ -110,6 +114,7 @@ async function main() {
     return;
   }
 
+  solanaCli = await resolveSolanaCli();
   const cliVersion = runSolana(['--version']).trim().split('\n')[0];
   const programBytes = await readFile(artifact);
   if (!programBytes.length) throw new Error('SBF program artifact is empty.');

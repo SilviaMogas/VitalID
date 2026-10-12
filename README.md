@@ -90,7 +90,7 @@ npm run dev            # → http://localhost:3000
 2. **Dashboard** — today's signals and insight.  **Trends** — switch 7D / 30D.
 3. **Vital ID** — the health credential card.
 4. Fátima's ordinary member-sharing route is deliberately disabled. Use the isolated [Colosseum synthetic proof demo](demos/colosseum/README.md) for its separate sharing flow.
-5. With a real member account and your own data, **Share** requires the intended recipient's authenticated account ID, an exact data preview and explicit authorization. **Revoke** prevents new reads, not retention of downloaded copies.
+5. With a real member account and your own data, **Share** requires the intended recipient's authenticated account ID, an exact data preview and explicit authorization. Ask the recipient to verify that ID through a trusted independent channel; names, emails and professional identities are not verified by this flow. **Revoke** prevents new reads, not retention of downloaded copies.
 6. Toggle **العربية** to see the full RTL experience.
 
 > No keys needed: without env vars the app runs on in-memory stores with the deterministic demo dataset.

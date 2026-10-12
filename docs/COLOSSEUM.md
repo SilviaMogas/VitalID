@@ -183,6 +183,8 @@ part of this mode. The recipient must be authenticated and the permission must
 still be valid; a bearer URL or proof from the other mode cannot grant access.
 
 In the main member app, existing sharing now targets an explicit account ID.
+The sender should verify that ID through a trusted independent channel; names,
+emails and professional identities are not verified by this flow.
 This is intentional because the existing demo-oriented signup code uses
 `email_confirm: true` without an email verification round trip. Email equality
 would therefore be an unsafe authorization boundary. The sender must obtain the

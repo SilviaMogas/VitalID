@@ -223,5 +223,8 @@ on('send-presentation', async () => {
 $('recipient')?.addEventListener('input', () => { $('consent').checked = false; });
 $('mode')?.addEventListener('change', preview);
 for (const field of ['identity', 'healthProfile']) $(`field-${field}`)?.addEventListener('change', preview);
-if (!receiverOnly) preview();
+if (!receiverOnly) {
+  try { await preview(); }
+  catch { text('global-status', 'Preview unavailable.'); }
+}
 setInterval(() => { if (session && !working) refresh().catch(error => text('global-status', error.message)); }, 8000);

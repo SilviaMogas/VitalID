@@ -92,7 +92,7 @@ export async function verifyPresentation({presentation: p, context, trustedPubli
         || typeof p.proof !== 'string' || p.proof.length > 10000
         || typeof p.authorization !== 'string' || p.authorization.length !== 128) return false;
     const c = p.claims;
-    if (!c || Object.keys(c).sort().join(',') !== [...FIELDS].sort().join(',')
+    if (!c || Object.keys(c).length !== FIELDS.length || !FIELDS.every(field => Object.hasOwn(c, field))
         || c.demo !== true || c.claimType !== CLAIM || c.qualifies !== true
         || c.permissionRef !== permission.reference || c.controller !== permission.controller
         || c.expiresAt !== permission.expiresAt || Date.parse(c.expiresAt) <= now

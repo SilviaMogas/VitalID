@@ -8,6 +8,7 @@ const { POST: createShare } = await import('@/app/api/share/route');
 const { POST: previewShare } = await import('@/app/api/share/preview/route');
 const owner = { id: '00000000-0000-4000-8000-00000000000a', email: 'owner@example.test' };
 const recipient = { id: '00000000-0000-4000-8000-00000000000b', email: 'recipient@example.test' };
+globalThis.__recipientAccountLookup = (id) => id === recipient.id;
 
 function fixture(overrides = {}) {
   return {
@@ -134,8 +135,9 @@ test('share access allows the recipient account id and returns only the public p
   assert.equal(result.id, payload.id);
   assert.equal(result.sharedBy, 'Owner Name');
   assert.deepEqual(Object.keys(result.sharedByLocalized).sort(), ['ar', 'en']);
+  assert.deepEqual(result.snapshot.sources, ['manual']);
   assert.deepEqual(Object.keys(result.snapshot).sort(), [
-    'currentSignals', 'emergencyInfo', 'healthProfile', 'identity', 'recentTrends',
+    'currentSignals', 'emergencyInfo', 'healthProfile', 'identity', 'recentTrends', 'sources',
   ]);
   assert.deepEqual(Object.keys(result.snapshot.identity).sort(), [
     'dateOfBirth', 'fullName', 'localizedName', 'nationality', 'sex', 'vitalId',
@@ -180,7 +182,7 @@ test('legacy shares never disclose identity or sender names when identity was no
   assert.deepEqual(Object.keys(result).sort(), [
     'createdAt', 'expiresAt', 'id', 'purpose', 'revoked', 'selectedFields', 'snapshot',
   ]);
-  assert.deepEqual(Object.keys(result.snapshot), ['currentSignals']);
+  assert.deepEqual(Object.keys(result.snapshot).sort(), ['currentSignals', 'sources']);
   assert.doesNotMatch(JSON.stringify(result), /Owner Name|localizedName|identity/);
 });
 
@@ -244,6 +246,43 @@ test('create requires a valid recipient account id and returns the same safe sna
   assert.equal('recipientUserId' in result, false);
   assert.equal('ownerKey' in result, false);
   assert.equal('sentTo' in result, false);
+});
+
+async function createIdentityShareFor(recipientUserId) {
+  globalThis.__testShares = new Map();
+  globalThis.__createdShare = null;
+  globalThis.__testUser = owner;
+  const previewResponse = await previewShare(new Request('https://example.test/api/share/preview', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({selectedFields: ['identity']}),
+  }));
+  const {snapshot} = await previewResponse.json();
+  return createShare(new Request('https://example.test/api/share', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      purpose: 'doctor',
+      selectedFields: ['identity'],
+      durationMinutes: 60,
+      recipientUserId,
+      expectedSnapshot: snapshot,
+    }),
+  }));
+}
+
+test('create rejects a valid-looking recipient id when the account does not exist', async () => {
+  const response = await createIdentityShareFor('00000000-0000-4000-8000-00000000000c');
+  assert.equal(response.status, 404);
+  assert.equal(globalThis.__createdShare, null);
+});
+
+test('create fails closed when recipient account lookup errors', async () => {
+  globalThis.__recipientAccountLookup = () => { throw new Error('lookup unavailable'); };
+  const response = await createIdentityShareFor(recipient.id);
+  assert.equal(response.status, 404);
+  assert.equal(globalThis.__createdShare, null);
+  globalThis.__recipientAccountLookup = (id) => id === recipient.id;
 });
 
 test('preview requires a signed-in member, rejects unknown fields, and never persists a share', async () => {

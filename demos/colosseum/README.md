@@ -29,10 +29,11 @@ when supported. Browser testing found Chrome 137 lacked native Ed25519; the
 portable fallback uses pinned `@noble/curves@2.4.0` and keeps the private bytes
 in a page-memory closure without persisting or transmitting them. This fallback
 is not a non-extractable WebCrypto or hardware-backed key; page compromise
-remains a risk. The full browser flow still needs a post-change retest.
+remains a risk. The bounded browser run verifies enrollment, previews, isolation
+and fail-closed access; the positive devnet lifecycle is still blocked.
 
 Latest local verification (2026-10-12): the focused crypto test passed 9/9, the
-demo suite passed 28/28, the demo build passed, and root lint passed. These
+demo suite passed 30/30, the demo build passed, and root lint passed. These
 results do not imply devnet deployment or end-to-end browser success.
 
 ## Build and attempt the devnet deployment
@@ -47,6 +48,16 @@ shell profiles or the existing Solana CLI configuration:
 curl -sSfL https://release.anza.xyz/stable/install -o "$HOME/anza-install.sh"
 sh "$HOME/anza-install.sh" --no-modify-path -d "$HOME/.local/share/solana/install" stable
 export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
+```
+
+The setup script does not trust `PATH` to locate Solana. It resolves the
+default executable at
+`$HOME/.local/share/solana/install/active_release/bin/solana` and validates
+that it is an absolute, executable regular file that is not group- or
+other-writable. An alternative may be supplied only as an absolute path:
+
+```bash
+export SOLANA_CLI_PATH="/absolute/path/to/solana"
 ```
 
 Prepare a new disposable fee payer under the ignored `.local/` directory, then
