@@ -3,6 +3,7 @@ import type Stripe from 'stripe';
 import { BILLING_CURRENCY, type BillingInterval, type PlanId } from '@/lib/plans';
 import { getMembershipStore } from '@/lib/membership/store';
 import type { MembershipRecord } from '@/lib/membership/types';
+import { ACTIVE_SUBSCRIPTION_STATUSES } from '@/lib/membership/constants';
 import { getConfiguredPriceRefs, getStripe, StripeConfigError } from './server';
 
 export type VerifyResult =
@@ -26,8 +27,6 @@ export type VerifyResult =
         | 'not_found';
     };
 
-/** Subscription statuses that keep the paid plan active. */
-const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due']);
 
 function isConfiguredPriceForPlan(plan: PlanId, price: Stripe.Price | null | undefined): boolean {
   if (!price) return false;
