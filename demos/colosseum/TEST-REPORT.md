@@ -7,8 +7,12 @@ test passing is not an on-chain deployment or browser demonstration.
 ## Local tests
 
 Verification completed 2026-10-12. This follow-up validates the reviewed Sonar,
-account-existence, source-projection and preparation-quota fixes. Browser-flow
-verification remains pending; this report does not claim a full UI pass.
+account-existence, source-projection and preparation-quota fixes. The tested code
+revision is `f783f36953711e04685b6aa0697a44c22aa7937d` on
+`devin/1791812117-colosseum-review-fixes`, PR
+https://github.com/SilviaMogas/VitalID/pull/63. PR #62 was merged externally during
+the session; the follow-up is separate. This report does not claim a full
+positive devnet or production-authenticated end-to-end pass.
 
 | Area | Evidence |
 |---|---|
@@ -22,6 +26,40 @@ verification remains pending; this report does not claim a full UI pass.
 | SBF artifact | `cargo build-sbf --manifest-path program/Cargo.toml --sbf-out-dir .local/sbf`: passed. Artifact: 67,272 bytes, SHA-256 `e541154cc717db0673dc8c035d34e6672abf18b8c3f7f20619f537254e65712e`. The CLI kept its generated program keypair in ignored `.local/sbf/`; no keypair remained under `program/target/deploy/`. |
 | Root privacy fix | Focused privacy regression: 9 passed. Root isolation suite: 29 passed, 0 failed. Covers missing recipient accounts, lookup failure, and source allowlisting. |
 | Root static checks | `npm run lint`, `npx tsc --noEmit -p .` and `npm run build`: passed. |
+| CI at tested revision | Four passed, none failed/pending: build, SonarCloud Code Analysis, Vercel, Vercel Preview Comments. No quality-gate rules were changed. |
+
+## Browser verification — real local adapter, blocked devnet
+
+The final bounded run used Chrome 137 and three independent cookie jars at the
+tested revision above. Native Ed25519 was unsupported in this browser; the actual
+Noble fallback produced enrollment signatures accepted by the server. No fake
+adapter was substituted for successful chain activity.
+
+Observed passes:
+
+- Independent holder, recipient and outsider enrollment/session isolation.
+- Identity-off preview containing only the selected fictional height and weight.
+- Failed preparation visibly denied without receipt or grant; retry pruned the
+  previous never-submitted failure instead of accumulating quota entries.
+- Recipient challenge and summary denied; outsider had no permissions.
+- Recipient HTML, CSS, browser bundle, DOM and captured successful API bodies
+  contained no actual hidden name, daily records or signed credential.
+- Observed requests were local only, with no Analytics or third-party fetch.
+  Browser storage inspection found no localStorage/sessionStorage/IndexedDB
+  entries; enrollment transmitted a public key and signature, not a private key.
+  This is bounded observation, not a memory-security audit.
+- Holder and recipient views were usable at 390×844 without horizontal overflow.
+
+**Incomplete capture:** error-response bodies timed out after three seconds in
+the browser observer. Their 503/404 statuses and denial UI were checked, but
+complete browser response-body privacy coverage is not claimed.
+
+After recording, the unchanged server was restarted with the exact HTTPS preview
+origin. Direct server checks passed: matching Origin → 200 and a Secure,
+HttpOnly, SameSite=Strict cookie; foreign Origin → 403 without a cookie.
+Preview-browser enrollment remained untested because that browser reached the
+Devin sign-in screen. The local recording is not preview-browser E2E evidence.
+Restarting discarded all previous demo sessions as designed.
 
 ## Real devnet evidence
 
@@ -51,9 +89,11 @@ remain under the ignored `.local/` directory.
 
 ## Limits
 
-- Browser testing found Chrome 137 lacked native Ed25519, prompting the Noble
-  fallback. The independent native-verification/BBS test now passes locally;
-  full browser-flow retest after this change remains pending.
+- Positive browser BBS derivation/verification, transaction signing, successful
+  authorized summary access and on-chain revocation remain untested without a
+  deployed program and funded devnet sponsor. There are no confirmed receipts.
+- The native-browser Ed25519 path, complete browser error-body audit and real
+  Supabase-authenticated member-sharing paths remain untested.
 - Synthetic assertion semantics and issuer computation are not independently
   audited; BBS proves a signed statement, not the truth of the data.
 - In-memory server state is single-process and is not durable across restarts.

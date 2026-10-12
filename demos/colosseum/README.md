@@ -29,10 +29,11 @@ when supported. Browser testing found Chrome 137 lacked native Ed25519; the
 portable fallback uses pinned `@noble/curves@2.4.0` and keeps the private bytes
 in a page-memory closure without persisting or transmitting them. This fallback
 is not a non-extractable WebCrypto or hardware-backed key; page compromise
-remains a risk. The full browser flow still needs a post-change retest.
+remains a risk. The bounded browser run verifies enrollment, previews, isolation
+and fail-closed access; the positive devnet lifecycle is still blocked.
 
 Latest local verification (2026-10-12): the focused crypto test passed 9/9, the
-demo suite passed 28/28, the demo build passed, and root lint passed. These
+demo suite passed 30/30, the demo build passed, and root lint passed. These
 results do not imply devnet deployment or end-to-end browser success.
 
 ## Build and attempt the devnet deployment
