@@ -22,6 +22,19 @@ const passThrough = ({ children }) => children ?? null;
 const noop = () => null;
 const translate = (key, params) =>
   key === "share.history" ? `share.history.${params?.count ?? 0}` : key;
+const testInsurer = {
+  color: "#087F5B",
+  id: "daman",
+  monogram: "D",
+  name: "Daman",
+  nameAr: "ضمان",
+};
+const testRecipient = {
+  consented: true,
+  deliveryRef: "VID-SHARE-DAMAN-TEST",
+  insurerId: "daman",
+  sentAt: "2026-01-01T00:00:00.000Z",
+};
 
 function loadShareClient() {
   const source = fs.readFileSync(componentPath, "utf8");
@@ -58,8 +71,22 @@ function loadShareClient() {
         SHARE_PURPOSES: ["doctor"],
       },
     ],
-    ["@/lib/insurers", { getInsurer: () => undefined, INSURERS: [] }],
-    ["@/components/share/InsurerBadge", { InsurerMonogram: noop, resolveRecipients: () => [] }],
+    [
+      "@/lib/insurers",
+      {
+        getInsurer: (id) => id === testInsurer.id ? testInsurer : undefined,
+        INSURERS: [testInsurer],
+      },
+    ],
+    [
+      "@/components/share/InsurerBadge",
+      {
+        InsurerMonogram: ({ insurer }) => React.createElement("span", null, insurer.monogram),
+        resolveRecipients: (recipients) => (recipients ?? [])
+          .filter((recipient) => recipient.insurerId === testInsurer.id)
+          .map((recipient) => ({ recipient, insurer: testInsurer })),
+      },
+    ],
   ]);
   const componentModule = new Module(componentPath);
   componentModule.filename = componentPath;
@@ -104,24 +131,35 @@ function deferredResponse(body, onRead) {
   };
 }
 
-function deferredInitialList(body, onRead, nextResponse) {
+function deferredInitialList(body, nextResponse) {
   let calls = 0;
+  let bodyRead = false;
   return {
+    get bodyRead() {
+      return bodyRead;
+    },
     get calls() {
       return calls;
     },
     next() {
       calls += 1;
-      return calls === 1 ? deferredResponse(body, onRead) : nextResponse(calls);
+      return calls === 1
+        ? deferredResponse(body, () => {
+          bodyRead = true;
+        })
+        : nextResponse(calls);
     },
   };
 }
 
-function shareCreationFetch(result, listResponse) {
+function shareCreationFetch(result, listResponse, additionalResponses = new Map()) {
   return async (input, init = {}) => {
     const url = String(input);
+    if (additionalResponses.has(url)) return okResponse(additionalResponses.get(url));
     if (url === "/api/share/preview") return okResponse({ snapshot: result.snapshot });
-    if (url === "/api/share" && init.method === "POST") return okResponse(result);
+    if (url === "/api/share" && init.method === "POST") {
+      return okResponse(typeof result === "function" ? result() : result);
+    }
     if (url === "/api/share" && (!init.method || init.method === "GET")) return listResponse();
     throw new Error(`Unexpected fetch: ${url}`);
   };
@@ -195,8 +233,10 @@ function revokeButtonFor(renderer, id) {
 
 async function createShare(renderer) {
   const [fieldCheckbox] = checkboxInputs(renderer);
-  await act(async () => fieldCheckbox.props.onChange({}));
-  await flush();
+  if (!fieldCheckbox.props.checked) {
+    await act(async () => fieldCheckbox.props.onChange({}));
+    await flush();
+  }
 
   const recipientInput = renderer.root
     .findAllByType("input")
@@ -305,24 +345,26 @@ test("failed revoke does not mark the share as revoked", async () => {
 test("an earlier initial list recovers after the post-create refresh fails", async () => {
   const initialBody = deferred();
   const created = shareResult("share-created");
+  const laterCreated = shareResult("share-created-later");
   const existing = [shareSummary("share-a"), shareSummary("share-b")];
-  let initialBodyRead = false;
+  let createCalls = 0;
   const lists = deferredInitialList(
     initialBody,
-    () => {
-      initialBodyRead = true;
-    },
     () => {
       throw new Error("post-create refresh failed");
     },
   );
 
-  await withShareClient(shareCreationFetch(created, () => lists.next()), async (renderer) => {
-    await waitFor(() => initialBodyRead);
+  await withShareClient(shareCreationFetch(
+    () => [created, laterCreated][createCalls++],
+    () => lists.next(),
+  ), async (renderer) => {
+    await waitFor(() => lists.bodyRead);
     await createShare(renderer);
     await waitFor(() => lists.calls === 2);
     await flush();
-    assert.equal(buttonsWithText(renderer, "share.revoke").length, 1);
+    assert.equal(buttonsWithText(renderer, "share.revoke").length, 2);
+    assert.ok(revokeButtonFor(renderer, created.id));
 
     initialBody.resolve(existing);
     await flush();
@@ -330,7 +372,14 @@ test("an earlier initial list recovers after the post-create refresh fails", asy
       assert.ok(shareRow(renderer, share.id));
       assert.ok(revokeButtonFor(renderer, share.id));
     }
-    assert.equal(buttonsWithText(renderer, "share.revoke").length, 3);
+
+    await createShare(renderer);
+    await waitFor(() => lists.calls === 3);
+    await flush();
+    assert.ok(shareRow(renderer, created.id));
+    assert.ok(revokeButtonFor(renderer, created.id));
+    assert.ok(shareRow(renderer, laterCreated.id));
+    assert.ok(revokeButtonFor(renderer, laterCreated.id));
   });
 });
 
@@ -339,21 +388,18 @@ test("an older late list cannot replace a newer successful list", async () => {
   const created = shareResult("share-created");
   const older = shareSummary("share-older");
   const newer = shareSummary("share-newer");
-  let initialBodyRead = false;
   const lists = deferredInitialList(
     initialBody,
-    () => {
-      initialBodyRead = true;
-    },
     () => okResponse([newer]),
   );
 
   await withShareClient(shareCreationFetch(created, () => lists.next()), async (renderer) => {
-    await waitFor(() => initialBodyRead);
+    await waitFor(() => lists.bodyRead);
     await createShare(renderer);
     await waitFor(() => lists.calls === 2);
     await flush();
     assert.ok(revokeButtonFor(renderer, newer.id));
+    assert.equal(shareRow(renderer, created.id), undefined);
 
     initialBody.resolve([older]);
     await flush();
@@ -363,15 +409,82 @@ test("an older late list cannot replace a newer successful list", async () => {
   });
 });
 
-test("reset prevents a pre-reset list response from restoring cleared shares", async () => {
+test("confirmed insurer recipients survive an older list after send refresh fails", async () => {
   const initialBody = deferred();
-  const stale = shareSummary("share-before-reset");
-  let initialBodyRead = false;
+  const created = shareResult("share-sent");
+  const existing = [shareSummary("share-a"), shareSummary("share-b")];
   const lists = deferredInitialList(
     initialBody,
     () => {
-      initialBodyRead = true;
+      throw new Error("post-mutation refresh failed");
     },
+  );
+  const fetchHandler = shareCreationFetch(
+    created,
+    () => lists.next(),
+    new Map([[`/api/share/${created.id}/send`, { id: created.id, sentTo: [testRecipient] }]]),
+  );
+
+  await withShareClient(fetchHandler, async (renderer) => {
+    await waitFor(() => lists.bodyRead);
+    await createShare(renderer);
+    await waitFor(() => lists.calls === 2);
+    await flush();
+
+    const insurerButton = renderer.root
+      .findAllByType("button")
+      .find((button) => textOf(button).includes(testInsurer.name));
+    assert.ok(insurerButton, textOf(renderer.root));
+    await act(async () => insurerButton.props.onClick());
+    await act(async () => checkboxInputs(renderer)[2].props.onChange({ target: { checked: true } }));
+    await act(async () => buttonsWithText(renderer, "share.sendReport")[0].props.onClick());
+    await waitFor(() => lists.calls === 3);
+
+    initialBody.resolve(existing);
+    await flush();
+    const row = shareRow(renderer, created.id);
+    assert.ok(row);
+    assert.ok(row.findAllByType("span").some((span) => span.props.title === "Daman"));
+  });
+});
+
+test("confirmed revoke wins over a created-share mutation on an older list", async () => {
+  const initialBody = deferred();
+  const created = shareResult("share-revoked");
+  const existing = [shareSummary("share-a"), shareSummary("share-b")];
+  const lists = deferredInitialList(
+    initialBody,
+    () => {
+      throw new Error("post-mutation refresh failed");
+    },
+  );
+  const fetchHandler = shareCreationFetch(
+    created,
+    () => lists.next(),
+    new Map([[`/api/share/${created.id}/revoke`, {}]]),
+  );
+
+  await withShareClient(fetchHandler, async (renderer) => {
+    await waitFor(() => lists.bodyRead);
+    await createShare(renderer);
+    await waitFor(() => lists.calls === 2);
+    await act(async () => buttonsWithText(renderer, "share.revoke")[0].props.onClick());
+    await waitFor(() => lists.calls === 3);
+
+    initialBody.resolve(existing);
+    await flush();
+    const row = shareRow(renderer, created.id);
+    assert.ok(row);
+    assert.match(textOf(row), /share\.status\.revoked/);
+    assert.equal(revokeButtonFor(renderer, created.id), undefined);
+  });
+});
+
+test("reset prevents a pre-reset list response from restoring cleared shares", async () => {
+  const initialBody = deferred();
+  const stale = shareSummary("share-before-reset");
+  const lists = deferredInitialList(
+    initialBody,
     () => {
       throw new Error("post-reset refresh failed");
     },
@@ -383,7 +496,7 @@ test("reset prevents a pre-reset list response from restoring cleared shares", a
     if (url === "/api/share" && (!init.method || init.method === "GET")) return lists.next();
     throw new Error(`Unexpected fetch: ${url}`);
   }, async (renderer) => {
-    await waitFor(() => initialBodyRead);
+    await waitFor(() => lists.bodyRead);
     await act(async () => buttonsWithText(renderer, "share.reset")[0].props.onClick());
     await waitFor(() => lists.calls === 2);
     await flush();
@@ -396,7 +509,7 @@ test("reset prevents a pre-reset list response from restoring cleared shares", a
   }, { confirm: () => true });
 });
 
-test("a confirmed revoke overlays a delayed list when the share exists only in the result", async () => {
+test("a confirmed revoke overlays a delayed post-create list", async () => {
   const delayedBody = deferred();
   const created = shareResult("share-result-only");
   let delayedBodyRead = false;
@@ -421,7 +534,7 @@ test("a confirmed revoke overlays a delayed list when the share exists only in t
     await createShare(renderer);
     await waitFor(() => listCalls === 2);
     await waitFor(() => delayedBodyRead);
-    assert.equal(buttonsWithText(renderer, "share.revoke").length, 1);
+    assert.equal(buttonsWithText(renderer, "share.revoke").length, 2);
 
     await act(async () => buttonsWithText(renderer, "share.revoke")[0].props.onClick());
     await waitFor(() => listCalls === 3);

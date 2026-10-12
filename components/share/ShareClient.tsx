@@ -35,6 +35,22 @@ interface ShareSummary {
   sentTo?: ShareRecipient[];
 }
 
+interface ConfirmedShareMutation {
+  version: number;
+  share?: ShareSummary;
+  sentTo?: ShareRecipient[];
+}
+
+function orderShares(shares: ShareSummary[]): ShareSummary[] {
+  return [...shares].sort(
+    (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+  );
+}
+
+function upsertShare(shares: ShareSummary[], next: ShareSummary): ShareSummary[] {
+  return orderShares([...shares.filter((share) => share.id !== next.id), next]);
+}
+
 function statusOf(s: ShareSummary): "active" | "expired" | "revoked" {
   if (s.revoked) return "revoked";
   return new Date(s.expiresAt).getTime() > Date.now() ? "active" : "expired";
@@ -72,6 +88,7 @@ export default function ShareClient() {
   const sharesRequestVersion = useRef(0);
   const latestAppliedSharesVersion = useRef(0);
   const confirmedRevokedShareIds = useRef(new Set<string>());
+  const confirmedShareMutations = useRef(new Map<string, ConfirmedShareMutation>());
   const fieldKey = SHARE_FIELDS.filter((field) => fields.has(field)).join(",");
 
   useEffect(() => {
@@ -111,8 +128,19 @@ export default function ShareClient() {
       if (res.ok) {
         const nextShares = (await res.json()) as ShareSummary[];
         if (requestVersion <= latestAppliedSharesVersion.current) return;
+        for (const [id, mutation] of confirmedShareMutations.current) {
+          if (mutation.version < requestVersion) confirmedShareMutations.current.delete(id);
+        }
+        const mergedShares = new Map(nextShares.map((share) => [share.id, share]));
+        for (const [id, mutation] of confirmedShareMutations.current) {
+          if (mutation.share && !mergedShares.has(id)) mergedShares.set(id, mutation.share);
+          if (mutation.sentTo) {
+            const share = mergedShares.get(id);
+            if (share) mergedShares.set(id, { ...share, sentTo: mutation.sentTo });
+          }
+        }
         latestAppliedSharesVersion.current = requestVersion;
-        setShares(nextShares.map((share) =>
+        setShares(orderShares(Array.from(mergedShares.values())).map((share) =>
           confirmedRevokedShareIds.current.has(share.id) ? { ...share, revoked: true } : share,
         ));
       }
@@ -164,7 +192,22 @@ export default function ShareClient() {
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setResult(await res.json());
+      const created = (await res.json()) as SharePayload;
+      const createdShare: ShareSummary = {
+        id: created.id,
+        purpose: created.purpose,
+        createdAt: created.createdAt,
+        expiresAt: created.expiresAt,
+        revoked: created.revoked,
+        selectedFields: created.selectedFields,
+        sentTo: created.sentTo ?? [],
+      };
+      confirmedShareMutations.current.set(created.id, {
+        version: sharesRequestVersion.current,
+        share: createdShare,
+      });
+      setShares((current) => upsertShare(current, createdShare));
+      setResult(created);
       setSelectedInsurers(new Set());
       setSendFeedback(null);
       setSendFailed(false);
@@ -229,9 +272,19 @@ export default function ShareClient() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const response = (await res.json()) as { id: string; sentTo: ShareRecipient[] };
+      const existingMutation = confirmedShareMutations.current.get(response.id);
+      const mutationVersion = sharesRequestVersion.current;
+      confirmedShareMutations.current.set(response.id, {
+        ...(existingMutation ?? {}),
+        version: Math.max(existingMutation?.version ?? 0, mutationVersion),
+        sentTo: response.sentTo,
+      });
       setResult((current) =>
         current?.id === response.id ? { ...current, sentTo: response.sentTo } : current,
       );
+      setShares((current) => current.map((share) =>
+        share.id === response.id ? { ...share, sentTo: response.sentTo } : share,
+      ));
       setSelectedInsurers(new Set());
       setConsent(false);
       const names = selected
@@ -254,6 +307,7 @@ export default function ShareClient() {
     await fetch("/api/share/reset", { method: "POST" });
     const resetBarrier = ++sharesRequestVersion.current;
     latestAppliedSharesVersion.current = resetBarrier;
+    confirmedShareMutations.current.clear();
     setResult(null);
     setShares([]);
     setFields(new Set());
