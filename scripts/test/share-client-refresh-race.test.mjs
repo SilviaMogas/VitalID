@@ -93,6 +93,17 @@ function okResponse(body) {
   return { json: async () => body, ok: true, status: 200 };
 }
 
+function deferredResponse(body, onRead) {
+  return {
+    json: () => {
+      onRead();
+      return body.promise;
+    },
+    ok: true,
+    status: 200,
+  };
+}
+
 function textOf(node) {
   return node.children
     .map((child) => (typeof child === "string" || typeof child === "number" ? String(child) : textOf(child)))
@@ -282,14 +293,9 @@ test("an earlier initial list recovers after the post-create refresh fails", asy
     if (url === "/api/share" && (!init.method || init.method === "GET")) {
       listCalls += 1;
       if (listCalls === 1) {
-        return {
-          json: () => {
-            initialBodyRead = true;
-            return initialBody.promise;
-          },
-          ok: true,
-          status: 200,
-        };
+        return deferredResponse(initialBody, () => {
+          initialBodyRead = true;
+        });
       }
       throw new Error("post-create refresh failed");
     }
@@ -326,14 +332,9 @@ test("an older late list cannot replace a newer successful list", async () => {
     if (url === "/api/share" && (!init.method || init.method === "GET")) {
       listCalls += 1;
       if (listCalls === 1) {
-        return {
-          json: () => {
-            initialBodyRead = true;
-            return initialBody.promise;
-          },
-          ok: true,
-          status: 200,
-        };
+        return deferredResponse(initialBody, () => {
+          initialBodyRead = true;
+        });
       }
       return okResponse([newer]);
     }
@@ -365,14 +366,9 @@ test("reset prevents a pre-reset list response from restoring cleared shares", a
     if (url === "/api/share" && (!init.method || init.method === "GET")) {
       listCalls += 1;
       if (listCalls === 1) {
-        return {
-          json: () => {
-            initialBodyRead = true;
-            return initialBody.promise;
-          },
-          ok: true,
-          status: 200,
-        };
+        return deferredResponse(initialBody, () => {
+          initialBodyRead = true;
+        });
       }
       throw new Error("post-reset refresh failed");
     }
@@ -405,16 +401,9 @@ test("a confirmed revoke overlays a delayed list when the share exists only in t
     if (url === "/api/share" && (!init.method || init.method === "GET")) {
       listCalls += 1;
       if (listCalls === 1) return okResponse([]);
-      if (listCalls === 2) {
-        return {
-          json: () => {
-            delayedBodyRead = true;
-            return delayedBody.promise;
-          },
-          ok: true,
-          status: 200,
-        };
-      }
+      if (listCalls === 2) return deferredResponse(delayedBody, () => {
+        delayedBodyRead = true;
+      });
       throw new Error("post-revoke refresh failed");
     }
     throw new Error(`Unexpected fetch: ${url}`);
