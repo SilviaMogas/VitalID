@@ -5,6 +5,7 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import { SectionTitle } from "@/components/vital-id/VitalIdSections";
 import { MascotNote } from "@/components/mascot/MascotNote";
 import { CoachChat } from "./CoachChat";
+import { WellnessArt, type WellnessKind } from "@/components/mascot/WellnessArt";
 import { COACH_AREAS, type CoachArea, type Recommendation } from "@/lib/coach";
 import type { TranslationKey } from "@/lib/i18n";
 import type { GoalId } from "@/lib/onboarding/types";
@@ -18,6 +19,10 @@ const AREA_STYLE: Record<CoachArea, { chip: string }> = {
   progress: { chip: "bg-mint text-brand-deep" },
   mood: { chip: "bg-peach/50 text-ink-2" },
   lifestyle: { chip: "bg-sand text-ink-2" },
+};
+const AREA_ART: Record<CoachArea, WellnessKind> = {
+  activity: "movement", nutrition: "nutrition", sleep: "sleep",
+  progress: "health", mood: "meditation", lifestyle: "hydration",
 };
 
 function AreaIcon({ area, className = "h-5 w-5" }: { area: CoachArea; className?: string }) {
@@ -126,9 +131,7 @@ export function CoachView({
         <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           {COACH_AREAS.map((area) => (
             <div key={area} className="card flex flex-col items-start gap-2.5 p-4">
-              <span className={`grid h-9 w-9 place-items-center rounded-xl ${AREA_STYLE[area].chip}`}>
-                <AreaIcon area={area} />
-              </span>
+              <WellnessArt kind={AREA_ART[area]} size={46} />
               <span className="text-xs font-medium leading-snug text-ink-2">
                 {t(`coach.area.${area}` as TranslationKey)}
               </span>

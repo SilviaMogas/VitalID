@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:community": "node --experimental-strip-types --no-warnings --import ./scripts/test/register-community.mjs --test scripts/test/community-route.test.mjs",
+    "test:wellness": "node --experimental-strip-types --no-warnings --import ./scripts/test/register-wellness.mjs --test scripts/test/wellness-route.test.mjs",
     "test:isolation": "node --experimental-strip-types --no-warnings --import ./scripts/test/register.mjs --test scripts/test/user-data-isolation.test.mjs scripts/test/consent-isolation.test.mjs scripts/test/share-privacy.test.mjs scripts/test/share-client-refresh-race.test.mjs",
     "test:share-client-race": "node --experimental-strip-types --no-warnings --import ./scripts/test/register.mjs --test scripts/test/share-client-refresh-race.test.mjs"
   },

@@ -15,6 +15,9 @@ export const metadata: Metadata = {
   title: { default: "Vital ID — Your portable health identity", template: "%s · Vital ID" },
   description: DESCRIPTION,
   applicationName: "Vital ID",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "Vital ID", statusBarStyle: "default" },
+  icons: { icon: "/icon.svg", apple: "/icons/apple-touch-icon.png" },
   openGraph: {
     type: "website",
     url: SITE_URL,
@@ -49,7 +52,7 @@ const jsonLd = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f4f6f9",
+  themeColor: "#f5f5f7",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

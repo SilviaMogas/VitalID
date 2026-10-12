@@ -11,14 +11,14 @@ export function EmptyDataActions({ showManual = true }: { showManual?: boolean }
       {showManual && (
         <Link
           href="/onboarding?step=4"
-          className="press rounded-full bg-white px-4 py-2 text-sm font-semibold text-alert-deep shadow-card"
+          className="press rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white"
         >
           {t("empty.dashboard.manual")}
         </Link>
       )}
       <Link
         href="/connectors"
-        className="press rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/40"
+        className="press rounded-full bg-brand-soft px-4 py-2 text-sm font-semibold text-brand"
       >
         {t("empty.dashboard.connect")}
       </Link>

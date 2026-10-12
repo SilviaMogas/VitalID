@@ -1,45 +1,30 @@
-# Vital ID — look & feel pass
+# Vital ID — current visual design
 
-Scope: presentation only. No changes to analytics, demo data, share API/store, routes, or types.
+## Visual direction
 
-## Visual concept
-"Health credential, not dashboard." Warm off-white canvas (`#f6f4ef`), deep teal brand
-(`#0f6e66`) with a sand accent (`#c9a86a`) for identity/credential moments, near-black ink.
-One elevated hero per screen (insight hero, credential card, QR result); everything else is
-quieter layered surfaces (`.surface` flat tint vs `.card` lifted) so white cards stop repeating.
-Type: tight tracking on headings, tabular numerals, small-caps eyebrow labels.
+The web experience is Apple-inspired, but Vital ID is not affiliated with Apple.
+It uses the system font stack; no proprietary fonts are bundled. The canvas is
+`#f5f5f7`, ink is `#1d1d1f`, and the Vital ID brand green `#0e7a5f` is retained.
+White grouped cards use 24px corners. Segmented controls are grey with a white
+selected state; the selected sidebar item uses soft green. Mobile navigation is
+translucent. Shared design tokens apply across the screens.
 
-## Splash flow
-`/` (and any core route) is gated client-side by `vitalid.session` in localStorage.
-Without it, `Onboarding` renders full-screen: Splash (brand, tagline, produce crew dancing,
-"Get started"; auto-advances after ~4.5s) → Welcome. `/welcome` always shows the flow so it can
-be replayed in a demo. "Sign out" in the shell clears the flag.
+The section label is **Health** in English and **الصحة** in Arabic.
 
-## Auth flow
-Welcome: brand, "Welcome to Vital ID", "Access your health identity securely", Sign in /
-Sign up (demo-only — show a small note, no real auth), primary "Login as Fatima" which sets
-the session flag and enters the existing dashboard. Desktop = split screen with a live preview
-of the credential card; mobile = stacked.
+## Core screens
 
-## Mascot system
-`components/mascot/Broccoli.tsx` — inline SVG, `state: neutral|happy|alert|encouraging|success`,
-`size`. Eyes/mouth/arms change per state; idle blink + float via CSS. `MascotNote` pairs the
-mascot with one line of microcopy. Used in: Today's insight hero, unusual-metric detail on
-Trends, Share step header, QR result (success), revoked state, recipient page. Supporting crew
-(apple, banana, orange, avocado, strawberry, carrot) in `Crew.tsx`, splash + welcome only.
+- Welcome uses a split layout with a health-identity preview explicitly marked
+  **DEMO**. Sign-up and sign-in use real Supabase authentication, not a
+  demo-only `localStorage` session.
+- The dashboard has a compact heading rather than a painted hero.
+- Settings use grouped rows. Wellness uses private forms for personal records.
+- The Vital ID card has a calmer gradient. Self-reported profile information
+  carries no verification badge.
+- Coach guidance is rule-based; it is not AI and is not a doctor or medical
+  advice.
 
-## Motion approach
-Pure CSS keyframes in `globals.css` (`float`, `sway`, `bounce`, `blink`, `rise`, `pop`), staggered
-via `--i`/`animation-delay`. `.rise` page-entrance utility; card hover lift; button press scale.
-Everything inside `@media (prefers-reduced-motion: no-preference)`; reduced motion = static.
+## Scope
 
-## Components modified
-- `app/globals.css`, `app/layout.tsx` (theme color), `app/welcome/page.tsx` (new)
-- `components/layout/AppShell.tsx` (gate, sign out, nav polish)
-- `components/onboarding/{Splash,Welcome,Onboarding}.tsx` (new)
-- `components/mascot/{Broccoli,Crew,MascotNote}.tsx` (new)
-- `components/dashboard/{Dashboard,InsightCard,MetricCard,StatusBadge}.tsx`
-- `components/trends/TrendsView.tsx`
-- `components/vital-id/{VitalIdView,VitalIdSections}.tsx`
-- `components/share/{ShareClient,SharedViewClient}.tsx` (markup/classes only; fetch/state untouched)
-- `lib/i18n.ts` (new `onboarding.*`, `mascot.*` strings, EN + AR)
+This visual pass does not change authentication or API behavior. The design
+describes the web experience only: it does not claim a native app or offline
+capabilities.

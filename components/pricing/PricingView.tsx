@@ -125,7 +125,7 @@ export function PricingView() {
       </div>
 
       <div className="flex justify-center md:justify-start" role="group" aria-label={t("pricing.interval.label")}>
-        <div className="inline-flex rounded-full border border-line bg-white p-1">
+        <div className="segmented-control">
           {BILLING_INTERVALS.map((value) => (
             <button
               key={value}
@@ -139,7 +139,7 @@ export function PricingView() {
               {t(value === "monthly" ? "pricing.interval.monthly" : "pricing.interval.annual")}
               {value === "annual" && (
                 <span className={`ms-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                  interval === "annual" ? "bg-white/25 text-white" : "bg-mint/60 text-brand-deep"
+                  interval === "annual" ? "bg-brand-soft text-brand" : "bg-mint/60 text-brand-deep"
                 }`}>
                   {t("pricing.annualBadge")}
                 </span>

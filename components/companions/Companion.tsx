@@ -6,17 +6,19 @@ export function Companion({
   mood = "idle",
   size = 64,
   label,
+  animated = false,
   className = "",
 }: {
   name: CompanionName;
   mood?: CompanionMood;
   size?: number;
   label?: string;
+  animated?: boolean;
   className?: string;
 }) {
   return (
     <span
-      className={`companion companion--${mood} inline-block ${className}`}
+      className={`companion ${animated ? `companion--${mood}` : ""} inline-block ${className}`}
       style={{ width: size, height: size }}
     >
       <Image

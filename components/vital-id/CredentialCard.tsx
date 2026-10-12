@@ -96,7 +96,7 @@ export function CredentialCard({
         )}
 
         <div className={`flex flex-wrap gap-2 ${compact ? "mt-4" : "mt-5"}`}>
-          {(["verified", "private", "portable"] as const).map((k) => (
+          {(["profile", "private", "portable"] as const).map((k) => (
             <span key={k} className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium ring-1 ring-white/15">
               <span className="h-1.5 w-1.5 rounded-full bg-mint" />
               {t(`onboarding.pill.${k}` as TranslationKey)}

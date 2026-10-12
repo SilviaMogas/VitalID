@@ -99,7 +99,7 @@ export function MetricCard({ metric, href, index = 0 }: { metric: HealthMetric; 
     </>
   );
 
-  const cls = "card lift rise relative block overflow-hidden p-4 ps-5";
+  const cls = "card lift rise relative block overflow-hidden p-5 ps-6";
   const style = { ["--i" as string]: index + 2 };
   return href ? (
     <Link href={href} className={cls} style={style}>

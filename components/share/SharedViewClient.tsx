@@ -6,7 +6,6 @@ import { nationalityLabel, type TranslationKey } from "@/lib/i18n";
 import { isShareActive, type SharePayload } from "@/lib/sharing";
 import { InsurerMonogram, resolveRecipients } from "@/components/share/InsurerBadge";
 import { LogoMark } from "@/components/layout/Logo";
-import { Broccoli } from "@/components/mascot/Broccoli";
 import { Companion } from "@/components/companions/Companion";
 import {
   EmergencySection,
@@ -78,7 +77,7 @@ export default function SharedViewClient({ id }: { id: string }) {
   if (state === "unavailable" || !payload) {
     return (
       <div className="card mx-auto mt-16 max-w-sm p-8 text-center">
-        <Broccoli state="neutral" size={72} className="anim-float mx-auto" />
+        <LogoMark size={40} className="mx-auto" />
         <p className="mt-4 text-lg font-semibold">{t("share.unavailable")}</p>
       </div>
     );
@@ -95,7 +94,7 @@ export default function SharedViewClient({ id }: { id: string }) {
       </header>
 
       <div className="surface flex items-center gap-3 p-4">
-        <Broccoli state="neutral" size={40} className="anim-float shrink-0" />
+        <LogoMark size={24} className="shrink-0" />
         <p className="text-sm font-medium text-ink-2">{t("mascot.recipient")}</p>
       </div>
 

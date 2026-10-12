@@ -9,7 +9,6 @@ import { useMembership } from "@/components/providers/MembershipProvider";
 import { PlanBadge } from "@/components/membership/PlanBadge";
 import type { TranslationKey } from "@/lib/i18n";
 import { LogoMark } from "@/components/layout/Logo";
-import { Broccoli } from "@/components/mascot/Broccoli";
 import { Onboarding } from "@/components/onboarding/Onboarding";
 import { UserAvatar } from "@/components/layout/UserAvatar";
 import { CONNECTORS_STORAGE_KEY } from "@/lib/connectors-state";
@@ -118,7 +117,7 @@ const NAV: { href: string; key: TranslationKey; icon: ReactNode }[] = [
 /** Mobile floating pill (Thine-style): four tabs + a separate round chat button for the coach. */
 const MOBILE_TABS = ["/", "/trends", "/vital-id", "/more"] as const;
 /** Routes reached from the More hub keep "More" highlighted in the pill. */
-const MORE_CHILDREN = ["/more", "/connectors", "/community", "/share", "/focus"];
+const MORE_CHILDREN = ["/more", "/connectors", "/community", "/share", "/focus", "/wellness"];
 
 export function openTabIntro() {
   window.dispatchEvent(new Event("vitalid:intro"));
@@ -262,19 +261,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-6xl md:flex-row md:gap-8 md:px-8">
+    <div className="app-shell mx-auto flex min-h-dvh w-full flex-col md:max-w-[1440px] md:flex-row">
       {/* Sidebar (desktop) */}
-      <aside className="hidden md:sticky md:top-0 md:flex md:h-dvh md:w-56 md:shrink-0 md:flex-col md:overflow-y-auto md:py-8">
+      <aside className="app-sidebar hidden md:sticky md:top-0 md:flex md:h-dvh md:w-60 md:shrink-0 md:flex-col md:overflow-y-auto md:px-5 md:py-8">
         <Brand />
-        <nav className="mt-8 flex flex-col gap-1">
+        <nav className="mt-10 flex flex-col gap-1.5" aria-label={t("app.name")}>
           {NAV.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`press flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+              aria-current={isActive(item.href) ? "page" : undefined}
+              className={`press flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
                 isActive(item.href)
-                  ? "bg-brand text-white shadow-hero"
-                  : "text-ink-2 hover:bg-white/80"
+                  ? "bg-brand-soft text-brand"
+                  : "text-ink-2 hover:bg-black/[0.035]"
               }`}
             >
               {item.icon}
@@ -283,7 +283,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="mt-auto space-y-4 pt-6">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <PlanBadge />
             {status === "fatima" && <DemoBadge />}
             <LangButton />
@@ -295,9 +295,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               {t("onboarding.signOut")}
             </button>
           </div>
-          <div className="relative hidden ps-1 [@media(min-height:860px)]:block">
-            <Broccoli state="encouraging" size={72} className="anim-float" />
-            <p className="surface -mt-2 inline-block rounded-2xl px-3 py-1.5 text-xs font-medium text-ink-2">
+          <div className="hidden border-t border-line pt-4 [@media(min-height:860px)]:block">
+            <p className="text-xs leading-relaxed text-muted">
               {t("mascot.vitalId")}
             </p>
           </div>
@@ -316,9 +315,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-h-dvh flex-1 flex-col">
+      <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
         {/* Top bar (mobile) — logo + help, like Thine */}
-        <header className="flex items-center justify-between px-5 pt-5 md:hidden">
+        <header className="app-mobile-header flex items-center justify-between px-5 py-4 md:hidden">
           <Brand compact />
           <div className="flex items-center gap-2">
             {status === "fatima" && <DemoBadge />}
@@ -329,7 +328,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 px-5 pb-36 pt-4 md:px-0 md:pb-12 md:pt-8" key={locale}>
+        <main className="app-content mx-auto w-full max-w-[1120px] flex-1 px-5 pb-36 pt-6 md:px-8 md:pb-16 md:pt-10 lg:px-12" key={locale}>
           {children}
         </main>
         <TabIntro />

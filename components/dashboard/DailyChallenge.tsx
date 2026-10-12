@@ -2,7 +2,7 @@
 
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useDailyChallenge } from "@/lib/challenge-state";
-import { Broccoli } from "@/components/mascot/Broccoli";
+import { Companion } from "@/components/companions/Companion";
 import type { Identity } from "@/types";
 
 export function DailyChallenge({ identity }: { identity: Identity }) {
@@ -13,17 +13,16 @@ export function DailyChallenge({ identity }: { identity: Identity }) {
   return (
     <section className="card rise space-y-3 p-5" data-testid="daily-challenge">
       <div className="flex items-start gap-3">
-        <span aria-hidden className="text-2xl">{challenge.icon}</span>
+        <Companion name="dumbbell" size={40} className="shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="eyebrow">{t("challenge.eyebrow")}</p>
           <h2 className="mt-0.5 text-lg font-semibold tracking-tight">{t(challenge.titleKey)}</h2>
         </div>
-        <Broccoli state={completed ? "success" : "encouraging"} size={44} className="shrink-0" />
       </div>
       <p className="text-sm text-ink-2">{t(challenge.bodyKey)}</p>
       {completed ? (
         <p role="status" data-testid="challenge-complete" className="rounded-2xl bg-brand-soft px-4 py-3 text-sm font-medium text-brand-deep">
-          <span aria-hidden>🎉</span> {t("challenge.complete", { name: firstName })}
+          {t("challenge.complete", { name: firstName })}
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-2">

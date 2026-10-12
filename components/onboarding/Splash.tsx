@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { LogoMark } from "@/components/layout/Logo";
-import { Broccoli } from "@/components/mascot/Broccoli";
-import { Apple, Avocado, Banana, Carrot, Orange, Strawberry } from "@/components/mascot/Crew";
+import { Companion } from "@/components/companions/Companion";
+import { WellnessArt } from "@/components/mascot/WellnessArt";
 
 const AUTO_ADVANCE_MS = 3600;
 
@@ -30,14 +30,6 @@ export function Splash({ onLeaving, onDone }: { onLeaving: () => void; onDone: (
       className={`fixed inset-0 z-50 flex flex-col items-center justify-between overflow-hidden bg-canvas px-6 pb-8 pt-14 ${leaving ? "anim-fadeout" : ""}`}
       style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
     >
-      {/* organic backdrop */}
-      <svg aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 400 800">
-        <ellipse cx="60" cy="120" rx="160" ry="120" fill="#e8f5ec" />
-        <ellipse cx="380" cy="640" rx="200" ry="160" fill="#f6f3e9" />
-        <path d="M340 60 c 30 -40 90 -30 80 30 c -40 10 -70 0 -80 -30 z" fill="#b7e4c7" opacity="0.6" className="anim-leaf o-bottom" />
-        <path d="M20 700 c 40 -30 90 -10 70 40 c -40 5 -60 -10 -70 -40 z" fill="#b7e4c7" opacity="0.5" className="anim-leaf o-bottom" style={{ ["--i" as string]: 2 }} />
-      </svg>
-
       <div className="relative flex flex-col items-center text-center">
         <div className="pop" style={{ ["--i" as string]: 0 }}>
           <LogoMark size={64} />
@@ -53,31 +45,19 @@ export function Splash({ onLeaving, onDone }: { onLeaving: () => void; onDone: (
         </p>
       </div>
 
-      {/* the crew */}
-      <div className="relative flex w-full max-w-lg items-end justify-center md:max-w-2xl md:scale-[1.35] md:origin-bottom" style={{ height: 220 }}>
-        <div className="pop absolute bottom-6 start-[2%]" style={{ ["--i" as string]: 3 }}>
-          <Apple className="anim-dance" size={80} />
+      <div className="relative my-8 flex flex-wrap items-center justify-center gap-3">
+        <div className="rounded-3xl border border-orange-100 bg-orange-50 p-3 shadow-card">
+          <WellnessArt kind="nutrition" size={56} />
         </div>
-        <div className="pop absolute bottom-0 start-[16%]" style={{ ["--i" as string]: 5 }}>
-          <Orange className="anim-dance" size={74} />
+        <div className="rounded-3xl border border-line bg-white p-5 shadow-card">
+          <Companion name="heart" size={64} />
         </div>
-        <div className="pop absolute bottom-2" style={{ ["--i" as string]: 2 }}>
-          <Broccoli className="anim-dance" size={130} state="happy" />
+        <div className="rounded-3xl border border-line bg-white p-5 shadow-card">
+          <Companion name="dumbbell" size={64} />
         </div>
-        <div className="pop absolute bottom-8 end-[14%]" style={{ ["--i" as string]: 4 }}>
-          <Banana className="anim-dance" size={82} />
+        <div className="rounded-3xl border border-indigo-100 bg-indigo-50 p-3 shadow-card">
+          <WellnessArt kind="sleep" size={56} />
         </div>
-        <div className="pop absolute bottom-0 end-[1%]" style={{ ["--i" as string]: 6 }}>
-          <Avocado className="anim-dance" size={72} />
-        </div>
-        <div className="pop absolute bottom-0 start-[34%] hidden sm:block" style={{ ["--i" as string]: 7 }}>
-          <Strawberry className="anim-dance" size={56} />
-        </div>
-        <div className="pop absolute bottom-1 end-[33%] hidden sm:block" style={{ ["--i" as string]: 8 }}>
-          <Carrot className="anim-dance" size={58} />
-        </div>
-        <span className="pop absolute start-[28%] top-2 text-lg text-warn" style={{ ["--i" as string]: 6 }}>✦</span>
-        <span className="pop absolute end-[26%] top-6 text-base text-brand" style={{ ["--i" as string]: 8 }}>♪</span>
       </div>
 
       <div className="relative flex w-full max-w-xs flex-col items-center gap-3">

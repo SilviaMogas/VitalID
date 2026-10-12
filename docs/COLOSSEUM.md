@@ -19,6 +19,28 @@ insurance eligibility, WHOOP certification, a private computation of seven days,
 or complete anonymity. A hash, JWT, encrypted JSON blob or conventional signature
 is not presented as a substitute for the BBS proof.
 
+## Separate member-app follow-up (2026-10-12)
+
+Community, private wellness records and PWA web-install metadata were added
+separately to the Vital ID member application. They are not part of the
+isolated Colosseum BBS/devnet demonstration described here, do not change its
+cryptographic provenance or audit baseline, and do not imply that all of the
+application's code was written during the contest period.
+
+The community and wellness flows were exercised locally against real local
+Supabase with two synthetic accounts. This is not production verification. For
+insurer-oriented work, a minimum privacy design is narrowly scoped,
+issuer-attested claims rather than raw records; this is a design criterion, not
+an insurer integration or an insurance decision. The existing BBS work remains
+an isolated synthetic lab: it is not in the member app and does not provide KYC,
+eligibility decisions, claims or payouts. No public devnet transaction receipts
+are claimed.
+
+The member app has standalone web-manifest and icon metadata only. It is not a
+native iOS/Android app and has no offline cache; end-to-end installation has not
+been verified in a fresh/incognito browser. For feature use and setup, see the
+[community and wellness guide](COMMUNITY-WELLNESS.md).
+
 ## Existing code and provenance
 
 The audit baseline and branch parent is
