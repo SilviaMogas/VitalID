@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -69,6 +69,7 @@ export default function ShareClient() {
   const [preview, setPreview] = useState<{ snapshot: SharePayload["snapshot"] } | null>(null);
   const [previewError, setPreviewError] = useState(false);
   const [disclosureConsent, setDisclosureConsent] = useState(false);
+  const sharesRequestVersion = useRef(0);
   const fieldKey = SHARE_FIELDS.filter((field) => fields.has(field)).join(",");
 
   useEffect(() => {
@@ -102,9 +103,13 @@ export default function ShareClient() {
   );
 
   const refreshShares = useCallback(async () => {
+    const requestVersion = ++sharesRequestVersion.current;
     try {
       const res = await fetch("/api/share", { cache: "no-store" });
-      if (res.ok) setShares(await res.json());
+      if (res.ok) {
+        const nextShares = await res.json();
+        if (requestVersion === sharesRequestVersion.current) setShares(nextShares);
+      }
     } catch {
       /* keep current list */
     }
