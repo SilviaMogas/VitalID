@@ -170,6 +170,7 @@ export default function ShareClient() {
       const response = await fetch(`/api/share/${id}/revoke`, { method: "POST" });
       if (!response.ok) throw new Error("Revocation not confirmed");
       if (result?.id === id) setResult({ ...result, revoked: true });
+      setShares((current) => current.map((share) => share.id === id ? { ...share, revoked: true } : share));
       refreshShares();
     } catch {
       setError(t("common.error"));
