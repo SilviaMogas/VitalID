@@ -1,18 +1,19 @@
-import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import {
   SHARE_DURATIONS,
   SHARE_FIELDS,
   SHARE_PURPOSES,
   buildSnapshot,
+  normalizeRecipientUserId,
+  projectSharePayload,
   type ShareDuration,
   type ShareField,
   type SharePayload,
   type SharePurpose,
 } from '@/lib/sharing';
 import { resolveUserData } from '@/lib/user-data';
-import { DEMO_USER_KEY, getCurrentUserKey } from '@/lib/membership/session';
 import { createShare, listShares } from '@/lib/share-store';
+import { getShareApiUser, isSameOrigin, shareJson } from '@/lib/share-api';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -38,56 +39,92 @@ function summarize(p: SharePayload) {
   };
 }
 
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value)
+      .filter(([, item]) => item !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right));
+    return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
 export async function POST(req: Request) {
+  if (!isSameOrigin(req)) return shareJson({ error: 'unavailable' }, 403);
+  const user = await getShareApiUser();
+
   let body: unknown;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'invalid JSON' }, { status: 400 });
+    return shareJson({ error: 'invalid request' }, 400);
   }
-  const { purpose, selectedFields, durationMinutes } = (body ?? {}) as {
+  const { purpose, selectedFields, durationMinutes, recipientUserId, expectedSnapshot } = (body ?? {}) as {
     purpose?: SharePurpose;
     selectedFields?: ShareField[];
     durationMinutes?: ShareDuration;
+    recipientUserId?: unknown;
+    expectedSnapshot?: unknown;
   };
-  if (!purpose || !SHARE_PURPOSES.includes(purpose)) {
-    return NextResponse.json({ error: 'invalid purpose' }, { status: 400 });
-  }
+  const normalizedRecipientUserId = normalizeRecipientUserId(recipientUserId);
   if (
+    !purpose ||
+    !SHARE_PURPOSES.includes(purpose) ||
     !Array.isArray(selectedFields) ||
     selectedFields.length === 0 ||
-    !selectedFields.every((f) => SHARE_FIELDS.includes(f))
+    !selectedFields.every((f) => typeof f === 'string' && SHARE_FIELDS.includes(f as ShareField)) ||
+    new Set(selectedFields).size !== selectedFields.length ||
+    !normalizedRecipientUserId
   ) {
-    return NextResponse.json({ error: 'invalid selectedFields' }, { status: 400 });
+    return shareJson({ error: 'invalid request' }, 400);
   }
   if (!durationMinutes || !SHARE_DURATIONS.includes(durationMinutes)) {
-    return NextResponse.json({ error: 'invalid durationMinutes' }, { status: 400 });
+    return shareJson({ error: 'invalid request' }, 400);
   }
 
-  const now = new Date();
-  const [{ snapshot: full, owner }, ownerKey] = await Promise.all([resolveUserData(), getCurrentUserKey()]);
-  if (owner !== 'member' || ownerKey === DEMO_USER_KEY) {
-    return NextResponse.json({ error: 'Demo data cannot be shared. Sign in to share your own readings.' }, { status: 403 });
+  try {
+    const { snapshot: full, owner } = await resolveUserData();
+    if (owner !== 'member') return shareJson({ error: 'unavailable' }, 403);
+    if (!user) return shareJson({ error: 'unavailable' }, 401);
+    const snapshot = buildSnapshot(full, selectedFields);
+    if (
+      !expectedSnapshot ||
+      typeof expectedSnapshot !== 'object' ||
+      Array.isArray(expectedSnapshot) ||
+      canonicalJson(expectedSnapshot) !== canonicalJson(snapshot)
+    ) {
+      return shareJson({ error: 'unavailable' }, 409);
+    }
+    const now = new Date();
+    const payload: SharePayload = {
+      id: randomId(),
+      createdAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + durationMinutes * 60_000).toISOString(),
+      revoked: false,
+      purpose,
+      selectedFields,
+      sharedBy: full.identity.fullName,
+      ownerKey: user.id,
+      recipientUserId: normalizedRecipientUserId,
+      sharedByLocalized: full.identity.localizedName,
+      snapshot,
+    };
+    await createShare(payload);
+    return shareJson(projectSharePayload(payload), 201);
+  } catch {
+    return shareJson({ error: 'unavailable' }, 500);
   }
-  const payload: SharePayload = {
-    id: randomId(),
-    createdAt: now.toISOString(),
-    expiresAt: new Date(now.getTime() + durationMinutes * 60_000).toISOString(),
-    revoked: false,
-    purpose,
-    selectedFields,
-    sharedBy: full.identity.fullName,
-    ownerKey,
-    sharedByLocalized: full.identity.localizedName,
-    snapshot: buildSnapshot(full, selectedFields),
-  };
-  await createShare(payload);
-  return NextResponse.json(payload, { status: 201, headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function GET() {
-  const ownerKey = await getCurrentUserKey();
-  const shares = (await listShares()).filter((s) => (s.ownerKey ?? DEMO_USER_KEY) === ownerKey);
-  shares.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return NextResponse.json(shares.map(summarize), { headers: { 'Cache-Control': 'no-store' } });
+  const user = await getShareApiUser();
+  if (!user) return shareJson({ error: 'unavailable' }, 401);
+  try {
+    const shares = (await listShares()).filter((s) => s.ownerKey === user.id);
+    shares.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return shareJson(shares.map(summarize));
+  } catch {
+    return shareJson({ error: 'unavailable' }, 500);
+  }
 }

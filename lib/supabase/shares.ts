@@ -30,8 +30,8 @@ interface VitalIdShareRow {
 }
 
 const LIST_PAGE_SIZE = 500;
-type SummaryRow = Omit<VitalIdShareRow, 'snapshot'> & { sentTo?: Json; ownerKey?: string | null; sharedBy?: string | null };
-const SUMMARY_COLUMNS = 'id, token, created_at, expires_at, revoked, purpose, selected_fields, sentTo:snapshot->sentTo, ownerKey:snapshot->>ownerKey, sharedBy:snapshot->>sharedBy';
+type SummaryRow = Omit<VitalIdShareRow, 'snapshot'> & { sentTo?: Json; ownerKey?: string | null; sharedBy?: string | null; recipientUserId?: string | null };
+const SUMMARY_COLUMNS = 'id, token, created_at, expires_at, revoked, purpose, selected_fields, sentTo:snapshot->sentTo, ownerKey:snapshot->>ownerKey, sharedBy:snapshot->>sharedBy, recipientUserId:snapshot->>recipientUserId';
 
 function fromRow(row: VitalIdShareRow): VitalIdShareRecord {
   return {
@@ -163,6 +163,7 @@ export class SupabaseShareStore implements ShareStore {
       sentTo: row.sentTo,
       ownerKey: row.ownerKey ?? undefined,
       sharedBy: row.sharedBy ?? undefined,
+      recipientUserId: row.recipientUserId ?? undefined,
     }));
   }
 

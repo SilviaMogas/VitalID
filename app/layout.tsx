@@ -5,7 +5,6 @@ import { MembershipProvider } from "@/components/providers/MembershipProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { VoiceProvider } from "@/components/providers/VoiceProvider";
 import { AppShell } from "@/components/layout/AppShell";
-import { Analytics } from "@vercel/analytics/next";
 
 const SITE_URL = "https://www.vitalid.site";
 const DESCRIPTION =
@@ -70,7 +69,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </MembershipProvider>
           </AuthProvider>
         </LocaleProvider>
-        <Analytics />
       </body>
     </html>
   );

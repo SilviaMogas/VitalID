@@ -105,16 +105,22 @@ test('Fatima demo cannot become a recipient snapshot', async () => {
 
 test('share API rejects a demo before persistence and allows own member readings', async () => {
   const { POST } = await import('@/app/api/share/route');
-  const request = () => new Request('https://example.test/api/share', {
+  const makeRequest = (expectedSnapshot) => new Request('https://example.test/api/share', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ purpose: 'doctor', selectedFields: ['identity', 'currentSignals'], durationMinutes: 60 }),
+    body: JSON.stringify({ purpose: 'doctor', selectedFields: ['identity', 'currentSignals'], durationMinutes: 60, recipientUserId: '00000000-0000-4000-8000-00000000000b', expectedSnapshot }),
   });
   globalThis.__createdShare = null;
   globalThis.__testUser = null;
-  assert.equal((await POST(request())).status, 403);
+  assert.equal((await POST(makeRequest())).status, 403);
   assert.equal(globalThis.__createdShare, null);
   globalThis.__testUser = A;
-  const response = await POST(request());
+  const { POST: preview } = await import('@/app/api/share/preview/route');
+  const previewResponse = await preview(new Request('https://example.test/api/share/preview', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ selectedFields: ['identity', 'currentSignals'] }),
+  }));
+  const { snapshot } = await previewResponse.json();
+  const response = await POST(makeRequest(snapshot));
   assert.equal(response.status, 201);
   assert.equal(globalThis.__createdShare.ownerKey, A.id);
   assert.deepEqual(globalThis.__createdShare.snapshot.currentSignals.map((m) => m.source), ['manual', 'manual']);

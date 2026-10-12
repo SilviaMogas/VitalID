@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
 import { LockedFeature } from "@/components/membership/LockedFeature";
 import { LockIcon, UpgradeChip } from "@/components/membership/UpgradeChip";
@@ -47,6 +48,7 @@ const STATUS_BADGE: Record<ReturnType<typeof statusOf>, string> = {
 
 export default function ShareClient() {
   const { t, d, locale } = useLocale();
+  const { account } = useAuth();
   const { hasFeature } = useMembership();
   const canPickExpiry = hasFeature("configurableExpiry");
   const [purpose, setPurpose] = useState<SharePurpose | null>(null);
@@ -63,6 +65,33 @@ export default function ShareClient() {
   const [sendFailed, setSendFailed] = useState(false);
   const [consent, setConsent] = useState(false);
   const [consentMissing, setConsentMissing] = useState(false);
+  const [recipientUserId, setRecipientUserId] = useState("");
+  const [preview, setPreview] = useState<{ snapshot: SharePayload["snapshot"] } | null>(null);
+  const [previewError, setPreviewError] = useState(false);
+  const [disclosureConsent, setDisclosureConsent] = useState(false);
+  const fieldKey = Array.from(fields).sort().join(",");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setPreview(null);
+    setPreviewError(false);
+    setDisclosureConsent(false);
+    if (!fieldKey) return () => controller.abort();
+    void fetch("/api/share/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ selectedFields: fieldKey.split(",") }),
+      cache: "no-store",
+      signal: controller.signal,
+    }).then(async (res) => {
+      if (!res.ok) throw new Error("Preview unavailable");
+      const data = await res.json();
+      if (!controller.signal.aborted) setPreview(data);
+    }).catch(() => {
+      if (!controller.signal.aborted) setPreviewError(true);
+    });
+    return () => controller.abort();
+  }, [fieldKey]);
 
   const link = useMemo(
     () =>
@@ -105,6 +134,10 @@ export default function ShareClient() {
       setError(t("share.selectAtLeastOne"));
       return;
     }
+    if (!preview || !disclosureConsent || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(recipientUserId.trim())) {
+      setError(locale === "ar" ? "أدخل معرّف المستلم وراجع البيانات ووافق على المشاركة." : "Enter the recipient’s account ID, review the data and authorize this disclosure.");
+      return;
+    }
     setError(null);
     setBusy(true);
     try {
@@ -115,6 +148,8 @@ export default function ShareClient() {
           purpose: purpose ?? "custom",
           selectedFields: Array.from(fields),
           durationMinutes: duration,
+          recipientUserId: recipientUserId.trim().toLowerCase(),
+          expectedSnapshot: preview.snapshot,
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -131,9 +166,14 @@ export default function ShareClient() {
   }
 
   async function revoke(id: string) {
-    await fetch(`/api/share/${id}/revoke`, { method: "POST" });
-    if (result?.id === id) setResult({ ...result, revoked: true });
-    refreshShares();
+    try {
+      const response = await fetch(`/api/share/${id}/revoke`, { method: "POST" });
+      if (!response.ok) throw new Error("Revocation not confirmed");
+      if (result?.id === id) setResult({ ...result, revoked: true });
+      refreshShares();
+    } catch {
+      setError(t("common.error"));
+    }
   }
 
   async function copyLink() {
@@ -354,10 +394,58 @@ export default function ShareClient() {
 
       {error && <p className="text-sm text-bad">{error}</p>}
 
+      <section className="card space-y-4 p-5">
+        <SectionTitle>{locale === "ar" ? "المستلم والمعاينة الدقيقة" : "Recipient and exact disclosure preview"}</SectionTitle>
+        <p className="text-sm text-muted">
+          {locale === "ar"
+            ? "اطلب معرّف حساب المستلم مباشرةً. الرابط وحده لا يمنح الوصول. هذا لا يتحقق من الهوية المهنية."
+            : "Ask the recipient directly for their VitalID account ID. They must sign in to that exact account; the link alone grants no access. This does not verify their professional identity."}
+        </p>
+        {account && (
+          <p className="break-all text-xs text-muted">
+            {locale === "ar" ? "معرّف حسابك للاستلام: " : "Your own account ID for receiving: "}
+            <span dir="ltr" className="font-mono">{account.userId}</span>
+          </p>
+        )}
+        <label className="block text-sm font-medium">
+          {locale === "ar" ? "معرّف حساب المستلم" : "Recipient account ID"}
+          <input
+            value={recipientUserId}
+            onChange={(e) => { setRecipientUserId(e.target.value); setDisclosureConsent(false); }}
+            dir="ltr"
+            autoComplete="off"
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            className="mt-2 w-full rounded-xl border border-line bg-white p-3 text-sm"
+          />
+        </label>
+        {preview ? (
+          <pre dir="ltr" className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-canvas p-3 text-xs">
+            {JSON.stringify(preview.snapshot, null, 2)}
+          </pre>
+        ) : (
+          <p className="text-sm text-muted">
+            {previewError
+              ? (locale === "ar" ? "المعاينة غير متاحة. المشاركة محظورة." : "Preview unavailable. Sharing is blocked.")
+              : (locale === "ar" ? "اختر حقولاً لتحميل المعاينة." : "Choose fields to load the exact preview.")}
+          </p>
+        )}
+        <label className="flex items-start gap-3 text-sm">
+          <input type="checkbox" checked={disclosureConsent} disabled={!preview} onChange={(e) => setDisclosureConsent(e.target.checked)} className="mt-1 accent-brand" />
+          {locale === "ar"
+            ? "أسمح لهذا الحساب فقط بالاطلاع على البيانات المعروضة، خلال المدة المختارة."
+            : "I authorize only this account to view the data shown above for the selected duration."}
+        </label>
+        <p className="text-xs text-muted">
+          {locale === "ar"
+            ? "الإلغاء يمنع الوصول الجديد ولا يسترجع النسخ التي سبق تنزيلها."
+            : "Revocation blocks new access; it cannot retrieve copies already downloaded."}
+        </p>
+      </section>
+
       <button
         type="button"
         onClick={generate}
-        disabled={busy}
+        disabled={busy || !preview || !disclosureConsent}
         className="press w-full rounded-2xl bg-brand py-3.5 text-sm font-semibold text-white shadow-lift transition hover:bg-brand-deep disabled:opacity-50"
       >
         {busy ? t("share.generating") : t("share.generate")}

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow"><title>VitalID • Independent verifier</title>
+  <link rel="stylesheet" href="/style.css"><script type="module" src="/client.js"></script>
+</head>
+<body>
+  <header><a class="brand" href="/receiver">Vital<span>ID</span></a><span class="eyebrow">INDEPENDENT VERIFIER</span><span class="tag">SYNTHETIC DATA · DEVNET ONLY</span></header>
+  <main>
+    <section class="hero"><p class="eyebrow">An assertion, not a health record.</p><h1>Verify what matters.<br><span>Nothing more.</span></h1><p class="intro">Authenticate an independent recipient session. A one-time challenge binds each BBS presentation to you and to one permission.</p><div class="notice">The demo issuer calculates the condition and signs it. BBS proves possession of that signed assertion, not its underlying computation. This is not a clinical or insurance eligibility check.</div></section>
+    <section class="session card"><div><h2>Your independent recipient session</h2><p>Use a different browser profile or incognito window from the holder. A copied permission reference alone cannot authorize you.</p></div><button id="start">Start recipient session</button><div id="identity" hidden><label for="receiver-code">Your recipient ID — give this to the holder</label><div class="copyrow"><input id="receiver-code" readonly><button id="copy-id" class="secondary">Copy ID</button></div><p id="key-info" class="mono"></p></div></section>
+    <p id="global-status" role="status" aria-live="polite"></p>
+    <div id="workspace" hidden>
+      <section id="receiver">
+        <section class="card"><h2>Permissions addressed to you</h2><p>Only the authenticated recipient can request a challenge or read an explicitly authorized summary.</p><button id="refresh" class="secondary">Refresh permissions</button><div id="receiver-permissions"></div></section>
+        <section class="card"><h2>Verification receipt</h2><p id="verification-status" role="status">No proof verified yet.</p><pre id="verification"></pre></section>
+      </section>
+      <section class="card deployment"><h2>Deployment &amp; trust boundary</h2><div id="deployment"></div><p>Single-process, in-memory research demo. No analytics. No on-chain ZK verification. Public controller and permission references are correlatable; this is not complete anonymity. Revocation prevents future access, not retention of prior copies.</p></section>
+    </div>
+    <footer>Only synthetic credentials are supported. Do not enter real health data, account credentials or wallet recovery phrases.</footer>
+  </main>
+</body>
+</html>

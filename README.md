@@ -32,6 +32,19 @@
 
 ---
 
+## Colosseum 2026 extension — isolated research demo
+
+The [Private proof lab](demos/colosseum/README.md) adds BBS selective disclosure and
+a Solana devnet permission program without replacing this application.
+Only fictional Fátima data is used. See the [provenance and trust model](docs/COLOSSEUM.md),
+[pitch/demo/application drafts](docs/COLOSSEUM-SCRIPTS.md), and the verification report
+in the demo directory before making claims about execution.
+
+The main application's recipient links now require an authenticated, explicitly
+authorized account ID. A link is not a bearer grant. Existing shares without a
+recipient assignment are owner-only. The signup flow auto-confirms email addresses,
+so email alone is **not** treated as verified recipient identity.
+
 ## The problem
 
 Health data is scattered across rings, watches, nutrition apps and medical records. When it matters —
@@ -56,7 +69,7 @@ Golden path: **Dashboard → Trends → Insight → Vital ID → Share → Link 
 
 - **Selective sharing, by design** — pick a purpose (Emergency, Doctor, Travel, Caregiver, Custom); fields are pre-selected but editable. Only those fields are copied server-side.
 - **Temporary + revocable** — 15 min / 1 h / 24 h expiry; revoke instantly; the recipient page re-polls and flips to *"expired or revoked"* live.
-- **Send to UAE insurers** — Daman, GIG Gulf (AXA), Sukoon, ADNIC, Orient, Bupa, Allianz Care, Cigna, MetLife.
+- **Insurer selection metadata** — records the sender's intended insurer selection only. It does not transmit data, deliver a report, grant recipient access, or establish an insurer integration.
 - **Real wearable integration** — **WHOOP OAuth 2.0 (API v2)** with rotating refresh tokens and daily sync; catalogue of 16 providers (Oura, Garmin, Fitbit, Apple Health, MyFitnessPal, Strava, Calm, …) ready for the same flow.
 - **Bilingual, RTL-first** — full English / Arabic UI with right-to-left layout switching.
 - **Real accounts** — Supabase Auth (email + password) with httpOnly cookie sessions and silent token refresh in middleware.
@@ -76,8 +89,8 @@ npm run dev            # → http://localhost:3000
 1. Open `/` → splash → **Login as Fatima**.
 2. **Dashboard** — today's signals and insight.  **Trends** — switch 7D / 30D.
 3. **Vital ID** — the health credential card.
-4. **Share** → purpose *Doctor* → expiry *1 h* → **Generate secure link** → scan the QR or open the link in another tab.
-5. Back on **Share**, click **Revoke** — within ~10 s the recipient tab shows *expired or revoked*.
+4. Fátima's ordinary member-sharing route is deliberately disabled. Use the isolated [Colosseum synthetic proof demo](demos/colosseum/README.md) for its separate sharing flow.
+5. With a real member account and your own data, **Share** requires the intended recipient's authenticated account ID, an exact data preview and explicit authorization. **Revoke** prevents new reads, not retention of downloaded copies.
 6. Toggle **العربية** to see the full RTL experience.
 
 > No keys needed: without env vars the app runs on in-memory stores with the deterministic demo dataset.
