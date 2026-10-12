@@ -24,6 +24,7 @@ import {
 } from "@/lib/sharing";
 import { getInsurer, INSURERS, type InsurerId } from "@/lib/insurers";
 import { InsurerMonogram, resolveRecipients } from "@/components/share/InsurerBadge";
+import { DisclosurePreview } from "@/components/share/DisclosurePreview";
 
 interface ShareSummary {
   id: string;
@@ -82,6 +83,7 @@ export default function ShareClient() {
   const [consent, setConsent] = useState(false);
   const [consentMissing, setConsentMissing] = useState(false);
   const [recipientUserId, setRecipientUserId] = useState("");
+  const [accountCodeFeedback, setAccountCodeFeedback] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ snapshot: SharePayload["snapshot"] } | null>(null);
   const [previewError, setPreviewError] = useState(false);
   const [disclosureConsent, setDisclosureConsent] = useState(false);
@@ -90,6 +92,17 @@ export default function ShareClient() {
   const confirmedRevokedShareIds = useRef(new Set<string>());
   const confirmedShareMutations = useRef(new Map<string, ConfirmedShareMutation>());
   const fieldKey = SHARE_FIELDS.filter((field) => fields.has(field)).join(",");
+  const validRecipient = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(recipientUserId.trim());
+
+  async function copyAccountCode() {
+    if (!account) return;
+    try {
+      await navigator.clipboard.writeText(account.userId);
+      setAccountCodeFeedback(locale === "ar" ? "تم نسخ رمزك." : "Your code is copied.");
+    } catch {
+      setAccountCodeFeedback(locale === "ar" ? "تعذر النسخ. حدد الرمز أدناه وانسخه يدوياً." : "Couldn’t copy. Select the code below and copy it manually.");
+    }
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -173,7 +186,7 @@ export default function ShareClient() {
       setError(t("share.selectAtLeastOne"));
       return;
     }
-    if (!preview || !disclosureConsent || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(recipientUserId.trim())) {
+    if (!preview || !disclosureConsent || !validRecipient) {
       setError(locale === "ar" ? "أدخل معرّف المستلم وراجع البيانات ووافق على المشاركة." : "Enter the recipient’s account ID, review the data and authorize this disclosure.");
       return;
     }
@@ -445,7 +458,7 @@ export default function ShareClient() {
                 key={dur}
                 type="button"
                 disabled={locked}
-                onClick={() => setDuration(locked ? 60 : dur)}
+                onClick={() => { setDuration(locked ? 60 : dur); setDisclosureConsent(false); }}
                 className={`${pill(duration === dur)} ${locked ? "inline-flex items-center gap-1 opacity-60" : ""}`}
               >
                 {t(`share.duration.${dur}` as TranslationKey)}
@@ -463,34 +476,70 @@ export default function ShareClient() {
 
       {error && <p className="text-sm text-bad">{error}</p>}
 
-      <section className="card space-y-4 p-5">
-        <SectionTitle>{locale === "ar" ? "المستلم والمعاينة الدقيقة" : "Recipient and exact disclosure preview"}</SectionTitle>
-        <p className="text-sm text-muted">
+      <section className="card space-y-4 p-5" aria-labelledby="share-recipient-heading">
+        <h2 id="share-recipient-heading" className="text-lg font-semibold">
+          {locale === "ar" ? "٤. من يمكنه فتح الرابط؟" : "4. Who can open this link?"}
+        </h2>
+        <p id="recipient-help" className="text-sm leading-relaxed text-muted">
           {locale === "ar"
-            ? "تحقق من معرّف حساب المستلم عبر قناة مستقلة موثوقة. يجب تسجيل الدخول إلى ذلك الحساب تحديداً؛ الرابط وحده لا يمنح الوصول. الأسماء وعناوين البريد والهوية المهنية غير موثقة هنا."
-            : "Verify the recipient’s account ID through a trusted independent channel. They must sign in to that exact account; the link alone grants no access. Names, emails and professional identities are not verified here."}
+            ? "سيتمكن حساب المستلم الذي تختاره فقط من فتح الرابط عند تسجيل الدخول، بالإضافة إليك. إعادة توجيه الرابط لا تمنح الآخرين الوصول."
+            : "Only the recipient account you choose can open the link when signed in, besides you. Forwarding the link won’t give anyone else access."}
         </p>
-        {account && (
-          <p className="break-all text-xs text-muted">
-            {locale === "ar" ? "معرّف حسابك للاستلام: " : "Your own account ID for receiving: "}
-            <span dir="ltr" className="font-mono">{account.userId}</span>
-          </p>
-        )}
+        <div className="rounded-2xl bg-canvas p-4 text-sm">
+          <p className="font-semibold">{locale === "ar" ? "كيف تحصل على رمز المستلم؟" : "How do I get their code?"}</p>
+          <ol className="mt-2 list-decimal space-y-2 ps-5 text-ink-2">
+            <li>{locale === "ar" ? "اطلب منه تسجيل الدخول إلى Vital ID وفتح صفحة المشاركة." : "Ask them to sign in to Vital ID and open Share."}</li>
+            <li>{locale === "ar" ? "يفتح قسم «استلام البيانات» وينسخ رمز حسابه." : "They open “Receive data” below and copy their account code."}</li>
+            <li>{locale === "ar" ? "تأكد منه عبر وسيلة اتصال تثق بها، ثم الصق الرمز هنا." : "Confirm it with them through a channel you trust, then paste it here."}</li>
+          </ol>
+          <p className="mt-3 text-xs text-muted">{locale === "ar" ? "ليس لدى المستلم حساب؟ عليه إنشاء حساب أولاً. الرمز يحدد الحساب ولا يتحقق من هوية الشخص أو صفته المهنية." : "No account yet? They need to create one first. The code selects an account; it doesn’t verify the person or their professional role."}</p>
+        </div>
         <label className="block text-sm font-medium">
-          {locale === "ar" ? "معرّف حساب المستلم" : "Recipient account ID"}
+          {locale === "ar" ? "رمز حساب المستلم" : "Recipient’s account code"}
           <input
             value={recipientUserId}
             onChange={(e) => { setRecipientUserId(e.target.value); setDisclosureConsent(false); }}
             dir="ltr"
             autoComplete="off"
-            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            spellCheck={false}
+            aria-describedby="recipient-help recipient-format"
+            aria-invalid={Boolean(recipientUserId.trim()) && !validRecipient}
+            placeholder={locale === "ar" ? "الصق رمز حساب المستلم" : "Paste their account code"}
             className="mt-2 w-full rounded-xl border border-line bg-white p-3 text-sm"
           />
         </label>
+        <p id="recipient-format" className={`text-xs ${recipientUserId.trim() && !validRecipient ? "text-bad" : "text-muted"}`}>
+          {recipientUserId.trim() && !validRecipient
+            ? (locale === "ar" ? "الرمز غير مكتمل. انسخ رمز الحساب كاملاً من صفحة المشاركة، وليس البريد الإلكتروني أو رقم Vital ID." : "That code looks incomplete. Copy the full account code from Share, not an email or a Vital ID number.")
+            : (locale === "ar" ? "الصق رمز المستلم، وليس رمز حسابك." : "Paste the recipient’s code, not your own receiving code.")}
+        </p>
+        {account && (
+          <details className="border-t border-line pt-4">
+            <summary className="cursor-pointer text-sm font-semibold text-brand">
+              {locale === "ar" ? "استلام البيانات — رمز حسابك" : "Receive data — your account code"}
+            </summary>
+            <p className="mt-3 text-sm text-muted">{locale === "ar" ? "أرسل هذا الرمز لشخص يريد مشاركة بياناته معك. الرمز وحده لا يتيح له الاطلاع على بياناتك." : "Send this code to someone who wants to share their data with you. The code alone doesn’t let them read your data."}</p>
+            <label className="mt-3 block text-xs text-muted">
+              {locale === "ar" ? "رمز حسابك للاستلام" : "Your receiving code"}
+              <input readOnly value={account.userId} dir="ltr" onFocus={(e) => e.target.select()} className="mt-2 w-full rounded-xl border border-line bg-canvas p-3 font-mono text-xs text-ink" />
+            </label>
+            <button type="button" onClick={copyAccountCode} className="press mt-3 rounded-xl bg-brand-soft px-4 py-2 text-sm font-semibold text-brand">
+              {locale === "ar" ? "نسخ رمزي" : "Copy my code"}
+            </button>
+            <p role="status" className="mt-2 text-xs text-muted">{accountCodeFeedback}</p>
+          </details>
+        )}
+      </section>
+
+      <section className="card space-y-4 p-5" aria-labelledby="share-review-heading">
+        <div>
+          <h2 id="share-review-heading" className="text-lg font-semibold">
+            {locale === "ar" ? "٥. راجع ما ستشاركه" : "5. Review what you’re sharing"}
+          </h2>
+          <p className="mt-2 text-sm text-muted">{locale === "ar" ? "هذه البيانات فقط هي التي ستظهر في الرابط. افتح كل قسم للمراجعة، أو عد إلى الخطوة ٢ لإزالة أي فئة." : "Only the data below will be included. Open each section to review it, or go back to step 2 to remove a category."}</p>
+        </div>
         {preview ? (
-          <pre dir="ltr" className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-canvas p-3 text-xs">
-            {JSON.stringify(preview.snapshot, null, 2)}
-          </pre>
+          <DisclosurePreview snapshot={preview.snapshot} />
         ) : (
           <p className="text-sm text-muted">
             {previewError
@@ -498,11 +547,14 @@ export default function ShareClient() {
               : (locale === "ar" ? "اختر حقولاً لتحميل المعاينة." : "Choose fields to load the exact preview.")}
           </p>
         )}
-        <label className="flex items-start gap-3 text-sm">
-          <input type="checkbox" checked={disclosureConsent} disabled={!preview} onChange={(e) => setDisclosureConsent(e.target.checked)} className="mt-1 accent-brand" />
+        <p className="rounded-xl bg-canvas p-3 text-sm font-medium">
+          {locale === "ar" ? "مدة الوصول: " : "Access lasts: "}{t(`share.duration.${duration}` as TranslationKey)}
+        </p>
+        <label className="flex items-start gap-3 text-sm leading-relaxed">
+          <input type="checkbox" checked={disclosureConsent} disabled={!preview || !validRecipient} onChange={(e) => setDisclosureConsent(e.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-brand" />
           {locale === "ar"
-            ? "أسمح لهذا الحساب فقط بالاطلاع على البيانات المعروضة، خلال المدة المختارة."
-            : "I authorize only this account to view the data shown above for the selected duration."}
+            ? "راجعت البيانات وأسمح لحساب المستلم هذا بالاطلاع عليها خلال المدة المحددة."
+            : "I’ve reviewed this data and allow this recipient account to view it for the selected duration."}
         </label>
         <p className="text-xs text-muted">
           {locale === "ar"
@@ -514,11 +566,20 @@ export default function ShareClient() {
       <button
         type="button"
         onClick={generate}
-        disabled={busy || !preview || !disclosureConsent}
+        disabled={busy || !preview || !disclosureConsent || !validRecipient}
         className="press w-full rounded-2xl bg-brand py-3.5 text-sm font-semibold text-white shadow-lift transition hover:bg-brand-deep disabled:opacity-50"
       >
         {busy ? t("share.generating") : t("share.generate")}
       </button>
+      {(!validRecipient || !preview || !disclosureConsent) && (
+        <p className="text-center text-xs text-muted" role="status">
+          {!validRecipient
+            ? (locale === "ar" ? "أضف رمز حساب المستلم في الخطوة ٤ للمتابعة." : "Add the recipient’s account code in step 4 to continue.")
+            : !preview
+              ? (locale === "ar" ? "اختر البيانات وانتظر تحميل المعاينة." : "Choose your data and wait for the preview to load.")
+              : (locale === "ar" ? "راجع البيانات وحدد مربع الموافقة لإنشاء الرابط." : "Review the data and tick the confirmation to create your link.")}
+        </p>
+      )}
 
       {/* Result card */}
       {result && (
