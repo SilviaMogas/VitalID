@@ -7,12 +7,12 @@ import { DEMO_USER_KEY } from '@/lib/membership/constants';
 /**
  * Adapter that persists Chat B's `SharePayload` in `vital_id_shares` via
  * `SupabaseShareStore`. The public share id doubles as the row `token`;
- * `sharedBy` / `sharedByLocalized` ride along inside the stored snapshot and
- * are split back out on read; `sources` / `lastUpdated` are non-health
- * metadata that `buildSnapshot` always includes for the recipient view.
+ * `sharedBy` / `sharedByLocalized` / `recipientUserId` ride along inside the stored snapshot and
+ * are split back out on read. Recipient projections are rebuilt from selected
+ * fields at the API boundary rather than trusting stored snapshot contents.
  */
 
-const META_KEYS = ['sharedBy', 'sharedByLocalized', 'ownerKey', 'sentTo', 'sources', 'lastUpdated'] as const;
+const META_KEYS = ['sharedBy', 'sharedByLocalized', 'ownerKey', 'recipientUserId', 'sentTo', 'sources', 'lastUpdated'] as const;
 
 interface StoreGlobal {
   __vitalIdSupabaseAdapter?: SupabaseShareStore;
@@ -35,17 +35,20 @@ function toPayload(share: {
   sentTo?: Json;
   ownerKey?: string;
   sharedBy?: string;
+  recipientUserId?: string;
 }): SharePayload {
   const {
     sharedBy: snapshotSharedBy,
     sharedByLocalized,
     ownerKey: snapshotOwnerKey,
+    recipientUserId: snapshotRecipientUserId,
     sentTo: snapshotSentTo,
     ...rest
   } = share.snapshot ?? {};
   const sentTo = share.sentTo ?? snapshotSentTo;
   const ownerKey = share.ownerKey ?? snapshotOwnerKey;
   const sharedBy = share.sharedBy ?? snapshotSharedBy;
+  const recipientUserId = share.recipientUserId ?? snapshotRecipientUserId;
   return {
     id: share.token,
     createdAt: share.createdAt,
@@ -57,6 +60,7 @@ function toPayload(share: {
     ) as ShareField[],
     sharedBy: typeof sharedBy === 'string' ? sharedBy : '',
     ownerKey: typeof ownerKey === 'string' ? ownerKey : undefined,
+    recipientUserId: typeof recipientUserId === 'string' ? recipientUserId : undefined,
     sharedByLocalized: (sharedByLocalized ?? undefined) as SharePayload['sharedByLocalized'],
     sentTo: Array.isArray(sentTo) ? (sentTo as unknown as ShareRecipient[]) : [],
     snapshot: rest as SharePayload['snapshot'],
@@ -68,6 +72,7 @@ export async function createShare(p: SharePayload): Promise<void> {
     ...(p.snapshot as Record<string, Json>),
     sharedBy: p.sharedBy,
     ownerKey: p.ownerKey ?? null,
+    recipientUserId: p.recipientUserId ?? null,
     sharedByLocalized: (p.sharedByLocalized ?? null) as Json,
     sentTo: (p.sentTo ?? []) as unknown as Json,
   };

@@ -10,7 +10,7 @@ const STUBS = {
   'next/server':
     'export const NextResponse = { json: (body, init) => Response.json(body, init), redirect: (url, status = 307) => Response.redirect(String(url), status) }; export class NextRequest extends Request {}',
   '@/lib/membership/session': 'export const DEMO_USER_KEY = "fatima"; export async function getCurrentUserKey(){ return globalThis.__testUser?.id ?? DEMO_USER_KEY; }',
-  '@/lib/share-store': 'export async function createShare(p){ globalThis.__createdShare = p; } export async function listShares(){ return []; }',
+  '@/lib/share-store': 'const shares = () => (globalThis.__testShares ??= new Map()); export async function createShare(p){ globalThis.__createdShare = p; shares().set(p.id, p); } export async function getShare(id){ return shares().get(id) ?? null; } export async function listShares(){ return Array.from(shares().values()); } export async function revokeShare(id){ const p = shares().get(id); if(!p) return false; shares().set(id, { ...p, revoked: true }); return true; } export async function setShareRecipients(id, sentTo){ const p = shares().get(id); if(!p) return null; const updated = { ...p, sentTo }; shares().set(id, updated); return updated; } export async function clearForOwner(ownerKey){ for(const [id, p] of shares()) if(p.ownerKey === ownerKey) shares().delete(id); }',
   'server-only': 'export {};',
   react: 'export const cache = (fn) => fn;',
   'next/headers':

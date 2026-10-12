@@ -33,7 +33,11 @@ export default function SharedViewClient({ id }: { id: string }) {
         setPayload(null);
         return;
       }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        setState("unavailable");
+        setPayload(null);
+        return;
+      }
       const p = (await res.json()) as SharePayload;
       if (!isShareActive(p)) {
         setState("unavailable");
@@ -43,7 +47,8 @@ export default function SharedViewClient({ id }: { id: string }) {
       setPayload(p);
       setState("active");
     } catch {
-      /* transient error — keep current state */
+      setState("unavailable");
+      setPayload(null);
     }
   }, [id]);
 
@@ -101,7 +106,7 @@ export default function SharedViewClient({ id }: { id: string }) {
           <p className="text-xs text-muted">{t("companion.shieldNote")}</p>
         </div>
         <div className="mt-3 divide-y divide-line">
-          <Row label={t("share.sharedBy")}>{sharedBy}</Row>
+          {sharedBy && <Row label={t("share.sharedBy")}>{sharedBy}</Row>}
           <Row label={t("share.purposeLabel")}>
             {t(`share.purpose.${payload.purpose}` as TranslationKey)}
           </Row>
