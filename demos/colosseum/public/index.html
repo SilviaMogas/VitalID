@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>VitalID • Private proof lab</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/client.js"></script>
+</head>
+<body>
+  <header><a class="brand" href="/">Vital<span>ID</span></a><span class="eyebrow">PRIVATE PROOF LAB</span><span class="tag">SYNTHETIC DATA · DEVNET ONLY</span></header>
+  <main>
+    <section class="hero">
+      <p class="eyebrow">A smaller disclosure. A clearer permission.</p>
+      <h1>Share the proof.<br><span>Not the whole picture.</span></h1>
+      <p class="intro">Fátima’s fictional health passport, with a BBS selective-disclosure proof and a separate, revocable permission on Solana devnet.</p>
+      <div class="notice">Research prototype — not medical evidence, insurance eligibility, WHOOP certification or complete anonymity.</div>
+    </section>
+    <section class="session card">
+      <div><h2>Your independent demo session</h2><p>Generate a browser-held control key. Open another browser profile or incognito window for the recipient. Keys and permissions are not shared with other visitors.</p></div>
+      <button id="start">Start isolated session</button>
+      <div id="identity" hidden><label for="receiver-code">Your recipient ID — give this to the holder</label><div class="copyrow"><input id="receiver-code" readonly><button id="copy-id" class="secondary">Copy ID</button></div><p id="key-info" class="mono"></p></div>
+    </section>
+    <p id="global-status" role="status" aria-live="polite"></p>
+    <div id="workspace" hidden>
+      <nav class="tabs" aria-label="Demo role"><button id="tab-holder" aria-pressed="true">1 / Fátima · holder</button><button id="tab-receiver" aria-pressed="false">2 / Recipient · verifier</button></nav>
+      <section id="holder">
+        <div class="split">
+          <section class="card">
+            <div class="person"><img src="/fatima.svg" width="64" height="64" alt="Fátima’s fictional avatar"><div><span class="tag">FICTIONAL PERSONA</span><h2>Fátima’s permission</h2></div></div>
+            <p>The issuer reuses VitalID’s bundled demo records. It signs whether at least seven distinct days exist within the stated thirty-day window.</p>
+            <label for="recipient">Authenticated recipient ID</label><input id="recipient" placeholder="Paste the other session’s recipient ID" autocomplete="off">
+            <label for="mode">What do you want to share?</label><select id="mode"><option value="proof">Minimal proof only — no medical summary</option><option value="summary">Separate private summary permission</option></select>
+            <fieldset id="summary-fields" hidden><legend>Explicit summary fields</legend><label class="check"><input id="field-identity" type="checkbox"> Fictional full name</label><label class="check"><input id="field-healthProfile" type="checkbox"> Fictional height and weight</label></fieldset>
+            <div class="preview"><h3>Exact recipient payload preview</h3><pre id="preview"></pre><p>Proof mode reveals only the assertion and verification metadata. It never unlocks the summary.</p></div>
+            <label class="check"><input id="consent" type="checkbox"> I authorize only this recipient and this selection, for 15 minutes.</label>
+            <button id="create">Create &amp; sign devnet permission</button>
+          </section>
+          <section class="card explainer"><span class="eyebrow">TWO INDEPENDENT CHECKS</span><h2>What the proof actually means</h2>
+            <div class="step"><b>01</b><div><h3>BBS · off-chain</h3><p>A real zero-knowledge proof of a signed attribute, hiding the name and daily measurements. The issuer calculates the seven-day condition — BBS does not prove that calculation privately.</p></div></div>
+            <div class="step"><b>02</b><div><h3>Solana · devnet</h3><p>A random permission reference, control public key, expiry and revocation flag. No health data or health-data hashes are written on-chain.</p></div></div>
+            <div class="step"><b>03</b><div><h3>You · authorization</h3><p>Your browser-held Ed25519 key signs the transaction and the proof’s challenge context. The fee sponsor cannot revoke your on-chain permission.</p></div></div>
+            <p class="notice">Revocation stops new access. It cannot retrieve copies already downloaded. Consent withdrawal, WHOOP disconnection and data deletion are separate actions in the main product.</p>
+          </section>
+        </div>
+        <section class="card"><h2>Your permissions</h2><p>Creating is not active until a real confirmed devnet receipt and matching account are checked.</p><div id="owner-permissions"></div></section>
+        <section class="card"><h2>Derive a selective proof in this browser</h2><p>Ask the recipient to create a one-time challenge, then paste its ID. The full signed credential stays in the holder context. Review the exact presentation before explicitly sending it.</p><label for="challenge">Recipient’s challenge ID</label><input id="challenge" autocomplete="off"><button id="present">Receive credential &amp; preview BBS proof</button><pre id="holder-result" aria-live="polite"></pre><button id="send-presentation" hidden>Authorize &amp; send this presentation only</button></section>
+      </section>
+      <section id="receiver" hidden>
+        <section class="card"><h2>Permissions addressed to you</h2><p>Your authenticated demo session is required. Possessing a public reference or URL does not grant access.</p><button id="refresh" class="secondary">Refresh permissions</button><div id="receiver-permissions"></div></section>
+        <section class="card"><h2>Verification receipt</h2><p id="verification-status" role="status">No proof verified yet.</p><pre id="verification"></pre></section>
+      </section>
+      <section class="card deployment"><h2>Deployment &amp; trust boundary</h2><div id="deployment"></div><p>This is a single-process, in-memory demonstration. Restarting it invalidates all sessions and challenges. Browser keys last only for the current page; refreshing loses control. Do not use real data or funds. The VitalID Demo issuer is trusted for its synthetic assertion; this is not a production wallet or identity system.</p></section>
+    </div>
+    <footer>Built on the existing VitalID demo. New Colosseum work is identified in the repository’s provenance notes. No analytics, third-party fonts or remote context resolution.</footer>
+  </main>
+</body>
+</html>
