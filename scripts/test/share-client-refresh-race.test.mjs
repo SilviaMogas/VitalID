@@ -93,6 +93,40 @@ function okResponse(body) {
   return { json: async () => body, ok: true, status: 200 };
 }
 
+function deferredResponse(body, onRead) {
+  return {
+    json: () => {
+      onRead();
+      return body.promise;
+    },
+    ok: true,
+    status: 200,
+  };
+}
+
+function deferredInitialList(body, onRead, nextResponse) {
+  let calls = 0;
+  return {
+    get calls() {
+      return calls;
+    },
+    next() {
+      calls += 1;
+      return calls === 1 ? deferredResponse(body, onRead) : nextResponse(calls);
+    },
+  };
+}
+
+function shareCreationFetch(result, listResponse) {
+  return async (input, init = {}) => {
+    const url = String(input);
+    if (url === "/api/share/preview") return okResponse({ snapshot: result.snapshot });
+    if (url === "/api/share" && init.method === "POST") return okResponse(result);
+    if (url === "/api/share" && (!init.method || init.method === "GET")) return listResponse();
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+}
+
 function textOf(node) {
   return node.children
     .map((child) => (typeof child === "string" || typeof child === "number" ? String(child) : textOf(child)))
@@ -138,18 +172,79 @@ const activeShare = {
   selectedFields: ["identity"],
 };
 
-test("stale active refresh cannot undo confirmed revoke after a failed latest refresh", async () => {
-  const originalFetch = globalThis.fetch;
-  const staleBody = deferred();
-  let mountBodyRead = false;
-  let listCalls = 0;
-  let renderer;
-  const result = {
-    ...activeShare,
+function shareSummary(id) {
+  return { ...activeShare, id };
+}
+
+function shareResult(id) {
+  return {
+    ...shareSummary(id),
     snapshot: { identity: { fullName: "Owner" } },
   };
+}
 
-  globalThis.fetch = async (input, init = {}) => {
+function shareRow(renderer, id) {
+  const idLabel = renderer.root.findAllByType("span").find((span) => textOf(span) === id);
+  return idLabel?.parent?.parent?.parent;
+}
+
+function revokeButtonFor(renderer, id) {
+  const row = shareRow(renderer, id);
+  return buttonsWithText(renderer, "share.revoke").find((button) => button.parent.parent === row);
+}
+
+async function createShare(renderer) {
+  const [fieldCheckbox] = checkboxInputs(renderer);
+  await act(async () => fieldCheckbox.props.onChange({}));
+  await flush();
+
+  const recipientInput = renderer.root
+    .findAllByType("input")
+    .find((input) => input.props.type !== "checkbox");
+  await act(async () => {
+    recipientInput.props.onChange({
+      target: { value: "00000000-0000-4000-8000-00000000000b" },
+    });
+  });
+  await act(async () => {
+    checkboxInputs(renderer)[1].props.onChange({ target: { checked: true } });
+  });
+
+  const generateButton = buttonsWithText(renderer, "share.generate").find((button) => !button.props.disabled);
+  assert.ok(generateButton);
+  await act(async () => generateButton.props.onClick());
+}
+
+async function withShareClient(fetchHandler, run, { confirm = () => true } = {}) {
+  const originalFetch = globalThis.fetch;
+  const originalWindow = globalThis.window;
+  let renderer;
+  globalThis.fetch = fetchHandler;
+  globalThis.window = {
+    ...(originalWindow ?? {}),
+    confirm,
+    location: originalWindow?.location ?? { origin: "http://localhost" },
+  };
+  try {
+    await act(async () => {
+      renderer = create(React.createElement(ShareClient));
+    });
+    await run(renderer);
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+    globalThis.fetch = originalFetch;
+    if (originalWindow === undefined) delete globalThis.window;
+    else globalThis.window = originalWindow;
+  }
+}
+
+test("stale active refresh cannot undo confirmed revoke after a failed latest refresh", async () => {
+  const staleBody = deferred();
+  const result = shareResult(activeShare.id);
+  let mountBodyRead = false;
+  let listCalls = 0;
+
+  await withShareClient(async (input, init = {}) => {
     const url = String(input);
     if (url === "/api/share/preview") return okResponse({ snapshot: result.snapshot });
     if (url === "/api/share" && init.method === "POST") return okResponse(result);
@@ -168,47 +263,16 @@ test("stale active refresh cannot undo confirmed revoke after a failed latest re
       if (listCalls === 2) return okResponse([activeShare]);
       throw new Error("post-revoke refresh failed");
     }
-    if (url === "/api/share/share-race-1/revoke") return okResponse({});
+    if (url === `/api/share/${activeShare.id}/revoke`) return okResponse({});
     throw new Error(`Unexpected fetch: ${url}`);
-  };
-
-  try {
-    await act(async () => {
-      renderer = create(React.createElement(ShareClient));
-    });
+  }, async (renderer) => {
     await waitFor(() => mountBodyRead);
-
-    const [fieldCheckbox] = checkboxInputs(renderer);
-    await act(async () => {
-      fieldCheckbox.props.onChange({});
-    });
-    await flush();
-
-    const recipientInput = renderer.root
-      .findAllByType("input")
-      .find((input) => input.props.type !== "checkbox");
-    await act(async () => {
-      recipientInput.props.onChange({
-        target: { value: "00000000-0000-4000-8000-00000000000b" },
-      });
-    });
-    const disclosureCheckbox = checkboxInputs(renderer)[1];
-    await act(async () => {
-      disclosureCheckbox.props.onChange({ target: { checked: true } });
-    });
-
-    const generateButton = buttonsWithText(renderer, "share.generate").find((button) => !button.props.disabled);
-    assert.ok(generateButton);
-    await act(async () => {
-      await generateButton.props.onClick();
-    });
+    await createShare(renderer);
     await waitFor(() => listCalls === 2);
     await flush();
     assert.equal(buttonsWithText(renderer, "share.revoke").length, 2);
 
-    await act(async () => {
-      await buttonsWithText(renderer, "share.revoke")[0].props.onClick();
-    });
+    await act(async () => buttonsWithText(renderer, "share.revoke")[0].props.onClick());
     await waitFor(() => listCalls === 3);
     await flush();
     assert.equal(buttonsWithText(renderer, "share.revoke").length, 0);
@@ -217,38 +281,157 @@ test("stale active refresh cannot undo confirmed revoke after a failed latest re
     await flush();
     assert.equal(buttonsWithText(renderer, "share.revoke").length, 0);
     assert.match(textOf(renderer.root), /share\.status\.revoked/);
-  } finally {
-    if (renderer) await act(async () => renderer.unmount());
-    globalThis.fetch = originalFetch;
-  }
+  });
 });
 
 test("failed revoke does not mark the share as revoked", async () => {
-  const originalFetch = globalThis.fetch;
-  let renderer;
-  globalThis.fetch = async (input, init = {}) => {
+  await withShareClient(async (input, init = {}) => {
     const url = String(input);
     if (url === "/api/share" && (!init.method || init.method === "GET")) {
       return okResponse([activeShare]);
     }
-    if (url === "/api/share/share-race-1/revoke") return { json: async () => ({}), ok: false, status: 500 };
+    if (url === `/api/share/${activeShare.id}/revoke`) return { json: async () => ({}), ok: false, status: 500 };
     throw new Error(`Unexpected fetch: ${url}`);
-  };
-
-  try {
-    await act(async () => {
-      renderer = create(React.createElement(ShareClient));
-    });
+  }, async (renderer) => {
     await flush();
     assert.equal(buttonsWithText(renderer, "share.revoke").length, 1);
 
-    await act(async () => {
-      await buttonsWithText(renderer, "share.revoke")[0].props.onClick();
-    });
+    await act(async () => buttonsWithText(renderer, "share.revoke")[0].props.onClick());
     assert.equal(buttonsWithText(renderer, "share.revoke").length, 1);
     assert.doesNotMatch(textOf(renderer.root), /share\.status\.revoked/);
-  } finally {
-    if (renderer) await act(async () => renderer.unmount());
-    globalThis.fetch = originalFetch;
-  }
+  });
+});
+
+test("an earlier initial list recovers after the post-create refresh fails", async () => {
+  const initialBody = deferred();
+  const created = shareResult("share-created");
+  const existing = [shareSummary("share-a"), shareSummary("share-b")];
+  let initialBodyRead = false;
+  const lists = deferredInitialList(
+    initialBody,
+    () => {
+      initialBodyRead = true;
+    },
+    () => {
+      throw new Error("post-create refresh failed");
+    },
+  );
+
+  await withShareClient(shareCreationFetch(created, () => lists.next()), async (renderer) => {
+    await waitFor(() => initialBodyRead);
+    await createShare(renderer);
+    await waitFor(() => lists.calls === 2);
+    await flush();
+    assert.equal(buttonsWithText(renderer, "share.revoke").length, 1);
+
+    initialBody.resolve(existing);
+    await flush();
+    for (const share of existing) {
+      assert.ok(shareRow(renderer, share.id));
+      assert.ok(revokeButtonFor(renderer, share.id));
+    }
+    assert.equal(buttonsWithText(renderer, "share.revoke").length, 3);
+  });
+});
+
+test("an older late list cannot replace a newer successful list", async () => {
+  const initialBody = deferred();
+  const created = shareResult("share-created");
+  const older = shareSummary("share-older");
+  const newer = shareSummary("share-newer");
+  let initialBodyRead = false;
+  const lists = deferredInitialList(
+    initialBody,
+    () => {
+      initialBodyRead = true;
+    },
+    () => okResponse([newer]),
+  );
+
+  await withShareClient(shareCreationFetch(created, () => lists.next()), async (renderer) => {
+    await waitFor(() => initialBodyRead);
+    await createShare(renderer);
+    await waitFor(() => lists.calls === 2);
+    await flush();
+    assert.ok(revokeButtonFor(renderer, newer.id));
+
+    initialBody.resolve([older]);
+    await flush();
+    assert.ok(shareRow(renderer, newer.id));
+    assert.equal(shareRow(renderer, older.id), undefined);
+    assert.ok(revokeButtonFor(renderer, newer.id));
+  });
+});
+
+test("reset prevents a pre-reset list response from restoring cleared shares", async () => {
+  const initialBody = deferred();
+  const stale = shareSummary("share-before-reset");
+  let initialBodyRead = false;
+  const lists = deferredInitialList(
+    initialBody,
+    () => {
+      initialBodyRead = true;
+    },
+    () => {
+      throw new Error("post-reset refresh failed");
+    },
+  );
+
+  await withShareClient(async (input, init = {}) => {
+    const url = String(input);
+    if (url === "/api/share/reset" && init.method === "POST") return okResponse({});
+    if (url === "/api/share" && (!init.method || init.method === "GET")) return lists.next();
+    throw new Error(`Unexpected fetch: ${url}`);
+  }, async (renderer) => {
+    await waitFor(() => initialBodyRead);
+    await act(async () => buttonsWithText(renderer, "share.reset")[0].props.onClick());
+    await waitFor(() => lists.calls === 2);
+    await flush();
+
+    initialBody.resolve([stale]);
+    await flush();
+    assert.equal(shareRow(renderer, stale.id), undefined);
+    assert.equal(buttonsWithText(renderer, "share.revoke").length, 0);
+    assert.match(textOf(renderer.root), /share\.noShares/);
+  }, { confirm: () => true });
+});
+
+test("a confirmed revoke overlays a delayed list when the share exists only in the result", async () => {
+  const delayedBody = deferred();
+  const created = shareResult("share-result-only");
+  let delayedBodyRead = false;
+  let listCalls = 0;
+
+  await withShareClient(async (input, init = {}) => {
+    const url = String(input);
+    if (url === "/api/share/preview") return okResponse({ snapshot: created.snapshot });
+    if (url === "/api/share" && init.method === "POST") return okResponse(created);
+    if (url === `/api/share/${created.id}/revoke`) return okResponse({});
+    if (url === "/api/share" && (!init.method || init.method === "GET")) {
+      listCalls += 1;
+      if (listCalls === 1) return okResponse([]);
+      if (listCalls === 2) return deferredResponse(delayedBody, () => {
+        delayedBodyRead = true;
+      });
+      throw new Error("post-revoke refresh failed");
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  }, async (renderer) => {
+    await flush();
+    await createShare(renderer);
+    await waitFor(() => listCalls === 2);
+    await waitFor(() => delayedBodyRead);
+    assert.equal(buttonsWithText(renderer, "share.revoke").length, 1);
+
+    await act(async () => buttonsWithText(renderer, "share.revoke")[0].props.onClick());
+    await waitFor(() => listCalls === 3);
+    await flush();
+    delayedBody.resolve([created]);
+    await flush();
+
+    const row = shareRow(renderer, created.id);
+    assert.ok(row);
+    assert.match(textOf(row), /share\.status\.revoked/);
+    assert.equal(revokeButtonFor(renderer, created.id), undefined);
+  });
 });
