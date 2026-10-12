@@ -104,6 +104,29 @@ function deferredResponse(body, onRead) {
   };
 }
 
+function deferredInitialList(body, onRead, nextResponse) {
+  let calls = 0;
+  return {
+    get calls() {
+      return calls;
+    },
+    next() {
+      calls += 1;
+      return calls === 1 ? deferredResponse(body, onRead) : nextResponse(calls);
+    },
+  };
+}
+
+function shareCreationFetch(result, listResponse) {
+  return async (input, init = {}) => {
+    const url = String(input);
+    if (url === "/api/share/preview") return okResponse({ snapshot: result.snapshot });
+    if (url === "/api/share" && init.method === "POST") return okResponse(result);
+    if (url === "/api/share" && (!init.method || init.method === "GET")) return listResponse();
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+}
+
 function textOf(node) {
   return node.children
     .map((child) => (typeof child === "string" || typeof child === "number" ? String(child) : textOf(child)))
@@ -284,26 +307,20 @@ test("an earlier initial list recovers after the post-create refresh fails", asy
   const created = shareResult("share-created");
   const existing = [shareSummary("share-a"), shareSummary("share-b")];
   let initialBodyRead = false;
-  let listCalls = 0;
-
-  await withShareClient(async (input, init = {}) => {
-    const url = String(input);
-    if (url === "/api/share/preview") return okResponse({ snapshot: created.snapshot });
-    if (url === "/api/share" && init.method === "POST") return okResponse(created);
-    if (url === "/api/share" && (!init.method || init.method === "GET")) {
-      listCalls += 1;
-      if (listCalls === 1) {
-        return deferredResponse(initialBody, () => {
-          initialBodyRead = true;
-        });
-      }
+  const lists = deferredInitialList(
+    initialBody,
+    () => {
+      initialBodyRead = true;
+    },
+    () => {
       throw new Error("post-create refresh failed");
-    }
-    throw new Error(`Unexpected fetch: ${url}`);
-  }, async (renderer) => {
+    },
+  );
+
+  await withShareClient(shareCreationFetch(created, () => lists.next()), async (renderer) => {
     await waitFor(() => initialBodyRead);
     await createShare(renderer);
-    await waitFor(() => listCalls === 2);
+    await waitFor(() => lists.calls === 2);
     await flush();
     assert.equal(buttonsWithText(renderer, "share.revoke").length, 1);
 
@@ -323,26 +340,18 @@ test("an older late list cannot replace a newer successful list", async () => {
   const older = shareSummary("share-older");
   const newer = shareSummary("share-newer");
   let initialBodyRead = false;
-  let listCalls = 0;
+  const lists = deferredInitialList(
+    initialBody,
+    () => {
+      initialBodyRead = true;
+    },
+    () => okResponse([newer]),
+  );
 
-  await withShareClient(async (input, init = {}) => {
-    const url = String(input);
-    if (url === "/api/share/preview") return okResponse({ snapshot: created.snapshot });
-    if (url === "/api/share" && init.method === "POST") return okResponse(created);
-    if (url === "/api/share" && (!init.method || init.method === "GET")) {
-      listCalls += 1;
-      if (listCalls === 1) {
-        return deferredResponse(initialBody, () => {
-          initialBodyRead = true;
-        });
-      }
-      return okResponse([newer]);
-    }
-    throw new Error(`Unexpected fetch: ${url}`);
-  }, async (renderer) => {
+  await withShareClient(shareCreationFetch(created, () => lists.next()), async (renderer) => {
     await waitFor(() => initialBodyRead);
     await createShare(renderer);
-    await waitFor(() => listCalls === 2);
+    await waitFor(() => lists.calls === 2);
     await flush();
     assert.ok(revokeButtonFor(renderer, newer.id));
 
@@ -358,25 +367,25 @@ test("reset prevents a pre-reset list response from restoring cleared shares", a
   const initialBody = deferred();
   const stale = shareSummary("share-before-reset");
   let initialBodyRead = false;
-  let listCalls = 0;
+  const lists = deferredInitialList(
+    initialBody,
+    () => {
+      initialBodyRead = true;
+    },
+    () => {
+      throw new Error("post-reset refresh failed");
+    },
+  );
 
   await withShareClient(async (input, init = {}) => {
     const url = String(input);
     if (url === "/api/share/reset" && init.method === "POST") return okResponse({});
-    if (url === "/api/share" && (!init.method || init.method === "GET")) {
-      listCalls += 1;
-      if (listCalls === 1) {
-        return deferredResponse(initialBody, () => {
-          initialBodyRead = true;
-        });
-      }
-      throw new Error("post-reset refresh failed");
-    }
+    if (url === "/api/share" && (!init.method || init.method === "GET")) return lists.next();
     throw new Error(`Unexpected fetch: ${url}`);
   }, async (renderer) => {
     await waitFor(() => initialBodyRead);
     await act(async () => buttonsWithText(renderer, "share.reset")[0].props.onClick());
-    await waitFor(() => listCalls === 2);
+    await waitFor(() => lists.calls === 2);
     await flush();
 
     initialBody.resolve([stale]);
