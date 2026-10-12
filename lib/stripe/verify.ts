@@ -1,24 +1,45 @@
 import 'server-only';
 import type Stripe from 'stripe';
-import { DEMO_CHARGE_CENTS, DEMO_CURRENCY, type PlanId } from '@/lib/plans';
+import { BILLING_CURRENCY, type BillingInterval, type PlanId } from '@/lib/plans';
 import { getMembershipStore } from '@/lib/membership/store';
 import type { MembershipRecord } from '@/lib/membership/types';
-import { getDemoPriceId, getStripe, StripeConfigError } from './server';
+import { getConfiguredPriceRefs, getStripe, StripeConfigError } from './server';
 
 export type VerifyResult =
-  | { ok: true; plan: 'plus' | 'pro'; userKey: string; session: Stripe.Checkout.Session }
+  | {
+      ok: true;
+      plan: 'plus' | 'pro';
+      userKey: string;
+      session: Stripe.Checkout.Session;
+      subscription: Stripe.Subscription;
+    }
   | {
       ok: false;
       reason:
         | 'not_paid'
-        | 'bad_amount'
         | 'bad_currency'
         | 'bad_mode'
         | 'bad_price'
         | 'bad_plan'
+        | 'subscription_inactive'
         | 'user_mismatch'
         | 'not_found';
     };
+
+/** Subscription statuses that keep the paid plan active. */
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due']);
+
+function isConfiguredPriceForPlan(plan: PlanId, price: Stripe.Price | null | undefined): boolean {
+  if (!price) return false;
+  const refs = getConfiguredPriceRefs(plan);
+  const productId = typeof price.product === 'string' ? price.product : price.product?.id;
+  return refs.includes(price.id) || (productId !== undefined && refs.includes(productId));
+}
+
+function subscriptionPeriodEnd(subscription: Stripe.Subscription): string | null {
+  const end = subscription.items.data[0]?.current_period_end;
+  return typeof end === 'number' ? new Date(end * 1000).toISOString() : null;
+}
 
 /**
  * Re-retrieves a Checkout Session from Stripe and validates every field that
@@ -37,31 +58,23 @@ export async function verifyCheckoutSession(
     return { ok: false, reason: 'not_found' };
   }
 
-  if (session.mode !== 'payment') return { ok: false, reason: 'bad_mode' };
+  if (session.mode !== 'subscription') return { ok: false, reason: 'bad_mode' };
   if (session.payment_status !== 'paid') return { ok: false, reason: 'not_paid' };
-  if (session.amount_total !== DEMO_CHARGE_CENTS) return { ok: false, reason: 'bad_amount' };
-  if (session.currency !== DEMO_CURRENCY) return { ok: false, reason: 'bad_currency' };
 
   const plan = session.metadata?.plan;
   if (plan !== 'plus' && plan !== 'pro') return { ok: false, reason: 'bad_plan' };
 
   const items = session.line_items?.data ?? [];
-  const configured = getDemoPriceId(plan);
   const price = items[0]?.price;
-  // The line item belongs to the plan when it IS the configured price, or when
+  // The line item belongs to the plan when it IS a configured price, or when
   // the configured value is a product and the price belongs to that product —
   // so rotating a product's default_price never orphans in-flight sessions.
-  const belongsToPlan =
-    price?.id === configured ||
-    (configured.startsWith('prod_') &&
-      (typeof price?.product === 'string' ? price.product : price?.product?.id) === configured);
   if (
     items.length !== 1 ||
-    !belongsToPlan ||
     items[0].quantity !== 1 ||
-    price?.unit_amount !== DEMO_CHARGE_CENTS ||
-    price?.currency !== DEMO_CURRENCY ||
-    price?.type !== 'one_time'
+    !isConfiguredPriceForPlan(plan, price) ||
+    price?.type !== 'recurring' ||
+    price?.currency !== BILLING_CURRENCY
   ) {
     return { ok: false, reason: 'bad_price' };
   }
@@ -72,21 +85,31 @@ export async function verifyCheckoutSession(
     return { ok: false, reason: 'user_mismatch' };
   }
 
-  return { ok: true, plan, userKey, session };
+  const subscriptionId =
+    typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+  if (!subscriptionId) return { ok: false, reason: 'subscription_inactive' };
+
+  const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
+  if (!ACTIVE_SUBSCRIPTION_STATUSES.has(subscription.status)) {
+    return { ok: false, reason: 'subscription_inactive' };
+  }
+
+  return { ok: true, plan, userKey, session, subscription };
 }
 
 /** Persists the membership upgrade for an already-verified session. */
 export async function activateFromVerifiedSession(
   result: Extract<VerifyResult, { ok: true }>,
 ): Promise<MembershipRecord> {
-  const { session, plan, userKey } = result;
+  const { session, subscription, plan, userKey } = result;
   return getMembershipStore().activatePlan({
     userKey,
     plan,
     stripeCustomerId: typeof session.customer === 'string' ? session.customer : null,
     stripeCheckoutSessionId: session.id,
-    stripePaymentIntentId:
-      typeof session.payment_intent === 'string' ? session.payment_intent : null,
+    stripeSubscriptionId: subscription.id,
+    subscriptionStatus: subscription.status,
+    subscriptionPeriodEnd: subscriptionPeriodEnd(subscription),
   });
 }
 
@@ -100,29 +123,64 @@ export async function verifyAndActivate(
 }
 
 /**
- * Guard used before creating a Checkout Session: ensures the configured Price
- * is an active one-time $1 USD price — a misconfigured Price ID can never
- * create a checkout for the wrong amount or a subscription.
+ * Syncs the membership plan with a subscription's current state — re-retrieved
+ * from Stripe (webhook payloads are never trusted). Active/trialing/past_due
+ * keeps (or restores) the paid plan from the subscription metadata; every other
+ * status (canceled, unpaid, incomplete_expired, paused, incomplete) downgrades
+ * to free.
  */
-export async function assertDemoPrice(priceId: string, plan: PlanId): Promise<void> {
+export async function syncSubscriptionFromStripe(
+  subscriptionId: string,
+): Promise<MembershipRecord | null> {
+  let subscription: Stripe.Subscription;
+  try {
+    subscription = await getStripe().subscriptions.retrieve(subscriptionId);
+  } catch {
+    return null;
+  }
+  const metaPlan = subscription.metadata?.plan;
+  const plan = metaPlan === 'plus' || metaPlan === 'pro' ? metaPlan : null;
+  const isActive = ACTIVE_SUBSCRIPTION_STATUSES.has(subscription.status);
+  return getMembershipStore().syncSubscription({
+    stripeSubscriptionId: subscription.id,
+    stripeCustomerId: typeof subscription.customer === 'string' ? subscription.customer : null,
+    userKey: subscription.metadata?.userKey ?? null,
+    plan: isActive ? plan : null,
+    status: subscription.status,
+    periodEnd: subscriptionPeriodEnd(subscription),
+  });
+}
+
+/**
+ * Guard used before creating a Checkout Session: ensures the configured Price
+ * is an active recurring USD price with the expected billing interval — a
+ * misconfigured Price ID can never create a checkout for the wrong cadence.
+ */
+export async function assertSubscriptionPrice(
+  priceId: string,
+  plan: PlanId,
+  interval: BillingInterval,
+): Promise<void> {
   const price = await getStripe().prices.retrieve(priceId);
+  const expectedInterval = interval === 'monthly' ? 'month' : 'year';
+  const intervalCount = price.recurring?.interval_count ?? 1;
   if (
     !price.active ||
-    price.type !== 'one_time' ||
-    price.unit_amount !== DEMO_CHARGE_CENTS ||
-    price.currency !== DEMO_CURRENCY ||
-    price.recurring
+    price.type !== 'recurring' ||
+    price.currency !== BILLING_CURRENCY ||
+    price.recurring?.interval !== expectedInterval ||
+    intervalCount !== 1
   ) {
     const why = !price.active
       ? 'price_inactive'
-      : price.type !== 'one_time' || price.recurring
-        ? 'price_recurring'
-        : price.currency !== DEMO_CURRENCY
+      : price.type !== 'recurring'
+        ? 'price_not_recurring'
+        : price.currency !== BILLING_CURRENCY
           ? 'price_not_usd'
-          : `price_amount_${price.unit_amount ?? 'null'}`;
+          : `price_interval_${price.recurring?.interval ?? 'null'}_x${intervalCount}`;
     throw new StripeConfigError(
       why,
-      `Configured price for plan "${plan}" is not an active one-time $1 USD price — refusing to create checkout.`,
+      `Configured price for plan "${plan}" (${interval}) is not an active recurring USD ${expectedInterval}ly price — refusing to create checkout.`,
     );
   }
 }

@@ -1,5 +1,6 @@
-// Creates (idempotently) the Vital ID demo products + one-time $1 USD prices.
+// Creates (idempotently) the Vital ID products + recurring subscription prices.
 // Usage: STRIPE_SECRET_KEY=sk_live_... node scripts/stripe-setup.mjs
+//        STRIPE_SECRET_KEY=sk_test_... node scripts/stripe-setup.mjs   (test-mode first!)
 // NEVER prints secret key values.
 import Stripe from 'stripe';
 
@@ -10,22 +11,25 @@ if (!key) {
 }
 const stripe = new Stripe(key);
 
+// Prices must match lib/plans.ts display prices.
 const PLANS = [
   {
     plan: 'plus',
     productName: 'Vital ID Plus',
-    description: 'Hackathon demo: one-time $1 payment. Displayed price $10/month (Plus). No subscription.',
-    displayed_price: '$10/month',
-    lookup_key: 'vital_id_plus_demo_usd_1',
-    env: 'STRIPE_PLUS_DEMO_PRICE_ID',
+    description: 'Vital ID Plus membership subscription.',
+    prices: [
+      { interval: 'monthly', unit_amount: 1000, lookup_key: 'vital_id_plus_monthly_usd', env: 'STRIPE_PRICE_PLUS_MONTHLY' },
+      { interval: 'annual', unit_amount: 9600, lookup_key: 'vital_id_plus_annual_usd', env: 'STRIPE_PRICE_PLUS_ANNUAL' },
+    ],
   },
   {
     plan: 'pro',
     productName: 'Vital ID Pro',
-    description: 'Hackathon demo: one-time $1 payment. Displayed price $25/month (Pro). No subscription.',
-    displayed_price: '$25/month',
-    lookup_key: 'vital_id_pro_demo_usd_1',
-    env: 'STRIPE_PRO_DEMO_PRICE_ID',
+    description: 'Vital ID Pro membership subscription.',
+    prices: [
+      { interval: 'monthly', unit_amount: 2500, lookup_key: 'vital_id_pro_monthly_usd', env: 'STRIPE_PRICE_PRO_MONTHLY' },
+      { interval: 'annual', unit_amount: 24000, lookup_key: 'vital_id_pro_annual_usd', env: 'STRIPE_PRICE_PRO_ANNUAL' },
+    ],
   },
 ];
 
@@ -39,29 +43,32 @@ for (const p of PLANS) {
     product = await stripe.products.create({
       name: p.productName,
       description: p.description,
-      metadata: { vital_id_plan: p.plan, displayed_price: p.displayed_price },
+      metadata: { vital_id_plan: p.plan },
     });
   }
 
-  const prices = await stripe.prices.list({ lookup_keys: [p.lookup_key], limit: 1 });
-  let price = prices.data[0];
-  if (!price) {
-    price = await stripe.prices.create({
-      product: product.id,
-      unit_amount: 100,
-      currency: 'usd',
-      lookup_key: p.lookup_key,
-      metadata: { vital_id_plan: p.plan, hackathon_demo: 'true' },
-    });
+  for (const spec of p.prices) {
+    const existing = await stripe.prices.list({ lookup_keys: [spec.lookup_key], limit: 1 });
+    let price = existing.data[0];
+    if (!price) {
+      price = await stripe.prices.create({
+        product: product.id,
+        unit_amount: spec.unit_amount,
+        currency: 'usd',
+        recurring: { interval: spec.interval === 'monthly' ? 'month' : 'year' },
+        lookup_key: spec.lookup_key,
+        metadata: { vital_id_plan: p.plan, vital_id_interval: spec.interval },
+      });
+    }
+    rows.push({ plan: p.plan, env: spec.env, interval: spec.interval, price });
   }
-  rows.push({ plan: p.plan, env: p.env, product, price });
 }
 
 console.log(rows[0]?.price.livemode ? 'LIVE MODE' : 'TEST MODE');
 console.log('');
 for (const r of rows) {
   console.log(
-    `${r.plan.padEnd(5)} product=${r.product.id} price=${r.price.id} amount=${r.price.unit_amount} currency=${r.price.currency} type=${r.price.type} livemode=${r.price.livemode}`,
+    `${r.plan.padEnd(5)} ${r.interval.padEnd(7)} price=${r.price.id} amount=${r.price.unit_amount} currency=${r.price.currency} recurring=${r.price.recurring?.interval} livemode=${r.price.livemode}`,
   );
 }
 console.log('');

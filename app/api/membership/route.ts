@@ -17,6 +17,8 @@ export async function GET() {
       onboardingComplete: isDemoUser || membership.onboardingCompletedAt !== null,
       displayName: membership.displayName,
       activatedAt: membership.activatedAt,
+      subscriptionStatus: membership.subscriptionStatus,
+      subscriptionPeriodEnd: membership.subscriptionPeriodEnd,
     },
     { headers: { 'Cache-Control': 'no-store' } },
   );

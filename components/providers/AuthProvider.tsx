@@ -19,6 +19,12 @@ import type { PlanId } from "@/lib/plans";
  */
 export const DEMO_SESSION_KEY = "vitalid.session";
 
+/**
+ * Instant demo login ("Login as Fatima") is OFF by default — production-safe.
+ * Set NEXT_PUBLIC_DEMO_LOGIN=1 at build time to re-enable it for demos.
+ */
+const DEMO_LOGIN_ENABLED = process.env.NEXT_PUBLIC_DEMO_LOGIN === "1";
+
 export type NextRoute = "/pricing" | "/onboarding" | "/";
 
 export interface AccountSnapshot {
@@ -47,7 +53,11 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 function hasFatimaFlag(): boolean {
-  return typeof window !== "undefined" && window.localStorage.getItem(DEMO_SESSION_KEY) === "fatima";
+  return (
+    DEMO_LOGIN_ENABLED &&
+    typeof window !== "undefined" &&
+    window.localStorage.getItem(DEMO_SESSION_KEY) === "fatima"
+  );
 }
 
 async function probe(): Promise<AccountSnapshot | null> {
@@ -94,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const enterAsFatima = useCallback(async () => {
+    if (!DEMO_LOGIN_ENABLED) return;
     if (status === "member") {
       await fetch("/api/auth/signout", { method: "POST" }).catch(() => undefined);
     }

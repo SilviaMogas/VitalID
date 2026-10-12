@@ -5,6 +5,15 @@ import type { CompanionName } from "@/lib/companions";
 
 export type PlanId = "free" | "plus" | "pro";
 
+/** Billing interval for paid plans. */
+export type BillingInterval = "monthly" | "annual";
+
+export const BILLING_INTERVALS: BillingInterval[] = ["monthly", "annual"];
+
+export function isBillingInterval(x: unknown): x is BillingInterval {
+  return x === "monthly" || x === "annual";
+}
+
 export const PLAN_ORDER: PlanId[] = ["free", "plus", "pro"];
 
 export type Feature =
@@ -28,13 +37,16 @@ export interface PlanDefinition {
   nameKey: TranslationKey;
   /** Avatar shown for this plan across the membership UI. */
   companion: CompanionName;
-  /** Price shown on the pricing card. */
+  /** Monthly price shown on the pricing card. */
   displayPrice: string;
+  /** Annual price shown on the pricing card (billed once per year). */
+  displayPriceAnnual: string;
   billingLabelKey: TranslationKey;
-  /** Hackathon demo charge in cents; null for free (free never calls Stripe). */
-  demoChargeCents: number | null;
-  /** Env var name holding the one-time $1 demo Price ID; null for free. */
-  demoPriceEnvKey: "STRIPE_PLUS_DEMO_PRICE_ID" | "STRIPE_PRO_DEMO_PRICE_ID" | null;
+  /** Env var names holding the recurring Stripe Price IDs per interval; null for free. */
+  priceEnvKey: {
+    monthly: "STRIPE_PRICE_PLUS_MONTHLY" | "STRIPE_PRICE_PRO_MONTHLY";
+    annual: "STRIPE_PRICE_PLUS_ANNUAL" | "STRIPE_PRICE_PRO_ANNUAL";
+  } | null;
   features: Feature[];
   /** null = unlimited */
   connectorLimit: number | null;
@@ -67,9 +79,9 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     nameKey: "pricing.plan.free.name",
     companion: "shield",
     displayPrice: "$0",
+    displayPriceAnnual: "$0",
     billingLabelKey: "pricing.billing.free",
-    demoChargeCents: null,
-    demoPriceEnvKey: null,
+    priceEnvKey: null,
     features: FREE_FEATURES,
     connectorLimit: 2,
     featureKeys: [
@@ -86,9 +98,12 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     nameKey: "pricing.plan.plus.name",
     companion: "heart",
     displayPrice: "$10",
+    displayPriceAnnual: "$96",
     billingLabelKey: "pricing.billing.monthly",
-    demoChargeCents: 100,
-    demoPriceEnvKey: "STRIPE_PLUS_DEMO_PRICE_ID",
+    priceEnvKey: {
+      monthly: "STRIPE_PRICE_PLUS_MONTHLY",
+      annual: "STRIPE_PRICE_PLUS_ANNUAL",
+    },
     features: PLUS_FEATURES,
     connectorLimit: 5,
     recommended: true,
@@ -107,9 +122,12 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     nameKey: "pricing.plan.pro.name",
     companion: "muscle",
     displayPrice: "$25",
+    displayPriceAnnual: "$240",
     billingLabelKey: "pricing.billing.monthly",
-    demoChargeCents: 100,
-    demoPriceEnvKey: "STRIPE_PRO_DEMO_PRICE_ID",
+    priceEnvKey: {
+      monthly: "STRIPE_PRICE_PRO_MONTHLY",
+      annual: "STRIPE_PRICE_PRO_ANNUAL",
+    },
     features: PRO_FEATURES,
     connectorLimit: null,
     featureKeys: [
@@ -126,8 +144,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
 
 export const PAID_PLANS: Exclude<PlanId, "free">[] = ["plus", "pro"];
 
-export const DEMO_CHARGE_CENTS = 100;
-export const DEMO_CURRENCY = "usd";
+export const BILLING_CURRENCY = "usd";
 
 export function isPlanId(x: unknown): x is PlanId {
   return x === "free" || x === "plus" || x === "pro";

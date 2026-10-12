@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { PAID_PLANS } from '@/lib/plans';
-import { getStripe, isStripeConfigured, resolveDemoPriceId, StripeConfigError } from '@/lib/stripe/server';
-import { assertDemoPrice } from '@/lib/stripe/verify';
+import { isBillingInterval, PAID_PLANS } from '@/lib/plans';
+import { getStripe, isStripeConfigured, resolvePriceId, StripeConfigError } from '@/lib/stripe/server';
+import { assertSubscriptionPrice } from '@/lib/stripe/verify';
 import { getCurrentUserKey } from '@/lib/membership/session';
 import { getMembershipStore } from '@/lib/membership/store';
 
@@ -36,9 +36,13 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'invalid JSON' }, { status: 400 });
   }
-  const { plan } = (body ?? {}) as { plan?: string };
+  const { plan, interval: rawInterval } = (body ?? {}) as { plan?: string; interval?: string };
   if (!PAID_PLANS.includes(plan as 'plus' | 'pro')) {
     return NextResponse.json({ error: 'invalid plan' }, { status: 400 });
+  }
+  const interval = rawInterval === undefined ? 'monthly' : rawInterval;
+  if (!isBillingInterval(interval)) {
+    return NextResponse.json({ error: 'invalid interval' }, { status: 400 });
   }
   if (!isStripeConfigured()) {
     return NextResponse.json({ error: 'stripe_not_configured' }, { status: 503 });
@@ -50,19 +54,19 @@ export async function POST(req: Request) {
     stage = 'membership_store';
     const membership = await getMembershipStore().upsert({ userKey });
     stage = 'price_config';
-    const priceId = await resolveDemoPriceId(plan as 'plus' | 'pro');
-    await assertDemoPrice(priceId, plan as 'plus' | 'pro');
+    const priceId = await resolvePriceId(plan as 'plus' | 'pro', interval);
+    await assertSubscriptionPrice(priceId, plan as 'plus' | 'pro', interval);
     stage = 'stripe_session';
 
     const origin = requestOrigin(req);
     const session = await getStripe().checkout.sessions.create({
-      mode: 'payment',
+      mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/checkout/cancel?plan=${plan}`,
       client_reference_id: userKey,
-      metadata: { plan: plan as string, userKey, app: 'vital-id', offer: 'hackathon-demo' },
-      payment_intent_data: { metadata: { plan: plan as string, userKey } },
+      metadata: { plan: plan as string, interval, userKey, app: 'vital-id' },
+      subscription_data: { metadata: { plan: plan as string, interval, userKey } },
       customer_email: membership.email ?? undefined,
       locale: 'auto',
       allow_promotion_codes: false,

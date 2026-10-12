@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
-import { PLAN_ORDER, PLANS, planRank, type PlanId } from "@/lib/plans";
+import { BILLING_INTERVALS, PLAN_ORDER, PLANS, planRank, type BillingInterval, type PlanId } from "@/lib/plans";
 import { Companion } from "@/components/companions/Companion";
 import { HackathonSmallPrint } from "./HackathonSmallPrint";
 
@@ -24,7 +24,9 @@ export function PricingView() {
   const { status, account, refresh: refreshAuth } = useAuth();
   const { plan: currentPlan, loading, refresh } = useMembership();
   const [busyPlan, setBusyPlan] = useState<PlanId | null>(null);
+  const [busyPortal, setBusyPortal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [interval, setInterval] = useState<BillingInterval>("monthly");
   const inJourney = status === "member" && account !== null && !account.onboardingCompleted;
 
   async function continueFree() {
@@ -54,7 +56,7 @@ export function PricingView() {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, interval }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         url?: string;
@@ -76,6 +78,24 @@ export function PricingView() {
       setError(t("common.error"));
     } finally {
       setBusyPlan(null);
+    }
+  }
+
+  async function openBillingPortal() {
+    setError(null);
+    setBusyPortal(true);
+    try {
+      const res = await fetch("/api/stripe/portal", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !data.url) {
+        setError(data.error === "stripe_not_configured" ? t("pricing.stripeNotConfigured") : t("common.error"));
+        return;
+      }
+      window.location.assign(data.url);
+    } catch {
+      setError(t("common.error"));
+    } finally {
+      setBusyPortal(false);
     }
   }
 
@@ -102,6 +122,31 @@ export function PricingView() {
             className="-ms-3 first:ms-0"
           />
         ))}
+      </div>
+
+      <div className="flex justify-center md:justify-start" role="group" aria-label={t("pricing.interval.label")}>
+        <div className="inline-flex rounded-full border border-line bg-white p-1">
+          {BILLING_INTERVALS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setInterval(value)}
+              aria-pressed={interval === value}
+              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                interval === value ? "bg-brand text-white shadow-sm" : "text-ink-2 hover:bg-canvas"
+              }`}
+            >
+              {t(value === "monthly" ? "pricing.interval.monthly" : "pricing.interval.annual")}
+              {value === "annual" && (
+                <span className={`ms-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                  interval === "annual" ? "bg-white/25 text-white" : "bg-mint/60 text-brand-deep"
+                }`}>
+                  {t("pricing.annualBadge")}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -133,10 +178,15 @@ export function PricingView() {
                   <h2 className="text-lg font-semibold">{t(plan.nameKey)}</h2>
                   <p className="mt-2 flex items-baseline gap-1">
                     <span className="text-3xl font-semibold tracking-tight" dir="ltr">
-                      {plan.displayPrice}
+                      {isPaid && interval === "annual" ? plan.displayPriceAnnual : plan.displayPrice}
                     </span>
-                    <span className="text-sm text-muted">{t(plan.billingLabelKey)}</span>
+                    <span className="text-sm text-muted">
+                      {t(isPaid && interval === "annual" ? "pricing.billing.annual" : plan.billingLabelKey)}
+                    </span>
                   </p>
+                  {isPaid && interval === "annual" && (
+                    <p className="text-xs text-muted">{t("pricing.annualNote")}</p>
+                  )}
                 </div>
                 <Companion
                   name={plan.companion}
@@ -167,13 +217,25 @@ export function PricingView() {
                     {t("checkout.continueOnboarding")}
                   </button>
                 ) : isCurrent ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="w-full rounded-2xl border border-line bg-canvas py-3 text-sm font-semibold text-muted"
-                  >
-                    {t("pricing.currentPlan")}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full rounded-2xl border border-line bg-canvas py-3 text-sm font-semibold text-muted"
+                    >
+                      {t("pricing.currentPlan")}
+                    </button>
+                    {isPaid && status === "member" && (
+                      <button
+                        type="button"
+                        onClick={openBillingPortal}
+                        disabled={busyPortal}
+                        className="mt-2 w-full rounded-2xl border border-brand/40 bg-white py-3 text-sm font-semibold text-brand transition hover:bg-sage disabled:opacity-50"
+                      >
+                        {busyPortal ? t("common.loading") : t("pricing.manageBilling")}
+                      </button>
+                    )}
+                  </>
                 ) : isIncluded ? (
                   <button
                     type="button"

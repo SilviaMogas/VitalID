@@ -10,8 +10,8 @@ import { DEMO_EMERGENCY, DEMO_IDENTITY } from "@/lib/demo-data";
 import { DemoBadge } from "@/components/layout/DemoBadge";
 import { LegalLinks } from "@/components/legal/LegalLinks";
 
-/** Set NEXT_PUBLIC_DEMO_LOGIN=0 to hide the instant demo login (e.g. production). */
-const DEMO_LOGIN_ENABLED = process.env.NEXT_PUBLIC_DEMO_LOGIN !== "0";
+/** Instant demo login is OFF by default — set NEXT_PUBLIC_DEMO_LOGIN=1 to enable it. */
+const DEMO_LOGIN_ENABLED = process.env.NEXT_PUBLIC_DEMO_LOGIN === "1";
 
 export function Welcome({
   onEnter,

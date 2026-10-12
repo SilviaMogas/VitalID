@@ -2,7 +2,7 @@
 
 import { useLocale } from "@/components/providers/LocaleProvider";
 
-/** Hackathon disclosure shown under the pricing grid and on checkout screens. */
+/** Subscription disclosure shown under the pricing grid and on checkout screens. */
 export function HackathonSmallPrint({ short = false }: { short?: boolean }) {
   const { t } = useLocale();
   return (
