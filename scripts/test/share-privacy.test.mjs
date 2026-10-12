@@ -6,9 +6,26 @@ for (const key of ['SUPABASE_URL', 'SUPABASE_SECRET_KEY', 'NEXT_PUBLIC_SUPABASE_
 const { GET: getShare } = await import('@/app/api/share/[id]/route');
 const { POST: createShare } = await import('@/app/api/share/route');
 const { POST: previewShare } = await import('@/app/api/share/preview/route');
+const { isSameOrigin } = await import('@/lib/share-api');
+const { NextRequest } = await import('next/server.js');
 const owner = { id: '00000000-0000-4000-8000-00000000000a', email: 'owner@example.test' };
 const recipient = { id: '00000000-0000-4000-8000-00000000000b', email: 'recipient@example.test' };
 globalThis.__recipientAccountLookup = (id) => id === recipient.id;
+
+test('same-origin guard preserves exact loopback host and port through real NextRequest normalization', () => {
+  const request = (host, origin, urlHost = host) => new NextRequest(`http://${urlHost}/api/share/preview`, {
+    method: 'POST',
+    headers: {host, origin},
+  });
+  assert.equal(isSameOrigin(request('127.0.0.1:3001', 'http://127.0.0.1:3001')), true);
+  assert.equal(isSameOrigin(request('[::1]:3001', 'http://[::1]:3001')), true);
+  assert.equal(isSameOrigin(request('localhost:3001', 'http://localhost:3001')), true);
+  assert.equal(isSameOrigin(request('127.0.0.1:3001', 'http://localhost:3001')), false);
+  assert.equal(isSameOrigin(request('127.0.0.1:3001', 'http://127.0.0.1:3002')), false);
+  assert.equal(isSameOrigin(request('evil.example', 'http://evil.example', 'localhost:3001')), false);
+  assert.equal(isSameOrigin(request('example.test', 'http://example.test')), true);
+  assert.equal(isSameOrigin(request('example.test', 'http://evil.example')), false);
+});
 
 function fixture(overrides = {}) {
   return {
