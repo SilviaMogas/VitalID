@@ -4,7 +4,7 @@ This is VitalID: prove what matters, and share only what's necessary.
 
 2
 00:00:07,000 --> 00:00:15,000
-Fictional person, synthetic records. A credential prototype with real permissions on Solana devnet, not medical evidence.
+A fictional person with synthetic records. A credential prototype with real permissions on Solana devnet.
 
 3
 00:00:15,000 --> 00:00:40,000
@@ -32,8 +32,8 @@ Now I revoke future access. Local blocking is immediate; the on-chain revocation
 
 9
 00:02:25,000 --> 00:02:40,000
-The recipient can no longer request a new presentation. Revocation cannot retrieve information already downloaded.
+The recipient can no longer request a new presentation under this permission.
 
 10
 00:02:40,000 --> 00:02:55,000
-This prototype does not establish clinical truth or authenticate wearable readings. CUDIS and Muse are not connected. VitalID: prove what matters. Share only what's necessary.
+VitalID: prove what matters. Share only what's necessary.
