@@ -63,8 +63,8 @@ export async function clearSessionCookies(): Promise<void> {
 }
 
 export type AuthResult =
-  | { ok: true; user: AuthUser }
-  | { ok: false; code: 'invalid_credentials' | 'email_taken' | 'weak_password' | 'not_configured' | 'unknown'; message: string };
+  | { ok: true; user: AuthUser; created?: boolean }
+  | { ok: false; code: 'invalid_credentials' | 'email_taken' | 'weak_password' | 'not_configured' | 'consent_required' | 'unknown'; message: string };
 
 function toAuthUser(u: User): AuthUser {
   return { id: u.id, email: u.email ?? null };
@@ -119,23 +119,45 @@ export async function signInWithPassword(input: { email: string; password: strin
  * user (`sol.<pubkey>@wallet.vitalid.site`) whose password is derived from the
  * server secret — created on first login, re-derived on every later one.
  */
-export async function signInWithWallet(publicKey: string): Promise<AuthResult> {
+export async function signInWithWallet(
+  publicKey: string,
+  consents: { consentTerms: boolean; consentHealthData: boolean },
+): Promise<AuthResult> {
   if (!isAuthConfigured()) return { ok: false, code: 'not_configured', message: 'auth not configured' };
   const { walletEmail, walletPassword } = await import('@/lib/solpay/wallet-auth');
   const email = walletEmail(publicKey);
   const password = walletPassword(publicKey);
+  const admin = getSupabaseServerClient();
   const first = await signInWithPassword({ email, password });
   if (first.ok || first.code !== 'invalid_credentials') return first;
-  const { error } = await getSupabaseServerClient().auth.admin.createUser({
+  // Password grant failed: either the wallet has no account yet or its
+  // derived password predates a secret rotation. Tell them apart by user.
+  const { data: link, error: linkError } = await admin.auth.admin.generateLink({
+    type: 'recovery',
+    email,
+  });
+  const existingUser = linkError || !link?.user ? null : link.user;
+  if (existingUser) {
+    // Known wallet, rotated secret: reset to the current derived password.
+    const { error } = await admin.auth.admin.updateUserById(existingUser.id, { password });
+    if (error) return { ok: false, code: 'unknown', message: error.message };
+    return signInWithPassword({ email, password });
+  }
+  // New wallet account: same legal gate as password signup — no terms or
+  // health-data consent, no account.
+  if (!consents.consentTerms || !consents.consentHealthData) {
+    return { ok: false, code: 'consent_required', message: 'consent required for new wallet account' };
+  }
+  const { error } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
     user_metadata: { solana_wallet: publicKey },
   });
-  if (error && !error.message.toLowerCase().includes('already') && error.code !== 'email_exists') {
-    return { ok: false, code: 'unknown', message: error.message };
-  }
-  return signInWithPassword({ email, password });
+  if (error) return { ok: false, code: 'unknown', message: error.message };
+  const created = await signInWithPassword({ email, password });
+  if (!created.ok) return created;
+  return { ok: true, user: created.user, created: true };
 }
 
 export async function signOut(): Promise<void> {

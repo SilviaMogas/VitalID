@@ -2,6 +2,7 @@ import 'server-only';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { base58Decode } from './base58';
 import { readServerSupabaseEnv } from '@/lib/supabase/env';
+import { getWalletNonceStore } from '@/lib/auth/wallet-nonce';
 
 /**
  * Sign-in with a Solana wallet (Solflare, Phantom, …): the server issues a
@@ -37,6 +38,9 @@ export function walletEmail(publicKey: string): string {
 }
 
 export function isSolanaPublicKey(value: string): boolean {
+  // 32 bytes base58-encode to 32–44 chars — reject anything else before
+  // decoding so oversized inputs never reach the BigInt codec.
+  if (value.length < 32 || value.length > 44) return false;
   try {
     return base58Decode(value).length === 32;
   } catch {
@@ -89,11 +93,17 @@ export async function verifyWalletMessage(
   } catch {
     return 'bad_signature';
   }
+  let ok = false;
   try {
     const key = await crypto.subtle.importKey('raw', base58Decode(publicKey) as BufferSource, 'Ed25519', false, ['verify']);
-    const ok = await crypto.subtle.verify('Ed25519', key, signatureBytes as BufferSource, new TextEncoder().encode(message));
-    return ok ? 'ok' : 'bad_signature';
+    ok = await crypto.subtle.verify('Ed25519', key, signatureBytes as BufferSource, new TextEncoder().encode(message));
   } catch {
     return 'bad_signature';
   }
+  if (!ok) return 'bad_signature';
+  // Single-use: burn the nonce only once the signature checked out, so a
+  // replay of the same verified request is refused while failures — or a
+  // corrupted forgery burning someone else's nonce — never consume it.
+  if (!(await getWalletNonceStore().claim(nonce))) return 'expired';
+  return 'ok';
 }

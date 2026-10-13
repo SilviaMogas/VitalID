@@ -69,6 +69,22 @@ test('stale or forged nonces are rejected', async () => {
   );
 });
 
+test('a verified request cannot be replayed with the same nonce', async () => {
+  const w = await makeWallet();
+  const message = issueMessage(w.publicKey, HOST);
+  const sig = await sign(w, message);
+  assert.equal(await verifyWalletMessage(w.publicKey, sig, message, HOST), 'ok');
+  // Identical replay within the TTL window is refused.
+  assert.equal(await verifyWalletMessage(w.publicKey, sig, message, HOST), 'expired');
+});
+
+test('a failed signature never burns the nonce', async () => {
+  const w = await makeWallet();
+  const message = issueMessage(w.publicKey, HOST);
+  assert.equal(await verifyWalletMessage(w.publicKey, 'not-base58!!', message, HOST), 'bad_signature');
+  assert.equal(await verifyWalletMessage(w.publicKey, await sign(w, message), message, HOST), 'ok');
+});
+
 test('public key validation and derived credentials', async () => {
   const w = await makeWallet();
   assert.equal(isSolanaPublicKey(w.publicKey), true);

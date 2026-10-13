@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
+import { HealthDataConsent, TermsConsent } from "@/components/legal/HealthDataConsent";
 import { base58Encode } from "@/lib/solpay/base58";
 
 type SolanaProvider = {
@@ -41,6 +42,10 @@ export function WalletButtons() {
   const { refresh: refreshMembership } = useMembership();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Same gate as password signup: terms + health-data consent, sent with the
+  // verify call — the server enforces them when the wallet is new.
+  const [consentTerms, setConsentTerms] = useState(false);
+  const [consentHealth, setConsentHealth] = useState(false);
 
   async function login(walletId: string) {
     setError(null);
@@ -67,7 +72,13 @@ export function WalletButtons() {
       const verifyRes = await fetch("/api/auth/sol/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ publicKey, signature: base58Encode(signatureBytes), message }),
+        body: JSON.stringify({
+          publicKey,
+          signature: base58Encode(signatureBytes),
+          message,
+          consentTerms,
+          consentHealthData: consentHealth,
+        }),
       });
       if (!verifyRes.ok) throw new Error(`HTTP ${verifyRes.status}`);
       await Promise.all([refreshAuth(), refreshMembership()]);
@@ -86,13 +97,15 @@ export function WalletButtons() {
         {t("auth.wallet.or")}
         <span className="h-px flex-1 bg-line" />
       </div>
+      <TermsConsent id="wal-terms" checked={consentTerms} onChange={setConsentTerms} />
+      <HealthDataConsent id="wal-consent" checked={consentHealth} onChange={setConsentHealth} />
       <div className="grid grid-cols-2 gap-3">
         {WALLETS.map((wallet) => (
           <button
             key={wallet.id}
             type="button"
             onClick={() => void login(wallet.id)}
-            disabled={busy !== null}
+            disabled={busy !== null || !consentTerms || !consentHealth}
             className="press rounded-2xl border border-line py-3 text-sm font-semibold transition hover:border-brand disabled:opacity-50"
           >
             {busy === wallet.id ? t("common.loading") : t(`auth.wallet.${wallet.id}`)}
