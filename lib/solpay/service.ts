@@ -130,24 +130,16 @@ export function extractPayment(
   return { lamports, payer };
 }
 
-function periodEndFor(interval: BillingInterval, from = new Date()): string {
-  const end = new Date(from);
-  end.setUTCDate(end.getUTCDate() + (interval === 'annual' ? 365 : 30));
-  return end.toISOString();
-}
-
 async function activate(payment: SolPayment, signature: string, payer: string | null) {
-  // Only the newest *claimed* request for this user may activate. Ordering by
-  // request creation (not activation time) keeps the latest purchase winning
-  // regardless of settle order, re-polls, or concurrent confirmations.
-  if (await getSolPaymentStore().hasNewerClaimed(payment)) return;
-  await getMembershipStore().activatePlan({
+  // Additive: every paid request grants its purchased days on top of any paid
+  // time remaining; the plan keeps the highest rank. Atomic per membership
+  // row, so settle order, re-polls and concurrent confirms cannot regress it.
+  await getMembershipStore().activateSol({
     userKey: payment.userKey,
     plan: payment.plan,
-    stripeCheckoutSessionId: `${SOL_SESSION_PREFIX}${signature}`,
-    stripePaymentIntentId: payer,
-    subscriptionStatus: 'sol_one_time',
-    subscriptionPeriodEnd: periodEndFor(payment.interval),
+    extendDays: payment.interval === 'annual' ? 365 : 30,
+    sessionId: `${SOL_SESSION_PREFIX}${signature}`,
+    payer,
   });
 }
 

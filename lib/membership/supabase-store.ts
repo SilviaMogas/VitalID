@@ -167,6 +167,27 @@ export class SupabaseMembershipStore implements MembershipStore {
     });
   }
 
+  // Atomic and additive inside Postgres: the row lock serializes concurrent
+  // confirmations and the session-id check dedupes retries. See the
+  // vital_id_sol_activate migration.
+  async activateSol(input: {
+    userKey: string;
+    plan: Exclude<PlanId, 'free'>;
+    extendDays: number;
+    sessionId: string;
+    payer: string | null;
+  }) {
+    const { error } = await getSupabaseServerClient().rpc('vital_id_sol_activate', {
+      p_user_key: input.userKey,
+      p_plan: input.plan,
+      p_extend_days: input.extendDays,
+      p_session_id: input.sessionId,
+      p_payer: input.payer,
+    });
+    if (error) throw new Error(`sol activate failed: ${error.message}`);
+    return this.get(input.userKey) as Promise<MembershipRecord>;
+  }
+
   private async findOne(column: 'stripe_subscription_id' | 'stripe_customer_id', value: string) {
     const { data, error } = await getSupabaseServerClient()
       .from(TABLE)
