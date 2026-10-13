@@ -216,7 +216,7 @@ export function createDevnetFetch({
     const releaseAfterPrevious = () => {
       if (slotReleased) return;
       slotReleased = true;
-      previous.catch(() => {}).then(() => {
+      void previous.catch(() => {}).then(() => {
         decrementQueue();
         releaseGate();
       });
