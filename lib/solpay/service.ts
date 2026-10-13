@@ -137,14 +137,11 @@ function periodEndFor(interval: BillingInterval, from = new Date()): string {
 }
 
 async function activate(payment: SolPayment, signature: string, payer: string | null) {
-  const store = getMembershipStore();
-  // A newer activation already applied (e.g. a later purchase): an older
-  // settled request must never roll the membership back to its own period.
-  const current = await store.get(payment.userKey);
-  if (current?.activatedAt && Date.parse(current.activatedAt) > Date.parse(payment.createdAt)) {
-    return;
-  }
-  await store.activatePlan({
+  // Only the newest *claimed* request for this user may activate. Ordering by
+  // request creation (not activation time) keeps the latest purchase winning
+  // regardless of settle order, re-polls, or concurrent confirmations.
+  if (await getSolPaymentStore().hasNewerClaimed(payment)) return;
+  await getMembershipStore().activatePlan({
     userKey: payment.userKey,
     plan: payment.plan,
     stripeCheckoutSessionId: `${SOL_SESSION_PREFIX}${signature}`,
