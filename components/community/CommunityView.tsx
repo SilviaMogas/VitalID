@@ -61,34 +61,88 @@ function useCursorList<T extends { id: string; createdAt: string }>(url: string 
   const [error, setError] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const pending = useRef<AbortController | null>(null);
+  const loadedPages = useRef(0);
 
-  const load = useCallback(
-    async (append: boolean, last?: T) => {
-      if (!url) return;
-      pending.current?.abort();
-      const controller = new AbortController();
-      pending.current = controller;
-      setLoading(true);
-      const cursor = append && last ? `&before=${encodeURIComponent(last.createdAt)}&beforeId=${last.id}` : "";
-      const res = await api<Record<string, T[]>>(`${url}${cursor}`, { signal: controller.signal });
-      if (controller.signal.aborted) return;
-      setLoading(false);
-      if (!res.ok) {
-        setError(res.status);
+  const fetchPage = useCallback(async (controller: AbortController, last?: T) => {
+    if (!url) return null;
+    const cursor = last
+      ? `&before=${encodeURIComponent(last.createdAt)}&beforeId=${last.id}`
+      : "";
+    const res = await api<Record<string, T[]>>(`${url}${cursor}`, { signal: controller.signal });
+    if (controller.signal.aborted) return null;
+    if (!res.ok) return { ok: false as const, status: res.status };
+    const page = Array.isArray(res.data[field]) ? res.data[field] : [];
+    return {
+      ok: true as const,
+      items: page.slice(0, PAGE),
+      more: page.length > PAGE,
+    };
+  }, [field, url]);
+
+  const load = useCallback(async (append: boolean, last?: T) => {
+    if (!url) return;
+    pending.current?.abort();
+    const controller = new AbortController();
+    pending.current = controller;
+    if (!append) loadedPages.current = 0;
+    setLoading(true);
+    const result = await fetchPage(controller, append ? last : undefined);
+    if (!result || controller.signal.aborted) return;
+    setLoading(false);
+    if (!result.ok) {
+      setError(result.status);
+      return;
+    }
+    setError(null);
+    setMore(result.more);
+    setItems((prev) => (append
+      ? [...prev, ...result.items.filter((n) => !prev.some((p) => p.id === n.id))]
+      : result.items));
+    loadedPages.current = append ? loadedPages.current + 1 : 1;
+  }, [fetchPage, url]);
+
+  const refreshLoaded = useCallback(async () => {
+    if (!url) return;
+    pending.current?.abort();
+    const controller = new AbortController();
+    pending.current = controller;
+    setLoading(true);
+
+    const pageCount = Math.max(1, loadedPages.current);
+    const refreshed: T[] = [];
+    let last: T | undefined;
+    let refreshedMore = false;
+    let successfulPages = 0;
+    for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+      const result = await fetchPage(controller, last);
+      if (!result || controller.signal.aborted) return;
+      if (!result.ok) {
+        setLoading(false);
+        setError(result.status);
         return;
       }
-      setError(null);
-      const page = res.data[field] ?? [];
-      setMore(page.length > PAGE);
-      const shown = page.slice(0, PAGE);
-      setItems((prev) => (append ? [...prev, ...shown.filter((n) => !prev.some((p) => p.id === n.id))] : shown));
-    },
-    [url, field],
-  );
+      successfulPages += 1;
+      for (const item of result.items) {
+        if (!refreshed.some((existing) => existing.id === item.id)) refreshed.push(item);
+      }
+      refreshedMore = result.more;
+      if (!result.more || result.items.length === 0) break;
+      last = result.items[result.items.length - 1];
+    }
+
+    if (controller.signal.aborted) return;
+    setItems(refreshed);
+    setMore(refreshedMore);
+    loadedPages.current = successfulPages;
+    setError(null);
+    setLoading(false);
+  }, [fetchPage, url]);
 
   useEffect(() => {
     setItems([]);
     setMore(false);
+    setError(null);
+    loadedPages.current = 0;
     void load(false);
     return () => pending.current?.abort();
   }, [load]);
@@ -100,6 +154,7 @@ function useCursorList<T extends { id: string; createdAt: string }>(url: string 
     loading,
     reload: () => load(false),
     loadMore: () => load(true, items[items.length - 1]),
+    refreshLoaded,
   };
 }
 
@@ -396,7 +451,7 @@ function GroupPanel({ group, t, onChanged }: { group: GroupSummary; t: Translate
           )}
           <ul className="space-y-3">
             {feed.items.map((p) => (
-              <PostItem key={p.id} post={p} groupId={group.id} t={t} d={d} onRemoved={feed.reload} />
+              <PostItem key={p.id} post={p} groupId={group.id} t={t} d={d} onRemoved={feed.refreshLoaded} />
             ))}
           </ul>
           {feed.more && (
@@ -508,7 +563,7 @@ function PostItem({
     e.preventDefault();
     if (await run({ action: "comment", entityId: post.id, body: draft.trim() })) {
       setDraft("");
-      await comments.reload();
+      await comments.refreshLoaded();
       await onRemoved();
     }
   }
@@ -556,13 +611,13 @@ function PostItem({
                     t={t}
                     onDelete={async () => {
                       if (await run({ action: "delete_comment", entityId: c.id })) {
-                        await comments.reload();
+                        await comments.refreshLoaded();
                         await onRemoved();
                       }
                     }}
                     onReport={async (reason) => {
                       if (await run({ action: "report_comment", entityId: c.id, body: reason })) {
-                        await comments.reload();
+                        await comments.refreshLoaded();
                         await onRemoved();
                       }
                     }}

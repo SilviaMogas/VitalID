@@ -68,6 +68,34 @@ function isTimestamp(value: unknown): value is string {
   );
 }
 
+function projectDeletionMetadata(
+  value: unknown,
+  kind: WellnessKind,
+): { entries: Array<{ id: string; kind: WellnessKind; createdAt: string; updatedAt: string }> } | null {
+  if (!isRecord(value) || !Array.isArray(value.entries) || value.entries.length > 100) {
+    return null;
+  }
+  const entries = [];
+  for (const entry of value.entries) {
+    if (
+      !isRecord(entry) ||
+      !isUuid(entry.id) ||
+      entry.kind !== kind ||
+      !isTimestamp(entry.createdAt) ||
+      !isTimestamp(entry.updatedAt)
+    ) {
+      return null;
+    }
+    entries.push({
+      id: entry.id,
+      kind,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt,
+    });
+  }
+  return { entries };
+}
+
 function length(value: string): number {
   return Array.from(value).length;
 }
@@ -250,16 +278,57 @@ async function runAction(
   }
 }
 
+async function runDeletionMetadata(
+  userId: string,
+  kind: WellnessKind,
+): Promise<Response> {
+  try {
+    const result = await callWellnessStore({
+      userId,
+      action: "list_deletion",
+      kind,
+    });
+    if (!isRecord(result)) return errorResponse("unavailable", 503);
+    if ("error" in result || "status" in result) {
+      const error = result.error;
+      if (typeof error === "string") {
+        const status = RPC_ERRORS[error];
+        if (status !== undefined && result.status === status) {
+          return errorResponse(error, status, true);
+        }
+      }
+      return errorResponse("unavailable", 503);
+    }
+    const projected = projectDeletionMetadata(result, kind);
+    return projected ? shareJson(projected) : errorResponse("unavailable", 503);
+  } catch {
+    return errorResponse("unavailable", 503);
+  }
+}
+
 export async function GET(req: Request): Promise<Response> {
   const auth = await authorize(req);
   if ("response" in auth) return auth.response;
-  let kind: string | null;
+  let params: URLSearchParams;
   try {
-    kind = new URL(req.url).searchParams.get("kind");
+    params = new URL(req.url).searchParams;
   } catch {
     return errorResponse("invalid_request", 400);
   }
+  const kinds = params.getAll("kind");
+  const views = params.getAll("view");
+  if (
+    kinds.length !== 1 ||
+    views.length > 1 ||
+    (views.length === 1 && views[0] !== "deletion")
+  ) {
+    return errorResponse("invalid_request", 400);
+  }
+  const kind = kinds[0];
   if (!isKind(kind)) return errorResponse("invalid_request", 400);
+  if (views[0] === "deletion") {
+    return runDeletionMetadata(auth.userId, kind);
+  }
   const consentError = await requireConsent(auth.userId);
   if (consentError) return consentError;
   return runAction(auth.userId, { action: "list", kind });

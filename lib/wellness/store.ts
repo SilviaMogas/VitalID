@@ -2,7 +2,7 @@ import "server-only";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { WellnessData, WellnessKind } from "@/lib/wellness/types";
 
-export type WellnessAction = "list" | "create" | "update" | "delete";
+export type WellnessAction = "list" | "list_deletion" | "create" | "update" | "delete";
 
 export interface WellnessStoreInput {
   userId: string;
@@ -14,6 +14,17 @@ export interface WellnessStoreInput {
 }
 
 export async function callWellnessStore(input: WellnessStoreInput): Promise<unknown> {
+  if (input.action === "list_deletion") {
+    const { data, error } = await getSupabaseServerClient().rpc(
+      "vital_id_wellness_deletion_metadata",
+      {
+        p_user_id: input.userId,
+        p_kind: input.kind,
+      },
+    );
+    if (error) throw new Error("wellness deletion metadata unavailable");
+    return data;
+  }
   const { data, error } = await getSupabaseServerClient().rpc("vital_id_wellness", {
     p_user_id: input.userId,
     p_action: input.action,

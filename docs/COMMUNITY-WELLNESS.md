@@ -48,6 +48,7 @@ project before enabling the features:
 
 - [`20261012_vital_id_community.sql`](../supabase/migrations/20261012_vital_id_community.sql)
 - [`20261012_vital_id_wellness.sql`](../supabase/migrations/20261012_vital_id_wellness.sql)
+- [`20261013_vital_id_wellness_deletion_metadata.sql`](../supabase/migrations/20261013_vital_id_wellness_deletion_metadata.sql)
 
 Community and wellness use server-only RPCs. The authenticated identity comes
 from the server session, never from a client-supplied user ID. Tables have RLS
@@ -56,9 +57,12 @@ enabled and direct access is denied to `anon` and `authenticated`; only the
 or RPC is missing, the routes fail closed with an unavailable response. They
 have no in-memory fallback.
 
-The migrations were applied only to the isolated local Supabase project during
-the recorded verification. Production setup requires an authorized, manual
-migration process; no production migration was applied here.
+The 20261013 migration is additive: it provides only bounded deletion metadata
+for the owner and does not replace or alter the original wellness RPC, table or
+RLS migration. Apply it after the two 20261012 migrations with the same
+authorized, manual migration process. The migrations were applied only to the
+isolated local Supabase project during the recorded verification; no production
+migration was applied here.
 
 ## Web install metadata
 

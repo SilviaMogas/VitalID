@@ -6,7 +6,14 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { HealthDataConsent } from "@/components/legal/HealthDataConsent";
 import { WellnessArt } from "@/components/mascot/WellnessArt";
-import type { Exercise, SupplementData, WellnessKind, WorkoutData } from "@/lib/wellness/types";
+import type {
+  Exercise,
+  SupplementData,
+  WellnessDeletionMetadata,
+  WellnessDeletionMetadataResponse,
+  WellnessKind,
+  WorkoutData,
+} from "@/lib/wellness/types";
 import type { TranslationKey } from "@/lib/i18n";
 
 interface Entry {
@@ -57,6 +64,10 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
   const { status } = useAuth();
   const { t, d } = useLocale();
   const [entries, setEntries] = useState<Entry[] | null>(null);
+  const [deletionEntries, setDeletionEntries] = useState<WellnessDeletionMetadata[]>([]);
+  const [deletionError, setDeletionError] = useState<string | null>(null);
+  const [deletionLoading, setDeletionLoading] = useState(false);
+  const [deletionOnly, setDeletionOnly] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<TranslationKey | null>(null);
   const [busy, setBusy] = useState(false);
@@ -69,6 +80,32 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
   const pending = useRef<AbortController | null>(null);
   const isWorkout = kind === "workout";
 
+  const clearFullState = useCallback(() => {
+    setEntries(null);
+    setOpen(false);
+    setEditing(null);
+    setWorkout(emptyWorkout());
+    setSupplement(emptySupplement());
+    setRemoving(null);
+  }, []);
+
+  const fetchDeletionMetadata = useCallback(async (controller: AbortController) => {
+    setDeletionLoading(true);
+    const result = await request<WellnessDeletionMetadataResponse>(
+      `/api/wellness?kind=${kind}&view=deletion`,
+      { signal: controller.signal },
+    );
+    if (controller.signal.aborted) return null;
+    setDeletionLoading(false);
+    if (!result.ok) {
+      setDeletionError(result.code);
+      return null;
+    }
+    setDeletionError(null);
+    setDeletionEntries(result.data.entries);
+    return result.data.entries;
+  }, [kind]);
+
   const load = useCallback(async (): Promise<Entry[] | null> => {
     pending.current?.abort();
     const controller = new AbortController();
@@ -77,18 +114,47 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
     if (controller.signal.aborted) return null;
     if (!result.ok) {
       setError(result.code);
-      if (result.code === "unauthenticated" || result.code === "consent_required") setEntries(null);
+      if (result.code === "unauthenticated") {
+        setDeletionOnly(false);
+        clearFullState();
+        setDeletionEntries([]);
+        setDeletionError(null);
+      } else if (result.code === "consent_required") {
+        setDeletionOnly(true);
+        clearFullState();
+        setDeletionEntries([]);
+        setDeletionError(null);
+        await fetchDeletionMetadata(controller);
+      }
       return null;
     }
     setError(null);
+    setDeletionOnly(false);
+    setDeletionEntries([]);
+    setDeletionError(null);
     setEntries(result.data.entries);
     return result.data.entries;
-  }, [kind]);
+  }, [clearFullState, fetchDeletionMetadata, kind]);
+
+  const refreshDeletion = useCallback(async () => {
+    pending.current?.abort();
+    const controller = new AbortController();
+    pending.current = controller;
+    await fetchDeletionMetadata(controller);
+  }, [fetchDeletionMetadata]);
 
   useEffect(() => {
-    if (status === "member") void load();
+    if (status === "member") {
+      void load();
+    } else {
+      pending.current?.abort();
+      setDeletionOnly(false);
+      clearFullState();
+      setDeletionEntries([]);
+      setDeletionError(null);
+    }
     return () => pending.current?.abort();
-  }, [status, load]);
+  }, [clearFullState, load, status]);
 
   function start(entry?: Entry) {
     setEditing(entry ?? null);
@@ -119,21 +185,30 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
     await load();
   }
 
-  async function remove(entry: Entry) {
+  async function remove(entry: Pick<Entry, "id" | "kind" | "updatedAt">) {
     setBusy(true);
     const result = await request("/api/wellness", {
       method: "POST",
       body: JSON.stringify({ action: "delete", kind, id: entry.id, updatedAt: entry.updatedAt }),
     });
     setBusy(false);
-    if (!result.ok) return setError(result.code);
+    if (!result.ok) {
+      setError(result.code);
+      if (result.code === "conflict") setRemoving(null);
+      return;
+    }
     if (editing?.id === entry.id) {
       setOpen(false);
       setEditing(null);
     }
     setRemoving(null);
     setNotice("wellness.deleted");
-    await load();
+    if (entries === null) {
+      setError("consent_required");
+      await refreshDeletion();
+    } else {
+      await load();
+    }
   }
 
   async function acceptConsent() {
@@ -147,6 +222,7 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
 
   const titleKey = isWorkout ? "wellness.workouts" : "wellness.supplements";
   const canEdit = entries !== null && status === "member" && error !== "consent_required" && error !== "unauthenticated";
+  const showDeletion = status === "member" && entries === null && deletionOnly;
 
   return (
     <div className="space-y-5">
@@ -197,6 +273,11 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
               type="button"
               disabled={busy}
               onClick={async () => {
+                if (error === "conflict" && entries === null) {
+                  setError("consent_required");
+                  await refreshDeletion();
+                  return;
+                }
                 const latest = await load();
                 if (latest && error === "conflict") {
                   const updated = latest.find((entry) => entry.id === editing?.id);
@@ -214,6 +295,55 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
       )}
       {notice && <p role="status" className="text-sm font-medium text-brand">{t(notice)}</p>}
       {status === "member" && !error && entries === null && <p className="text-sm text-muted">{t("common.loading")}</p>}
+
+      {showDeletion && (
+        <section className="card space-y-4 p-5" data-testid={`wellness-${kind}-deletion-panel`}>
+          <div>
+            <h2 className="text-lg font-semibold">{t("wellness.deleteOnlyTitle")}</h2>
+            <p className="mt-1 text-sm text-ink-2">{t("wellness.deleteOnlyHint")}</p>
+          </div>
+          {deletionError && (
+            <p role="alert" className="rounded-xl bg-warn-soft px-3 py-2 text-sm text-ink-2">
+              {t("wellness.deleteOnlyUnavailable")}{" "}
+              <button type="button" disabled={deletionLoading || busy} onClick={refreshDeletion} className="font-semibold text-brand underline">
+                {t("wellness.deleteOnlyRetry")}
+              </button>
+            </p>
+          )}
+          {deletionLoading && <p className="text-sm text-muted">{t("common.loading")}</p>}
+          {!deletionLoading && !deletionError && deletionEntries.length === 0 && (
+            <p className="text-sm text-muted">{t("wellness.deleteOnlyEmpty")}</p>
+          )}
+          {deletionEntries.length > 0 && (
+            <ol className="space-y-3">
+              {deletionEntries.map((entry, index) => (
+                <li key={entry.id} className="rounded-xl border border-line bg-canvas p-3" data-testid="wellness-deletion-entry">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold">{t("wellness.deleteOnlyRecord", { number: index + 1 })}</h3>
+                      <p className="mt-1 text-xs text-muted">{t("wellness.deleteOnlyCreated", { date: d(entry.createdAt) })}</p>
+                    </div>
+                    <button type="button" disabled={busy} onClick={() => setRemoving(entry.id)} className="text-xs font-semibold text-muted">
+                      {t("community.delete")}
+                    </button>
+                  </div>
+                  {removing === entry.id && (
+                    <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-white p-3">
+                      <p className="text-xs text-ink-2">{t("wellness.deleteOnlyConfirm")}</p>
+                      <button type="button" disabled={busy} onClick={() => remove(entry)} className="text-xs font-semibold text-brand">
+                        {t("community.confirmDelete")}
+                      </button>
+                      <button type="button" onClick={() => setRemoving(null)} className="text-xs text-muted">
+                        {t("community.cancel")}
+                      </button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      )}
 
       {canEdit && (
         <>

@@ -1,0 +1,273 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+import test from "node:test";
+
+const require = createRequire(import.meta.url);
+const Module = require("node:module");
+const React = require("react");
+const ts = require("typescript");
+const { act, create } = require("react-test-renderer");
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+const componentPath = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../components/wellness/WellnessView.tsx",
+);
+
+const translate = (key, params) => {
+  const values = {
+    "community.cancel": "Cancel",
+    "community.confirmDelete": "Confirm delete",
+    "community.delete": "Delete",
+    "common.loading": "Loading",
+    "wellness.consentNeeded": "Health-data consent is required",
+    "wellness.deleteOnlyConfirm": "Delete this numbered record permanently?",
+    "wellness.deleteOnlyCreated": `Created ${params?.date ?? ""}`,
+    "wellness.deleteOnlyEmpty": "No private entries are available to delete.",
+    "wellness.deleteOnlyHint": "Only a number and creation date are shown here.",
+    "wellness.deleteOnlyRecord": `Record ${params?.number ?? ""}`,
+    "wellness.deleteOnlyRetry": "Refresh deletion list",
+    "wellness.deleteOnlyTitle": "Delete private entries",
+    "wellness.deleteOnlyUnavailable": "The deletion list is temporarily unavailable.",
+    "wellness.deleted": "Entry deleted.",
+    "wellness.enable": "Save consent and continue",
+    "wellness.reloadLatest": "Load latest (discard my edits)",
+    "wellness.unavailable": "Unavailable",
+  };
+  return values[key] ?? key;
+};
+
+const localeProviderMock = {
+  useLocale: () => ({ d: (value) => value, locale: "en", t: translate }),
+};
+
+const authState = {
+  account: { userId: "00000000-0000-4000-8000-0000000000a1" },
+  status: "member",
+};
+
+function loadTranspiledModule(modulePath, mocks) {
+  const source = fs.readFileSync(modulePath, "utf8");
+  const { outputText } = ts.transpileModule(source, {
+    compilerOptions: {
+      esModuleInterop: true,
+      jsx: ts.JsxEmit.ReactJSX,
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+    },
+    fileName: modulePath,
+  });
+  const componentModule = new Module(modulePath);
+  componentModule.filename = modulePath;
+  componentModule.paths = Module._nodeModulePaths(path.dirname(modulePath));
+  const originalLoad = Module._load;
+  Module._load = function load(request, parent, isMain) {
+    if (parent?.filename === modulePath && mocks.has(request)) return mocks.get(request);
+    return originalLoad.call(this, request, parent, isMain);
+  };
+  try {
+    componentModule._compile(outputText, modulePath);
+    return componentModule.exports;
+  } finally {
+    Module._load = originalLoad;
+  }
+}
+
+const Link = ({ children, ...props }) => React.createElement("a", props, children);
+const HealthDataConsent = ({ id, checked, onChange }) => React.createElement(
+  "label",
+  null,
+  React.createElement("input", {
+    id,
+    type: "checkbox",
+    checked,
+    onChange: (event) => onChange(event.target.checked),
+  }),
+);
+const WellnessArt = () => null;
+
+const WellnessView = loadTranspiledModule(
+  componentPath,
+  new Map([
+    ["next/link", { __esModule: true, default: Link }],
+    ["@/components/legal/HealthDataConsent", { HealthDataConsent }],
+    ["@/components/mascot/WellnessArt", { WellnessArt }],
+    ["@/components/providers/AuthProvider", { useAuth: () => authState }],
+    ["@/components/providers/LocaleProvider", localeProviderMock],
+  ]),
+).WellnessView;
+
+function response(body, status = 200) {
+  return { ok: status >= 200 && status < 300, status, json: async () => body };
+}
+
+function textOf(node) {
+  if (node === null || node === undefined) return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  return (node.children ?? []).map(textOf).join("");
+}
+
+function buttonsWithText(renderer, text) {
+  return renderer.root.findAllByType("button").filter((button) => textOf(button) === text);
+}
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
+async function flush() {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
+async function withWellness(kind, fetchHandler, run) {
+  const originalFetch = globalThis.fetch;
+  let renderer;
+  globalThis.fetch = fetchHandler;
+  try {
+    await act(async () => {
+      renderer = create(React.createElement(WellnessView, { kind }));
+    });
+    await flush();
+    await run(renderer);
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+    globalThis.fetch = originalFetch;
+  }
+}
+
+function deletionEntry(kind, updatedAt, id = "00000000-0000-4000-8000-0000000000c1") {
+  return {
+    id,
+    kind,
+    createdAt: "2026-10-12T10:20:30.123456Z",
+    updatedAt,
+    data: {
+      name: "Sensitive fixture value",
+      title: "Sensitive fixture value",
+      note: "Should never render",
+    },
+  };
+}
+
+test("expired-consent deletion metadata works for workout and supplement without consent writes", async () => {
+  for (const kind of ["workout", "supplement"]) {
+    const calls = [];
+    await withWellness(kind, async (input, init = {}) => {
+      const url = String(input);
+      calls.push({ init, url });
+      if (url === `/api/wellness?kind=${kind}`) {
+        return response({ error: "consent_required" }, 403);
+      }
+      if (url === `/api/wellness?kind=${kind}&view=deletion`) {
+        return response({ entries: [deletionEntry(kind, "2026-10-12T12:34:56.123456Z")] });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    }, async (renderer) => {
+      const panel = renderer.root.findByProps({ "data-testid": `wellness-${kind}-deletion-panel` });
+      assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 1);
+      assert.match(textOf(panel), /Record 1/);
+      assert.match(textOf(panel), /Created 2026-10-12T10:20:30.123456Z/);
+      assert.doesNotMatch(textOf(renderer.root), /Sensitive fixture value|Should never render/);
+      assert.equal(calls.some(({ url }) => url === "/api/consent"), false);
+    });
+  }
+});
+
+test("wellness conflict reloads metadata and requires a fresh explicit confirmation", async () => {
+  const calls = [];
+  let metadataReads = 0;
+  let deleteReads = 0;
+  const oldUpdatedAt = "2026-10-12T12:34:56.123456Z";
+  const freshUpdatedAt = "2026-10-12T12:34:56.654321Z";
+  await withWellness("workout", async (input, init = {}) => {
+    const url = String(input);
+    calls.push({ init, url });
+    if (url === "/api/wellness?kind=workout") return response({ error: "consent_required" }, 403);
+    if (url === "/api/wellness?kind=workout&view=deletion") {
+      metadataReads += 1;
+      return response({
+        entries: metadataReads < 3
+          ? [deletionEntry("workout", metadataReads === 1 ? oldUpdatedAt : freshUpdatedAt)]
+          : [],
+      });
+    }
+    if (url === "/api/wellness" && init.method === "POST") {
+      deleteReads += 1;
+      const body = JSON.parse(init.body);
+      if (deleteReads === 1) {
+        assert.equal(body.updatedAt, oldUpdatedAt);
+        return response({ error: "conflict", status: 409 }, 409);
+      }
+      assert.equal(body.updatedAt, freshUpdatedAt);
+      return response({ ok: true });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  }, async (renderer) => {
+    await act(async () => buttonsWithText(renderer, "Delete")[0].props.onClick());
+    await act(async () => buttonsWithText(renderer, "Confirm delete")[0].props.onClick());
+    await flush();
+    assert.equal(deleteReads, 1);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 1);
+
+    await act(async () => buttonsWithText(renderer, "Load latest (discard my edits)")[0].props.onClick());
+    await flush();
+    assert.equal(metadataReads, 2);
+    await act(async () => buttonsWithText(renderer, "Delete")[0].props.onClick());
+    await act(async () => buttonsWithText(renderer, "Confirm delete")[0].props.onClick());
+    await flush();
+    assert.equal(deleteReads, 2);
+    assert.equal(metadataReads, 3);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 0);
+    assert.equal(calls.some(({ url }) => url === "/api/consent"), false);
+  });
+});
+
+test("aborted metadata from the previous account cannot restore wellness records", async () => {
+  const originalFetch = globalThis.fetch;
+  const oldMetadata = deferred();
+  let metadataReads = 0;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url === "/api/wellness?kind=workout") return response({ error: "consent_required" }, 403);
+    if (url === "/api/wellness?kind=workout&view=deletion") {
+      metadataReads += 1;
+      if (metadataReads === 1) {
+        return { ok: true, status: 200, json: () => oldMetadata.promise };
+      }
+      return response({ entries: [] });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  let renderer;
+  try {
+    authState.account = { userId: "00000000-0000-4000-8000-0000000000a1" };
+    await act(async () => {
+      renderer = create(React.createElement(WellnessView, { kind: "workout" }));
+    });
+    await flush();
+    authState.account = { userId: "00000000-0000-4000-8000-0000000000b1" };
+    await act(async () => {
+      renderer.update(React.createElement(WellnessView, { kind: "workout" }));
+    });
+    await flush();
+    oldMetadata.resolve({ entries: [deletionEntry("workout", "2026-10-12T12:34:56.123456Z")] });
+    await flush();
+    assert.equal(metadataReads, 2);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 0);
+    assert.doesNotMatch(textOf(renderer.root), /Sensitive fixture value|Should never render/);
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
