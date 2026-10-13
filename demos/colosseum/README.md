@@ -2,7 +2,11 @@
 
 This is an isolated, synthetic research demo. It does not replace the VitalID
 application and does not connect to its production services, WHOOP, Supabase or
-mainnet. It uses the fictional Fátima fixture only.
+mainnet. It uses the fictional Fátima fixture only. The demo has an executable
+program on official Solana devnet, and its primary browser lifecycle was
+demonstrated at revision `1d42ec5e48b41206ad8c28435f99a5eb01a2d05b`. The main
+VitalID website is a separate surface and does not host this live BBS flow.
+See the revision-aware [verification report](TEST-REPORT.md).
 
 ## Requirements and local verification
 
@@ -25,18 +29,17 @@ Solana transaction serialization and signatures against an injected connection.
 Those injected-RPC tests are simulations, not evidence of a chain transaction.
 
 The browser controller uses native WebCrypto Ed25519 with a non-extractable key
-when supported. Browser testing found Chrome 137 lacked native Ed25519; the
-portable fallback uses pinned `@noble/curves@2.4.0` and keeps the private bytes
-in a page-memory closure without persisting or transmitting them. This fallback
-is not a non-extractable WebCrypto or hardware-backed key; page compromise
-remains a risk. The bounded browser run verifies enrollment, previews, isolation
-and fail-closed access; the positive devnet lifecycle is still blocked.
+when supported. Chrome 137 used the portable fallback from pinned
+`@noble/curves@2.4.0`; it keeps private bytes in a page-memory closure without
+persisting or transmitting them. This fallback is not a non-extractable
+WebCrypto or hardware-backed key; page compromise remains a risk.
 
-Latest local verification (2026-10-12): the focused crypto test passed 9/9, the
-demo suite passed 30/30, the demo build passed, and root lint passed. These
-results do not imply devnet deployment or end-to-end browser success.
+At PR80 revision `8f86010`, the demo suite passed 50/50 and the demo build
+passed. Those are local checks, not browser evidence for that revision; its
+targeted browser retest is in progress and no result is claimed here. The browser
+lifecycle recorded below ran at `1d42ec5`; do not attribute it to `8f86010`.
 
-## Build and attempt the devnet deployment
+## Build and verified devnet deployment
 
 Read the [official Solana installation](https://solana.com/docs/cli/install),
 [dependency](https://solana.com/docs/intro/installation/dependencies) and
@@ -69,39 +72,34 @@ npm run devnet:keys
 cargo build-sbf --manifest-path program/Cargo.toml --sbf-out-dir .local/sbf
 ```
 
-The intended deployment is explicitly pinned to the official devnet RPC and
-expected genesis. It requests one free 2 SOL devnet airdrop only if the fresh
-payer balance is below its deployment floor, passes URL and keypair arguments on
-each CLI command, refuses to overwrite unfamiliar local keys or upgrade an
-existing program, and retains the upgrade authority. It writes local key
-material and a private local deployment receipt only under `.local/`:
+The deployment script is pinned to official devnet and its expected genesis.
+It refuses to overwrite unfamiliar local keys or upgrade an existing program
+and retains the upgrade authority. Local key material and the private deployment
+receipt stay under ignored `.local/`; neither is included here.
 
 ```bash
 npm run devnet:setup
 npm run devnet:smoke
 ```
 
-The smoke script uses a fresh Ed25519 holder distinct from the fee payer. It
-attempts a confirmed create and check, rejects a wrong holder signature, revokes
-and verifies on-chain denial, then verifies that the same reference cannot be
-created again. It writes public-only evidence to `evidence/devnet.json` only if
-the full smoke sequence succeeds. A failed faucet, build, RPC or deployment is
-reported as blocked; no local fake is substituted for chain success.
+The verified program is
+[`5saLMUki5g345gSDuiFjaf5LNBDaxW5N4yMR4sSZEu4k`](https://explorer.solana.com/address/5saLMUki5g345gSDuiFjaf5LNBDaxW5N4yMR4sSZEu4k?cluster=devnet).
+Deployment and smoke receipts are documented in
+[`evidence/devnet.json`](evidence/devnet.json) and the
+[verification report](TEST-REPORT.md). Do not rerun setup or smoke simply to
+recheck these settled receipts. Do not upload `.local/`, share its files, or
+commit private keys. The upgrade authority is retained; this program is not
+immutable.
 
-No deployment or receipt should be claimed unless it appears in the
-[test report](TEST-REPORT.md). Do not upload `.local/`, share its files, or commit
-private keys. An intended deployment retains an upgrade authority and would not
-be immutable. No devnet deployment succeeded in this attempt; see the test report.
+## Run an authorized local server
 
-## Run the local server
-
-After a successful deployment, build the HTTP bundle and set its public program
-ID and local sponsor key path from `.local/deployment.json`:
+An independently authorized local process can be configured with the public
+program ID and its own local sponsor key path:
 
 ```bash
 npm run build
 VITALID_DEMO_ENABLED=1 \
-DEMO_PROGRAM_ID="<program from .local/deployment.json>" \
+DEMO_PROGRAM_ID="5saLMUki5g345gSDuiFjaf5LNBDaxW5N4yMR4sSZEu4k" \
 DEMO_FEE_PAYER_FILE=".local/payer.json" \
 npm start
 ```
@@ -121,13 +119,13 @@ this server across processes.
 
 ## What the proof means
 
-The issuer signs the assertion that the synthetic fixture has at least seven
-distinct days in a thirty-day window. BBS proves possession of that issuer
-signature while revealing only the fixed assertion and its context. It does not
-prove that the issuer counted correctly, that a wearable generated the records,
-or that the claim is medically meaningful. The issuer sees the synthetic source
-records; the holder receives the full synthetic credential to derive the proof.
-The recipient receives only the allowlisted revealed presentation.
+The demo issuer computes the assertion that the synthetic fixture has at least
+seven distinct days in a thirty-day window, then signs the credential. The
+holder receives that signed credential and derives the off-chain BBS
+selective-disclosure proof in the browser. The recipient receives only the
+allowlisted revealed presentation. BBS does not prove that the issuer counted
+correctly, that a wearable generated the records, or that the claim is
+medically meaningful.
 
 Proof-only authorization and private-summary authorization are separate modes.
 Summary mode supports only the fictional name and/or height/weight fields. The
@@ -137,5 +135,5 @@ stored on-chain.
 
 See [`../../docs/COLOSSEUM.md`](../../docs/COLOSSEUM.md) for provenance, trust
 assumptions, limits and the broader security model, and
-[`../../docs/COLOSSEUM-SCRIPTS.md`](../../docs/COLOSSEUM-SCRIPTS.md) for draft
-presentation/application wording.
+[`../../docs/COLOSSEUM-SCRIPTS.md`](../../docs/COLOSSEUM-SCRIPTS.md) for
+application and recording copy.

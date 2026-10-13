@@ -1,176 +1,118 @@
-# VitalID — English application and demo drafts
+# VitalID — current pitch and demo scripts
 
-**Human review required.** These are drafts, not a submitted application. Replace
-execution claims with the final verification report. Never call a mocked run a
-devnet transaction. Do not imply clinical, WHOOP or insurer certification.
+**Draft for human review.** This copy has not been submitted. Review current
+eligibility and portal questions before use; it does not guarantee eligibility,
+admission or a prize.
 
-**Current execution status:** the bounded official devnet setup attempt stopped
-after the free faucet request failed; its CLI mentioned rate limiting as one
-possible cause, which was not established. The disposable payer remained at
-`0 SOL`. No program was deployed, no chain receipt exists, and no browser demo
-was run. Until a later attempt is confirmed and recorded in
-[`demos/colosseum/TEST-REPORT.md`](../demos/colosseum/TEST-REPORT.md), present
-the Solana component as designed/built, not as live devnet state. Do not show a
-mocked successful chain flow.
+## Evidence status and boundaries
 
-## Short presentation script (about 90 seconds)
+- The executable Solana devnet program and public smoke receipts are documented
+  in [`demos/colosseum/TEST-REPORT.md`](../demos/colosseum/TEST-REPORT.md) and
+  [`demos/colosseum/evidence/devnet.json`](../demos/colosseum/evidence/devnet.json).
+- The primary real-browser lifecycle—including holder consent, create,
+  independent challenge, BBS derivation, verification, revoke and denial—was
+  demonstrated at revision `1d42ec5e48b41206ad8c28435f99a5eb01a2d05b`.
+- PR #80 status-refresh code is at `8f86010`; its targeted browser retest is
+  in progress, with no result claimed here. Do not attribute the `1d42ec5`
+  browser results to `8f86010`.
+- The issuer computes and signs the synthetic credential. **The holder derives
+  the BBS proof in the browser.** The recipient verifies it. BBS is off-chain;
+  Solana stores only a random permission reference, controller, expiry and
+  revocation state.
+- The demo uses synthetic records, not clinical truth, an actual benefit
+  credential or private computation. CUDIS and Muse are not connected; there
+  are no real wearable readings or production wallet, issuer or insurer
+  integrations. The main VitalID website does not host this isolated flow.
+- The initial buyer and B2B verification API are hypotheses, not validated
+  customer demand. Existing VitalID product work predates this isolated demo
+  and should be disclosed.
 
-“People often disclose an entire health screenshot when a service only needs one
-specific fact. VitalID explores a narrower alternative: show a verifiable
-assertion and keep the underlying details private.
+## Two-minute introduction
 
-We built this research extension on our existing VitalID product and fictional
-demo persona. We are not claiming the dashboard, connectors or previous product
-work as new for this competition.
+**Timing note:** about two minutes is a rehearsal target, not a measured duration.
+Rehearse with a timer; do not speed through evidence or confirmations.
 
-In this demo, VitalID Demo signs an assertion that at least seven distinct days
-of fictional records exist inside a thirty-day window. The holder derives a real
-BBS selective-disclosure proof in the browser. The recipient can verify that
-signed assertion without receiving the full name or daily measurements.
+> Hi, I’m Silvia Mogas, founder of VitalID.
+>
+> When an organisation needs one fact about your wellbeing, why should you have
+> to share your entire health history?
+>
+> VitalID is built around one principle: prove what matters, and share only
+> what’s necessary.
+>
+> We’re building a portable health-credential layer that lets people present
+> specific, verifiable claims while keeping unnecessary personal information
+> private.
+>
+> Our first commercial use case is helping someone demonstrate access to a
+> wellness benefit they already have. Our potential customers are benefits
+> administrators, employee-benefits platforms and insurers. We aim to complement
+> their eligibility systems, not become an insurance company.
+>
+> For this prototype, we built on the existing VitalID application and created
+> a working demonstration using BBS selective-disclosure proofs and real
+> permissions on Solana devnet.
+>
+> The holder reviews the disclosure and authorizes a specific recipient. That
+> recipient can verify an issuer-signed assertion without receiving the person’s
+> name or daily measurements.
+>
+> Solana records only the permission reference, controller, expiration and
+> revocation state. Health records stay off-chain. When the holder revokes
+> permission, future access is blocked.
+>
+> Our demonstration uses synthetic data: an issuer attests to seven distinct
+> days of records within a thirty-day window. The proof verifies that signed
+> assertion—not medical truth or the authenticity of wearable readings.
+>
+> CUDIS and Muse are future integrations, not connected today.
+>
+> Our business-model hypothesis is a B2B verification API. Next, we’ll validate
+> one narrow benefits workflow with prospective customers and an authorised
+> issuer.
+>
+> VitalID isn’t about collecting more health data. It’s about making a smaller
+> disclosure useful and verifiable.
+>
+> Prove what matters. Share only what’s necessary.
 
-BBS does not prove the calculation itself or prove that the records are medically
-accurate. The issuer is trusted for that assertion.
+## Browser demo
 
-The included Solana program is designed to record a short-lived permission
-controlled by the holder's key, with an expiry and an irreversible revoke
-operation. It stores no health data or health-data hashes. The code checks both
-the off-chain proof and current devnet permission state, but this run did not
-deploy the program: the official free faucet request failed, and its cause was
-not established. There is no live chain state or transaction to show.
+**Target:** under three minutes as a rehearsal goal, not a verified duration.
+Narration is English; screen directions are Spanish. Public-RPC confirmation
+latency may exceed the target. Wait for actual confirmation and preserve the
+real state; never simulate, skip or narrate success before it occurs.
 
-A one-time challenge binds the proof to this recipient and session. Revocation
-blocks new access locally even while chain confirmation is pending. It cannot
-retrieve copies someone has already downloaded.
+| Target | Instrucción en pantalla (español) | Narration (English) |
+|---|---|---|
+| 0:00–0:15 | Abre primero el destinatario en un perfil de navegador realmente independiente. Inicia su sesión, deja la pantalla lista y explica que usas datos sintéticos y estado efímero. | “This is an isolated prototype with synthetic data. I’m opening the recipient in an independent session before the holder approves anything.” |
+| 0:15–0:35 | Cambia al titular. Muestra el destinatario concreto y la opción de prueba mínima; deja visibles los campos que se compartirían. | “The holder reviews the recipient and the exact disclosure. This demo uses synthetic records, not a real benefit credential.” |
+| 0:35–0:50 | El titular acepta explícitamente el consentimiento mínimo. No habilites resumen ni otros campos. | “The holder explicitly consents to this minimal proof. The recipient will not receive the name or daily records.” |
+| 0:50–1:10 | Autoriza el create real con el controlador del navegador. Espera el estado confirmado y enseña el recibo/enlace público solo cuando exista. | “The holder’s browser controller authorizes a real permission on Solana devnet. I’m waiting for the network confirmation.” |
+| 1:10–1:30 | Vuelve al perfil independiente; solicita el reto de un solo uso y pásalo al titular mediante el flujo real de la app. | “The independent recipient issues a one-time challenge bound to this session and request.” |
+| 1:30–1:55 | En el titular, deriva la prueba BBS real en el navegador. Revisa la vista previa y pulsa **Send** explícitamente. | “The issuer signs the synthetic credential; the holder derives the BBS proof in the browser. I can inspect the preview before explicitly sending it.” |
+| 1:55–2:10 | Regresa al destinatario y muestra el resultado real `verified: true` y solo los campos revelados. | “The recipient verifies the issuer-signed assertion and current permission. The proof does not establish medical truth.” |
+| 2:10–2:40 | Vuelve al titular, revoca y espera confirmación de cadena. Regresa al destinatario e intenta el acceso de nuevo; muestra la denegación real. | “The holder revokes future access. After confirmation, the recipient can no longer verify this permission. Revocation cannot retrieve copies already received.” |
+| 2:40–2:55 | Cierra con los límites: “synthetic data / BBS off-chain / devnet permission / no wearable readings”. | “This demonstrates a narrow technical flow, not a clinical outcome or an actual benefit credential. CUDIS and Muse are not connected.” |
 
-Our next validation is whether a wellness service actually needs this minimal
-assertion and will pay for its verification. This is a synthetic, local research
-prototype, not a production health or insurance decision system.”
+If the real confirmation takes longer than the target, keep waiting and keep the
+screen truthful. Trim explanatory narration only if necessary; do not fake a
+receipt, suppress a failure or present a pending state as confirmed. Expiry and
+tamper evidence are supplemental report results, not a reason to stage a
+three-minute expiry sequence.
 
-For this run, say “the included program is designed to record,” state that the
-faucet request failed and the payer remained at `0 SOL`, and show only verified
-local BBS/software results. Do not splice
-simulated successful chain screens into the main demo.
+## Recording and submission checklist
 
-## Demo script (about three minutes)
-
-### Before recording
-
-- Use the final branch/commit and the exact reproducible instructions.
-- Do not present a live browser flow for this run: no devnet program was
-  deployed. Start the isolated server only after a later deployment is confirmed
-  and its public receipt is recorded.
-- Open the holder page in one browser profile and `/receiver` in a separate
-  browser/incognito profile. Tabs in the same cookie jar are not independent.
-- Confirm no real account, wearable, data or funds are used.
-- Keep the actual program and transaction explorer links available.
-
-### Recorded sequence
-
-1. **Boundary:** “This is a fictional person and synthetic records. The existing
-   VitalID product predates this extension.”
-2. **Recipient:** Start its own key-authenticated session. Give its public
-   recipient ID to the holder. Explain that it is not a bearer access token.
-3. **Holder:** Start the holder session, enter the recipient ID and choose
-   “Minimal proof only.” Show the disclosure fields; no full name or daily
-   measurements will be sent.
-4. **Permission:** Do not show a live permission until a real deployment exists.
-   On a later verified run, authorize and sign creation; show pending status and
-   then the actual confirmed receipt and program address.
-5. **Credential and proof:** Only after that confirmed permission, have the
-   recipient generate a one-time challenge and the holder derive the synthetic
-   BBS proof locally. Explain issuer-computed condition versus proof of a signed
-   claim.
-6. **Verification and replay:** On a live run, show revealed claims and
-   controller authorization, then show same-challenge replay rejected. Never
-   imply that BBS alone authorizes a summary.
-7. **Revoke:** On a live run, distinguish immediate local denial from chain
-   pending/confirmed status and show the real transaction only if confirmed.
-8. **After revoke:** Show denial of new access without implying prior receipts or
-   downloaded copies are erased.
-9. **Optional summary mode:** On a live run, use a different permission with
-   identity deselected and only height/weight selected. Show its exact preview,
-   receiver authentication and field-limited response.
-
-End by showing the verification report: real library tests, simulated dependency
-negative tests, actual devnet/browser evidence if later obtained, and every
-remaining gap. For the current run, state that devnet and browser evidence are
-absent.
-
-## Draft application answers
-
-### What problem are you solving?
-
-People frequently disclose more health-related data than a specific interaction
-requires. Screenshots and full reports are hard to limit and easy to retain.
-VitalID is exploring user-authorized, minimal disclosure of issuer-attested
-facts with explicit recipients, expiry and revocation of future access.
-This demo tests a narrow protocol, not clinical truth or insurer eligibility.
-
-### Who is the user?
-
-Initially, an individual who wants to prove a limited participation condition to
-a service without sharing the underlying wearable history. Our demonstration
-uses a fictional persona only. The recipient is authenticated for the specific
-permission; this does not verify its real-world professional identity.
-
-### Who is the buyer?
-
-A wellness or benefits service that needs a narrow, consented verification could
-be a buyer to validate. Willingness to pay, procurement, regulatory suitability
-and the usefulness of this particular condition remain hypotheses. We have not
-established a paying insurer integration, clinical use case or commercial demand
-through this demo.
-
-### Why blockchain? What does Solana do?
-
-A successful Solana devnet deployment would provide a public, independently
-queryable permission state: random reference, holder controller, expiry and
-revocation. A distinct payer can sponsor fees without becoming the controller.
-The recipient code checks this state alongside off-chain proof verification.
-This attempt was blocked at the official faucet, so no deployed state or
-transaction is claimed. Blockchain does not store health data, send reports,
-compute the assertion or verify BBS on-chain in this MVP. Any later deployment,
-RPC and the upgrade authority of any future deployment remain explicit trust
-dependencies.
-
-### What exactly is zero knowledge?
-
-The BBS presentation proves knowledge of a valid VitalID Demo issuer signature
-over a fixed message vector while selectively revealing the synthetic
-seven-distinct-days assertion, window, expiry and permission/controller binding.
-Name and daily measurements remain undisclosed to the recipient. The issuer
-counts and signs the condition outside ZK; there is no private seven-day
-computation or proof of medical accuracy. An independent Ed25519 signature binds
-the BBS proof and one-time challenge context to the holder's controller key.
-
-### What was built during this effort?
-
-Starting from audit commit `677086bd472ac0613886e388ceedcb7b9e400c57`, this effort
-hardens recipient authorization and output projection in the existing member
-sharing flow, removes analytics from private routes, clarifies insurer metadata,
-and adds an isolated BBS selective-disclosure/devnet permission demo with tests
-and reproducible instructions. No devnet program was deployed in this run. The
-dashboard, Fátima dataset/avatar, identity
-card, account/billing work and earlier connector code are pre-existing work.
-See the linked provenance document and final PR diff for exact boundaries.
-
-### What remains unvalidated?
-
-Production identity and issuer governance; authenticity of device records;
-clinical and regulatory suitability; buyer demand; durable multi-process replay
-protection; production wallets/recovery and deployment hardening. The BBS library
-and this integration are not claimed independently audited. Controllers and
-permission references are public, so no complete anonymity is claimed.
-Use the final report to state exactly whether devnet deployment and the
-separate-browser demonstration succeeded or remain blocked.
-
-## What Silvia must do herself
-
-1. Review the final test report, actual demo and pre-existing-work disclosure.
-2. Review official eligibility, team membership and submission requirements.
-3. Register/join the event and ensure each team member is registered, if required.
-4. Choose final answers, video/repository links and any personal/business facts.
-5. Accept terms and submit herself before the official deadline.
-
-No term acceptance, submission, fundraising claim or automatic merge/deployment
-is performed on Silvia's behalf.
+- Use truly separate holder and recipient browser profiles; tabs sharing a
+  cookie jar are not independent.
+- Do not show `.local/`, private keys, environment variables, tokens or real
+  health data.
+- Show the actual confirmation and result; do not claim all later code revisions
+  have browser coverage when the report identifies another revision.
+- Do not describe Solana as storing health data, calculating the seven-day
+  condition or verifying BBS on-chain.
+- Do not claim a production wallet, issuer, insurer, CUDIS, Muse or wearable
+  integration, customer, pilot, funding, traction or validated buyer.
+- Do not imply that revocation deletes data already received.
+- Silvia reviews eligibility, final wording and portal terms and submits the
+  application herself. No application or acceptance is performed on her behalf.
