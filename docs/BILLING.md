@@ -118,6 +118,36 @@ customer portal in the Stripe dashboard (Settings → Billing → Customer porta
 Without it `POST /api/stripe/portal` still returns a URL only when the portal is
 enabled — until then members can be cancelled from the Stripe dashboard directly.
 
+## Solana Pay (one-time SOL)
+
+Besides Stripe subscriptions, paid plans can be bought with a **one-time SOL
+transfer** via the Solana Pay protocol — no payment provider account needed.
+
+- `lib/solpay/` — config (`SOL_TREASURY_ADDRESS`, `SOL_PAY_CLUSTER`,
+  `SOL_PAY_LAMPORTS_*`), a fetch-based JSON-RPC client (no SDK dependency), the
+  `vital_id_sol_payments` store (Supabase + memory backends), and verification
+  in `service.ts`.
+- `POST /api/sol/checkout {plan, interval}` → creates a payment request: a fresh
+  **reference** public key, the expected lamports, and a `solana:` URL shown as
+  a QR on `/pricing` (works with any Solana wallet; no in-browser wallet needed).
+- `GET /api/sol/status?reference=…` → the UI polls it; the server calls
+  `getSignaturesForAddress(reference)` + `getParsedTransaction` on the configured
+  RPC and accepts the first confirmed transaction that transfers **≥ expected
+  lamports** to the treasury (inner instructions included). Underpaid and
+  unrelated transactions are ignored; a claimed signature can never settle two
+  requests (unique index + atomic claim).
+- On settlement `MembershipStore.activatePlan` runs with
+  `stripeCheckoutSessionId = "sol:<signature>"`, `subscriptionStatus =
+  "sol_one_time"` and `subscriptionPeriodEnd = +30d (monthly) / +365d (annual)`.
+  **No auto-renewal**: reads (`applySolReadExpiry`) treat the plan as `free`
+  once the period ends — there is no webhook to downgrade later.
+- Payment requests expire after `SOL_PAY_EXPIRY_MINUTES` (default 60).
+- Migration: `supabase/migrations/20261013_vital_id_sol_payments.sql` (RLS on,
+  no policies — server secret only, same as `vital_id_memberships`).
+
+Defaults target **devnet** for demos; for real SOL set `SOL_PAY_CLUSTER=
+mainnet-beta` and the `SOL_PAY_LAMPORTS_*` prices — there is no USD conversion.
+
 ## Fatima / demo semantics
 
 - No `vitalid_uid` cookie → `user_key = "fatima"` (demo user). `DEMO_DEFAULT_PLAN`
