@@ -47,6 +47,19 @@ export interface MembershipStore {
     subscriptionPeriodEnd?: string | null;
   }): Promise<MembershipRecord>;
   /**
+   * One-time SOL purchase activation. Atomic and additive: each paid request
+   * adds `extendDays` on top of max(now, current period end), the plan keeps
+   * the highest rank, and the same sessionId never applies twice. Stripe-
+   * managed members keep Stripe-owned status/period.
+   */
+  activateSol(input: {
+    userKey: string;
+    plan: Exclude<PlanId, "free">;
+    extendDays: number;
+    sessionId: string;
+    payer: string | null;
+  }): Promise<MembershipRecord>;
+  /**
    * Applies a Stripe subscription state to whichever member owns it (lookup by
    * subscription id, then userKey, then customer id). `plan` is the paid plan
    * to grant while the subscription is active; pass null to downgrade to free.

@@ -313,13 +313,12 @@ test('anonymous SOL checkout is refused when auth is configured', async () => {
   }
 });
 
-test('an older settled request cannot roll back a newer activation', async () => {
+test('paid SOL requests stack additively and never regress plan or period', async () => {
   const store = getMembershipStore();
   const user = 'user-sol-order';
-  // Older request created first, newer one second.
   const reqA = await createSolPayment(user, 'plus', 'monthly');
   const reqB = await createSolPayment(user, 'pro', 'annual');
-  // The newer request settles and activates first.
+  // The newer request settles and activates first: pro for ~365 days.
   const txB = transferTx({ signatureReference: reqB.reference, lamports: 500_000_000n, payer: 'payer-g' });
   const rpcB = fakeRpc({
     signatures: [{ signature: 'sig-newer', err: null }],
@@ -328,24 +327,25 @@ test('an older settled request cannot roll back a newer activation', async () =>
   assert.deepEqual(await confirmSolPayment(reqB.reference, user, rpcB), { state: 'paid' });
   const afterB = await store.get(user);
   assert.equal(afterB.plan, 'pro');
-  const periodEndB = afterB.subscriptionPeriodEnd;
-  // Now the older request settles on-chain (late scan path) — it must not
-  // regress the newer activation's plan or period.
+  const periodEndB = Date.parse(afterB.subscriptionPeriodEnd);
+  // The older request settles late — it ADDS its month on top, plan stays pro.
   const txA = transferTx({ signatureReference: reqA.reference, lamports: LAMPORTS, payer: 'payer-g' });
   const rpcA = fakeRpc({
     signatures: [{ signature: 'sig-older', err: null }],
     transactions: { 'sig-older': txA },
   });
   assert.deepEqual(await confirmSolPayment(reqA.reference, user, rpcA), { state: 'paid' });
-  // Nor may a re-poll of the already-claimed older reference.
-  assert.deepEqual(await confirmSolPayment(reqA.reference, user, rpcA), { state: 'paid' });
   const afterA = await store.get(user);
   assert.equal(afterA.plan, 'pro');
-  assert.equal(afterA.subscriptionPeriodEnd, periodEndB);
-  assert.equal(afterA.stripeCheckoutSessionId, 'sol:sig-newer');
+  const endAfterA = Date.parse(afterA.subscriptionPeriodEnd);
+  assert.ok(endAfterA > periodEndB, `expected period to extend: ${afterA.subscriptionPeriodEnd}`);
+  assert.ok(endAfterA - periodEndB >= 29 * 86_400_000, 'monthly purchase adds ~30 days');
+  // A re-poll of the already-claimed older reference is a no-op.
+  assert.deepEqual(await confirmSolPayment(reqA.reference, user, rpcA), { state: 'paid' });
+  assert.equal((await store.get(user)).subscriptionPeriodEnd, afterA.subscriptionPeriodEnd);
 });
 
-test('the newer request still activates when the older one settles first', async () => {
+test('a lower-tier purchase extends a higher plan instead of shortening it', async () => {
   const store = getMembershipStore();
   const user = 'user-sol-order2';
   const reqA = await createSolPayment(user, 'plus', 'monthly');
@@ -357,8 +357,11 @@ test('the newer request still activates when the older one settles first', async
     transactions: { 'sig-first': txA },
   });
   assert.deepEqual(await confirmSolPayment(reqA.reference, user, rpcA), { state: 'paid' });
-  assert.equal((await store.get(user)).plan, 'plus');
-  // Newer settles second — it must win even though the older activated before it.
+  const afterA = await store.get(user);
+  assert.equal(afterA.plan, 'plus');
+  const endA = Date.parse(afterA.subscriptionPeriodEnd);
+  // Newer annual pro settles second — plan upgrades and adds its year on the
+  // remaining paid time instead of replacing it.
   const txB = transferTx({ signatureReference: reqB.reference, lamports: 500_000_000n, payer: 'payer-h' });
   const rpcB = fakeRpc({
     signatures: [{ signature: 'sig-second', err: null }],
@@ -368,9 +371,11 @@ test('the newer request still activates when the older one settles first', async
   const membership = await store.get(user);
   assert.equal(membership.plan, 'pro');
   assert.equal(membership.stripeCheckoutSessionId, 'sol:sig-second');
-  // And a re-poll of the older one still cannot regress it.
-  assert.deepEqual(await confirmSolPayment(reqA.reference, user, rpcA), { state: 'paid' });
-  assert.equal((await store.get(user)).stripeCheckoutSessionId, 'sol:sig-second');
+  const endB = Date.parse(membership.subscriptionPeriodEnd);
+  assert.ok(endB >= endA + 364 * 86_400_000, `expected +~365d on remaining: ${membership.subscriptionPeriodEnd}`);
+  // Same payment applied twice never extends twice.
+  assert.deepEqual(await confirmSolPayment(reqB.reference, user, rpcB), { state: 'paid' });
+  assert.equal((await store.get(user)).subscriptionPeriodEnd, membership.subscriptionPeriodEnd);
 });
 
 test('paid members can complete onboarding without the plan picker flag', async () => {

@@ -113,6 +113,43 @@ export class MemoryMembershipStore implements MembershipStore {
     return structuredClone(record);
   }
 
+  // Same semantics as vital_id_sol_activate in Postgres — additive days and
+  // highest-plan-rank, deduped by sessionId. Serial in memory by nature.
+  async activateSol(input: {
+    userKey: string;
+    plan: Exclude<PlanId, "free">;
+    extendDays: number;
+    sessionId: string;
+    payer: string | null;
+  }) {
+    const now = new Date();
+    const stored = this.map.get(input.userKey);
+    const existing = stored ? applySolReadExpiry(stored) : undefined;
+    if (existing?.stripeCheckoutSessionId === input.sessionId) {
+      return structuredClone(existing);
+    }
+    const nowIso = now.toISOString();
+    const base = existing ?? this.blank(input.userKey, nowIso);
+    const stripeManaged = hasLiveStripeSubscription(base);
+    const remaining = base.subscriptionPeriodEnd ? Date.parse(base.subscriptionPeriodEnd) : 0;
+    const endMs = Math.max(now.getTime(), remaining) + input.extendDays * 86_400_000;
+    const record: MembershipRecord = {
+      ...base,
+      plan: planRank(input.plan) > planRank(base.plan) ? input.plan : base.plan,
+      stripeCheckoutSessionId: input.sessionId,
+      stripePaymentIntentId: input.payer ?? base.stripePaymentIntentId,
+      subscriptionStatus: stripeManaged ? base.subscriptionStatus : 'sol_one_time',
+      subscriptionPeriodEnd: stripeManaged
+        ? base.subscriptionPeriodEnd
+        : new Date(endMs).toISOString(),
+      activatedAt: nowIso,
+      planChosenAt: base.planChosenAt ?? nowIso,
+      updatedAt: nowIso,
+    };
+    this.map.set(input.userKey, record);
+    return structuredClone(record);
+  }
+
   async syncSubscription(input: {
     stripeSubscriptionId: string;
     stripeCustomerId?: string | null;
