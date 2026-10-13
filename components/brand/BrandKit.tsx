@@ -59,7 +59,7 @@ const NEVER = [
   "Sample data is always labelled DEMO or “Sample data”.",
 ];
 
-function Download({ href, children = "Download" }: { href: string; children?: string }) {
+function Download({ href, children = "Download" }: Readonly<{ href: string; children?: string }>) {
   return (
     <a
       href={href}
@@ -74,7 +74,7 @@ function Download({ href, children = "Download" }: { href: string; children?: st
   );
 }
 
-function Section({ id, title, lead, children }: { id: string; title: string; lead: string; children: ReactNode }) {
+function Section({ id, title, lead, children }: Readonly<{ id: string; title: string; lead: string; children: ReactNode }>) {
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-6">
       <h2 id={`${id}-title`} className="text-2xl font-semibold tracking-tight">{title}</h2>
