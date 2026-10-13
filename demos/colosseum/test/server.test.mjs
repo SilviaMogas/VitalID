@@ -542,6 +542,46 @@ test('a holder session is capped at twenty permissions', async t => {
   assert.equal(denied.status, 429);
 });
 
+test('status refreshes 65 confirmed recipient permissions sequentially across four holders', async t => {
+  const adapter = new FakeAdapter();
+  let activeRefreshes = 0;
+  let peakRefreshes = 0;
+  const transactionState = adapter.transactionState.bind(adapter);
+  adapter.transactionState = async receipt => {
+    activeRefreshes += 1;
+    peakRefreshes = Math.max(peakRefreshes, activeRefreshes);
+    try {
+      if (activeRefreshes > 64) throw new Error('bounded RPC queue capacity exceeded');
+      await delay(1);
+      return await transactionState(receipt);
+    } finally {
+      activeRefreshes -= 1;
+    }
+  };
+
+  const {client} = await harness(t, {adapter});
+  const receiver = client();
+  await receiver.authenticate();
+  const holders = [];
+  for (let index = 0; index < 4; index += 1) {
+    const holder = client();
+    await holder.authenticate();
+    holders.push(holder);
+  }
+
+  for (const [index, count] of [17, 17, 17, 14].entries()) {
+    for (let permission = 0; permission < count; permission += 1) {
+      await createPermission(holders[index], receiver);
+    }
+  }
+
+  const status = await receiver.get('/api/status');
+  assert.equal(status.status, 200);
+  assert.equal(status.body.permissions.length, 65);
+  assert.ok(status.body.permissions.every(permission => permission.createState === 'confirmed'));
+  assert.equal(peakRefreshes, 1);
+});
+
 test('request bodies are bounded without logging or echoing attacker data', async t => {
   const {client} = await harness(t);
   const browser = client();

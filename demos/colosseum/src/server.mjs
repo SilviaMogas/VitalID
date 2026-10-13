@@ -401,7 +401,7 @@ export async function createDemoServer({
       const visible = [...permissions.values()].filter(
         permission => permission.holderId === session.id || permission.receiverId === session.id,
       );
-      await Promise.all(visible.map(refreshState));
+      for (const permission of visible) await refreshState(permission);
       requireCurrentSession(session);
       json(response, 200, {
         session: {id: session.id, publicKey: session.publicKey},
