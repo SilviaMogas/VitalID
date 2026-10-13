@@ -33,6 +33,7 @@ Vital ID is not a medical device and does not give medical advice. For medical q
 
 - [Home](https://www.vitalid.site/): Product entry point and demo.
 - [Pricing](https://www.vitalid.site/pricing): Membership tiers.
+- [Brand kit](https://www.vitalid.site/brand): Logos, colours, mascot crew and usage guidelines.
 
 ## Machine-readable
 
