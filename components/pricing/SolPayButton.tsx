@@ -65,7 +65,9 @@ export function SolPayButton({
             onPaidRef.current();
             return;
           }
-          if (res.ok && (data.state === "expired" || data.state === "missing")) {
+          // The route answers 404 for a missing reference and 200 with a state
+          // otherwise — both mean the request can no longer be paid.
+          if (res.status === 404 || (res.ok && (data.state === "expired" || data.state === "missing"))) {
             setPhase("expired");
             return;
           }
