@@ -838,6 +838,7 @@ const wellnessToolsStrings = {
 const legalStrings = {
   "legal.privacy": ["Privacy Policy", "سياسة الخصوصية"],
   "legal.terms": ["Terms of Service", "شروط الخدمة"],
+  "legal.brand": ["Brand kit", "هوية العلامة"],
   "legal.links": ["Legal", "قانوني"],
   "legal.contact": ["Contact", "للتواصل"],
   "consent.accept.pre": ["I accept the", "أوافق على"],

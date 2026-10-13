@@ -18,11 +18,11 @@ import { TabIntro } from "@/components/layout/TabIntro";
 import { DemoBadge } from "@/components/layout/DemoBadge";
 import { LegalLinks } from "@/components/legal/LegalLinks";
 
-/** Routes rendered without the app navigation (auth + setup journey, public share view, legal pages). */
-const BARE_PREFIXES = ["/shared", "/signup", "/signin", "/checkout", "/pricing", "/onboarding", "/privacy", "/terms"];
+/** Routes rendered without the app navigation (auth + setup journey, public share view, legal and brand pages). */
+const BARE_PREFIXES = ["/shared", "/signup", "/signin", "/checkout", "/pricing", "/brand", "/onboarding", "/privacy", "/terms"];
 
 /** Bare routes that get the brand + language header. */
-const BARE_HEADER_PREFIXES = ["/shared", "/pricing", "/onboarding", "/privacy", "/terms"];
+const BARE_HEADER_PREFIXES = ["/shared", "/pricing", "/brand", "/onboarding", "/privacy", "/terms"];
 
 const NAV: { href: string; key: TranslationKey; icon: ReactNode }[] = [
   {
@@ -204,7 +204,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return (
       <div
         className={`mx-auto flex min-h-dvh w-full max-w-md flex-col ${
-          pathname.startsWith("/pricing")
+          pathname.startsWith("/pricing") || pathname.startsWith("/brand")
             ? "md:max-w-5xl"
             : pathname === "/privacy" || pathname === "/terms"
               ? "md:max-w-3xl"
