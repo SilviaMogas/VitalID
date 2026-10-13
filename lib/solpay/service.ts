@@ -137,7 +137,14 @@ function periodEndFor(interval: BillingInterval, from = new Date()): string {
 }
 
 async function activate(payment: SolPayment, signature: string, payer: string | null) {
-  await getMembershipStore().activatePlan({
+  const store = getMembershipStore();
+  // A newer activation already applied (e.g. a later purchase): an older
+  // settled request must never roll the membership back to its own period.
+  const current = await store.get(payment.userKey);
+  if (current?.activatedAt && Date.parse(current.activatedAt) > Date.parse(payment.createdAt)) {
+    return;
+  }
+  await store.activatePlan({
     userKey: payment.userKey,
     plan: payment.plan,
     stripeCheckoutSessionId: `${SOL_SESSION_PREFIX}${signature}`,
