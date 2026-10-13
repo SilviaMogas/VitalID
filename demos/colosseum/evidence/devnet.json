@@ -1,0 +1,32 @@
+{
+  "network": "devnet",
+  "rpc": "https://api.devnet.solana.com",
+  "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+  "program": "5saLMUki5g345gSDuiFjaf5LNBDaxW5N4yMR4sSZEu4k",
+  "payer": "8wU9Y36gQ6yx3SSZjyoM3HUyFyukbkWmoSeTNv2YuUNA",
+  "upgradeAuthority": "8wU9Y36gQ6yx3SSZjyoM3HUyFyukbkWmoSeTNv2YuUNA",
+  "artifactSha256": "e541154cc717db0673dc8c035d34e6672abf18b8c3f7f20619f537254e65712e",
+  "artifactBytes": 67272,
+  "reference": "ab0b61c4b45535a38ef4511a566fc1704581856f80ca9a71b6fbfbfbb4fc5c7c",
+  "wrongHolderRejectedByAdapter": true,
+  "create": {
+    "signature": "4DefB5Ue4CaTaxrgpBS7E2N6WxwLU5GkgR6YkveCW6QebHEP5L4L8TULjWRBvZhMnu2xgUxdhTUEyof3jzDR3wbt",
+    "state": "confirmed",
+    "slot": 510509696
+  },
+  "revoke": {
+    "signature": "3Nxve8QXWBeEazu5Vz7FPcu4evmr4mGVAV68fbBiyP6JEssFDBG6AwqFA1hq6znhPfSfxCzzhpnDiqABCWvDnDS3",
+    "state": "confirmed",
+    "slot": 510509729
+  },
+  "chainCheckAfterRevokeDenied": true,
+  "sameReferenceRecreateRejectedByRpcSimulation": true,
+  "recreateSimulationSlot": 510509752,
+  "recreateSimulationError": {
+    "InstructionError": [
+      0,
+      "AccountAlreadyInitialized"
+    ]
+  },
+  "checkedAt": "2026-10-13T04:48:26.752Z"
+}

@@ -33,8 +33,9 @@ insurer-oriented work, a minimum privacy design is narrowly scoped,
 issuer-attested claims rather than raw records; this is a design criterion, not
 an insurer integration or an insurance decision. The existing BBS work remains
 an isolated synthetic lab: it is not in the member app and does not provide KYC,
-eligibility decisions, claims or payouts. No public devnet transaction receipts
-are claimed.
+eligibility decisions, claims or payouts. This separate member-app follow-up
+makes no devnet transaction claims; the public receipts below belong only to the
+isolated Colosseum demo.
 
 The member app has standalone web-manifest and icon metadata only. It is not a
 native iOS/Android app and has no offline cache; end-to-end installation has not
@@ -180,10 +181,48 @@ wrong program/network, missing/expired/revoked accounts and RPC errors deny acce
 RPC providers and the configured deployment are trust dependencies; this is not
 a trustless light client. Deployment/upgrade-authority status and actual receipts
 must be reported separately; source code alone is not evidence of a devnet run.
-The bounded deployment attempt for this work stopped after the official devnet
-faucet request failed; its CLI suggested rate limiting as one possible cause,
-but the cause was not established. The disposable payer balance remained `0 SOL`;
-no live program or transaction receipt is claimed. See the demo test report.
+
+### Verified deployment and browser evidence
+
+The permission program is executable on official Solana devnet, genesis
+`EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG`:
+
+- Program:
+  [`5saLMUki5g345gSDuiFjaf5LNBDaxW5N4yMR4sSZEu4k`](https://explorer.solana.com/address/5saLMUki5g345gSDuiFjaf5LNBDaxW5N4yMR4sSZEu4k?cluster=devnet).
+- The deployed code matched the 67,272-byte SBF artifact byte for byte; SHA-256
+  `e541154cc717db0673dc8c035d34e6672abf18b8c3f7f20619f537254e65712e`.
+- Deployment transaction
+  [`5azeXpbggRuVUh7Bszrh7mfesTPJVu8NVJB5PK42FmMVuE419LeaTG2Drk56HLgpSVFqD2ackUBzkzsmBbC2mSYk`](https://explorer.solana.com/tx/5azeXpbggRuVUh7Bszrh7mfesTPJVu8NVJB5PK42FmMVuE419LeaTG2Drk56HLgpSVFqD2ackUBzkzsmBbC2mSYk?cluster=devnet)
+  finalized with `err: null` at slot `510508732`, timestamp
+  `2026-10-13T04:44:21Z`. Its upgrade authority remains the disposable payer
+  `8wU9Y36gQ6yx3SSZjyoM3HUyFyukbkWmoSeTNv2YuUNA`; the program is not immutable.
+- The exact public smoke evidence is
+  [`demos/colosseum/evidence/devnet.json`](../demos/colosseum/evidence/devnet.json).
+  The create/revoke receipts were independently verified finalized; the wrong
+  holder signature was rejected, post-revocation access denied, and same-reference
+  recreation rejected by RPC simulation as `AccountAlreadyInitialized` (not an
+  extra transaction).
+
+The complete real browser lifecycle was repeated at revision
+`8f86010b7e6c3fee5722ce448c48694013a35e2b`: minimal explicit consent, holder
+controller-authorized create, independent recipient challenge, real BBS proof
+derivation in the holder browser, preview and explicit send, recipient
+`verified: true`, confirmed browser revoke and subsequent denial. The primary
+browser create and revoke transactions are
+[`4Kg1jGuuzP66HwDUUJtjHGXxJYPP3mZyeG9Z8NRXz7LuRW5dUVAc6MaQbQNxzJQKDhzzaTjpcCEuXaTYHe7FDgbR`](https://explorer.solana.com/tx/4Kg1jGuuzP66HwDUUJtjHGXxJYPP3mZyeG9Z8NRXz7LuRW5dUVAc6MaQbQNxzJQKDhzzaTjpcCEuXaTYHe7FDgbR?cluster=devnet)
+and
+[`56HcRcSbuQ3C8y8uZ1hP2bczaRRB7ieuGDi4obqWSTQCTH4pCFcvgeMk3mjr5c8LzKW51Di8SxJHoKnH8h18PXVT`](https://explorer.solana.com/tx/56HcRcSbuQ3C8y8uZ1hP2bczaRRB7ieuGDi4obqWSTQCTH4pCFcvgeMk3mjr5c8LzKW51Di8SxJHoKnH8h18PXVT?cluster=devnet).
+The test report records bounded replay, tampered-presentation and application
+expiry observations from the older `1d42ec5` run, plus the final status-race
+exercise and preview boundary. The private preview requires Devin sign-in and an
+awake VM; it is not a public reviewer URL.
+
+An earlier deployment attempt failed at the devnet faucet and recorded `0 SOL`
+for the payer at that time. That historical pre-deployment observation was
+superseded by the funded deployment and receipts above; the faucet error's cause
+was not established. See the
+[revision-aware verification report](../demos/colosseum/TEST-REPORT.md) for
+browser, RPC and historical details.
 
 Local revocation denies new reads **before** submitting the chain transaction.
 The UI distinguishes local blocked access from pending/confirmed/failed chain
@@ -230,5 +269,9 @@ assignment are owner-only.
   hardening. This process must not be horizontally scaled.
 - Browser keys are intentionally page-lifetime keys. Reloading loses the private
   key; use short-lived demo permissions. This is not a production recovery design.
-- Local tests and mocked RPC failures are not proof of production security or
-  confirmed devnet execution. Consult the test report and actual explorer receipts.
+- Native WebCrypto Ed25519 in the tested browser, successful separate-summary
+  access, production Supabase sharing configuration and error cases outside the
+  report's bounded coverage remain untested by these demo runs.
+- Local tests and mocked RPC failures are not proof of production security.
+  Devnet execution is supported only by the public receipts and bounded browser
+  observations in the test report, not by local tests.
