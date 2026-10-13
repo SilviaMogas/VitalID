@@ -114,6 +114,30 @@ export async function signInWithPassword(input: { email: string; password: strin
   return { ok: true, user: toAuthUser(data.user) };
 }
 
+/**
+ * Session for a verified Solana wallet. The wallet owns a synthetic Supabase
+ * user (`sol.<pubkey>@wallet.vitalid.site`) whose password is derived from the
+ * server secret — created on first login, re-derived on every later one.
+ */
+export async function signInWithWallet(publicKey: string): Promise<AuthResult> {
+  if (!isAuthConfigured()) return { ok: false, code: 'not_configured', message: 'auth not configured' };
+  const { walletEmail, walletPassword } = await import('@/lib/solpay/wallet-auth');
+  const email = walletEmail(publicKey);
+  const password = walletPassword(publicKey);
+  const first = await signInWithPassword({ email, password });
+  if (first.ok || first.code !== 'invalid_credentials') return first;
+  const { error } = await getSupabaseServerClient().auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { solana_wallet: publicKey },
+  });
+  if (error && !error.message.toLowerCase().includes('already') && error.code !== 'email_exists') {
+    return { ok: false, code: 'unknown', message: error.message };
+  }
+  return signInWithPassword({ email, password });
+}
+
 export async function signOut(): Promise<void> {
   const store = await cookies();
   const at = store.get(ACCESS_COOKIE)?.value;

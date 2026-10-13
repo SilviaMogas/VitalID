@@ -7,6 +7,7 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
 import { AuthFrame, Field, inputClass } from "@/components/auth/AuthFrame";
+import { WalletButtons } from "@/components/signin/WalletButtons";
 
 const DEMO_LOGIN_ENABLED = process.env.NEXT_PUBLIC_DEMO_LOGIN === "1";
 
@@ -91,6 +92,7 @@ export function SigninForm() {
           {busy ? t("common.loading") : t("signin.cta")}
         </button>
       </form>
+      <WalletButtons />
     </AuthFrame>
   );
 }
