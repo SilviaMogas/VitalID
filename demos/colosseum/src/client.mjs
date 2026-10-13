@@ -7,6 +7,7 @@ const $ = id => document.getElementById(id);
 let keys, session, activeChallenge, pendingPresentation, previewSnapshot, displayedReference;
 let previewGeneration = 0;
 let working = false;
+let refreshPromise;
 const receiverOnly = location.pathname === '/receiver';
 const text = (id, value) => { if ($(id)) $(id).textContent = value; };
 const show = (id, value) => { if ($(id)) $(id).hidden = !value; };
@@ -141,30 +142,38 @@ function renderPermissions(items, owner) {
   if (!target.childNodes.length) target.textContent = 'No permissions in this session yet.';
 }
 
-async function refresh() {
-  if (!session) return;
-  try {
-    const state = await api('status');
-    if (state.session.id !== session.id) throw new Error('Session changed. Use separate browser profiles for holder and recipient.');
-    renderPermissions(state.permissions, true); renderPermissions(state.permissions, false);
-    const displayed = state.permissions.find(p => p.reference === displayedReference);
-    if (displayedReference && (!displayed || displayed.localRevoked || Date.parse(displayed.expiresAt) <= Date.now() || displayed.createState !== 'confirmed')) {
-      text('verification', '');
-      text('verification-status', 'Access is no longer current. Previous copies cannot be recalled.');
-      displayedReference = undefined;
+function refresh() {
+  if (!session) return Promise.resolve();
+  if (refreshPromise) return refreshPromise;
+  const current = (async () => {
+    try {
+      const state = await api('status');
+      if (state.session.id !== session.id) throw new Error('Session changed. Use separate browser profiles for holder and recipient.');
+      renderPermissions(state.permissions, true); renderPermissions(state.permissions, false);
+      const displayed = state.permissions.find(p => p.reference === displayedReference);
+      if (displayedReference && (!displayed || displayed.localRevoked || Date.parse(displayed.expiresAt) <= Date.now() || displayed.createState !== 'confirmed')) {
+        text('verification', '');
+        text('verification-status', 'Access is no longer current. Previous copies cannot be recalled.');
+        displayedReference = undefined;
+      }
+      const deployment = $('deployment'); deployment.replaceChildren();
+      const p = document.createElement('p');
+      p.textContent = state.config.program ? 'Solana devnet configured — each access still requires a live check.' : 'BLOCKED: devnet program/sponsor is not configured. No simulated permission will grant access.';
+      deployment.append(p);
+      link(deployment, 'Program on Solana devnet ↗', state.config.program, 'address');
+      const key = document.createElement('p'); key.className = 'mono';
+      key.textContent = `Trusted ephemeral VitalID Demo issuer key: ${state.config.issuerPublicKey}`;
+      deployment.append(key);
+    } catch (error) {
+      text('verification', ''); text('verification-status', 'State check failed — prior results are not a current access grant.');
+      throw error;
     }
-    const deployment = $('deployment'); deployment.replaceChildren();
-    const p = document.createElement('p');
-    p.textContent = state.config.program ? 'Solana devnet configured — each access still requires a live check.' : 'BLOCKED: devnet program/sponsor is not configured. No simulated permission will grant access.';
-    deployment.append(p);
-    link(deployment, 'Program on Solana devnet ↗', state.config.program, 'address');
-    const key = document.createElement('p'); key.className = 'mono';
-    key.textContent = `Trusted ephemeral VitalID Demo issuer key: ${state.config.issuerPublicKey}`;
-    deployment.append(key);
-  } catch (error) {
-    text('verification', ''); text('verification-status', 'State check failed — prior results are not a current access grant.');
-    throw error;
-  }
+  })();
+  const wrapped = current.finally(() => {
+    if (refreshPromise === wrapped) refreshPromise = undefined;
+  });
+  refreshPromise = wrapped;
+  return wrapped;
 }
 
 on('start', async () => {
@@ -227,4 +236,4 @@ if (!receiverOnly) {
   try { await preview(); }
   catch { text('global-status', 'Preview unavailable.'); }
 }
-setInterval(() => { if (session && !working) refresh().catch(error => text('global-status', error.message)); }, 8000);
+setInterval(() => { if (session && !working) refresh().catch(error => text('global-status', error.message)); }, 15000);

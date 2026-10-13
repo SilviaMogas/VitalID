@@ -1,6 +1,7 @@
 import {Connection, Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction} from '@solana/web3.js';
 import {readFileSync} from 'node:fs';
 import {hex, unhex} from './crypto.mjs';
+import {createDevnetFetch} from './rpc-fetch.mjs';
 
 export const GENESIS = 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG';
 export const RPC = 'https://api.devnet.solana.com';
@@ -53,7 +54,7 @@ export class DevnetAdapter {
     this.genesis = GENESIS;
     this.connection = connection ?? new Connection(RPC, {
       commitment: 'confirmed', disableRetryOnRateLimit: true,
-      fetch: (url, options) => fetch(url, {...options, signal: AbortSignal.timeout(12000)}),
+      fetch: createDevnetFetch(),
     });
     this.payer = payer;
   }
