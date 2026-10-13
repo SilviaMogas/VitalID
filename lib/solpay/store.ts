@@ -32,6 +32,13 @@ export interface SolPaymentStore {
    * 'already-paid' when this reference was settled before.
    */
   claimSignature(reference: string, signature: string, payer: string | null): Promise<ClaimResult>;
+  /**
+   * True when a request for the same user ordered after this one was already
+   * claimed. Ordering is (createdAt, reference) — a deterministic total order
+   * — so only the newest claimed request may activate, regardless of settle
+   * order, re-polls, or concurrent confirmations.
+   */
+  hasNewerClaimed(payment: SolPayment): Promise<boolean>;
 }
 
 interface Row {
@@ -124,6 +131,20 @@ class SupabaseSolPaymentStore implements SolPaymentStore {
     if (!current) return 'missing';
     return current.signature === signature ? 'already-paid' : 'signature-used';
   }
+
+  async hasNewerClaimed(payment: SolPayment): Promise<boolean> {
+    const { data, error } = await getSupabaseServerClient()
+      .from(TABLE)
+      .select('reference')
+      .eq('user_key', payment.userKey)
+      .not('signature', 'is', null)
+      .or(
+        `created_at.gt.${payment.createdAt},and(created_at.eq.${payment.createdAt},reference.gt.${payment.reference})`,
+      )
+      .limit(1);
+    if (error) throw new Error(`sol payment ordering failed: ${error.message}`);
+    return Array.isArray(data) && data.length > 0;
+  }
 }
 
 interface MemoryGlobal {
@@ -169,6 +190,20 @@ class MemorySolPaymentStore implements SolPaymentStore {
       confirmedAt: new Date().toISOString(),
     });
     return 'claimed';
+  }
+
+  async hasNewerClaimed(payment: SolPayment): Promise<boolean> {
+    for (const record of this.payments().values()) {
+      if (
+        record.userKey === payment.userKey &&
+        record.signature !== null &&
+        (record.createdAt > payment.createdAt ||
+          (record.createdAt === payment.createdAt && record.reference > payment.reference))
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 
