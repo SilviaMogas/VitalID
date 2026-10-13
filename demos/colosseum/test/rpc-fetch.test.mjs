@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
 import test from 'node:test';
 import {createDevnetFetch} from '../src/rpc-fetch.mjs';
 
@@ -84,6 +85,31 @@ test('serializes concurrent requests and spaces attempts by at least 500ms', asy
   assert.deepEqual(starts, [0, 500]);
 });
 
+test('default pacing timers stay referenced and completed queue deadlines are cleared', () => {
+  const helperUrl = JSON.stringify(new URL('../src/rpc-fetch.mjs', import.meta.url).href);
+  const script = `
+    import {createDevnetFetch} from ${helperUrl};
+    const fetch = createDevnetFetch({
+      fetchImpl: async () => new Response('ok'),
+      minIntervalMs: 20,
+    });
+    const body = method => JSON.stringify({jsonrpc: '2.0', id: 1, method, params: []});
+    await Promise.all([
+      fetch('https://api.devnet.solana.com', {body: body('getGenesisHash')}),
+      fetch('https://api.devnet.solana.com', {body: body('getAccountInfo')}),
+    ]);
+    console.log('two-complete');
+  `;
+  const child = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+    encoding: 'utf8',
+    timeout: 3_000,
+  });
+
+  assert.equal(child.error, undefined, child.error?.message);
+  assert.equal(child.status, 0, child.stderr);
+  assert.equal(child.stdout.trim(), 'two-complete');
+});
+
 test('a rejected fetch releases the serialized queue', async () => {
   const clock = fakeClock();
   const starts = [];
@@ -119,12 +145,16 @@ test('retries an allowlisted read once after draining a 429 body and honors Retr
     sleep: clock.sleep,
     minIntervalMs: 0,
   });
-  const result = fetch(endpoint, {body: body('getSignatureStatuses')});
+  let settled = false;
+  const result = fetch(endpoint, {body: body('getSignatureStatuses')})
+    .finally(() => { settled = true; });
 
   await waitUntil(() => clock.pending(10_000) === 1);
+  assert.equal(settled, false);
   assert.equal(limited.bodyUsed, true);
   clock.advance(10_000);
   assert.equal(await result, accepted);
+  assert.equal(settled, true);
   assert.equal(calls, 2);
   assert.notEqual(signals[0], signals[1]);
 });

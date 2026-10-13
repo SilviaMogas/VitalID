@@ -14,10 +14,33 @@ const MAX_QUEUED_REQUESTS = 64;
 const NEVER = new Promise(() => {});
 
 function defaultSleep(ms) {
-  return new Promise(resolve => {
-    const timer = setTimeout(resolve, ms);
-    timer.unref?.();
-  });
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function queueDeadline(sleep) {
+  if (sleep === defaultSleep) {
+    let timer;
+    const promise = new Promise(resolve => {
+      timer = setTimeout(() => {
+        timer = undefined;
+        resolve('deadline');
+      }, MAX_QUEUE_WAIT_MS);
+    });
+    return {
+      promise,
+      dispose() {
+        if (timer !== undefined) {
+          clearTimeout(timer);
+          timer = undefined;
+        }
+      },
+    };
+  }
+
+  return {
+    promise: Promise.resolve().then(() => sleep(MAX_QUEUE_WAIT_MS)).then(() => 'deadline'),
+    dispose() {},
+  };
 }
 
 function unavailable(message) {
@@ -167,8 +190,8 @@ export function createDevnetFetch({
     const spacing = Math.max(0, lastAttemptAt + minIntervalMs - queuedAt);
     const needsQueueWait = active || queued > 0 || spacing > 0;
     const deadline = needsQueueWait
-      ? Promise.resolve().then(() => sleep(MAX_QUEUE_WAIT_MS)).then(() => 'deadline')
-      : NEVER;
+      ? queueDeadline(sleep)
+      : {promise: NEVER, dispose() {}};
     const previous = tail;
     let releaseGate;
     const gate = new Promise(resolve => { releaseGate = resolve; });
@@ -200,11 +223,12 @@ export function createDevnetFetch({
     };
 
     try {
-      await waitFor(previous, deadline, signal);
+      await waitFor(previous, deadline.promise, signal);
       hasTurn = true;
 
       const waitMs = Math.max(0, lastAttemptAt + minIntervalMs - now());
-      if (waitMs > 0) await waitFor(sleep(waitMs), deadline, signal);
+      if (waitMs > 0) await waitFor(sleep(waitMs), deadline.promise, signal);
+      deadline.dispose();
       if (now() - queuedAt >= MAX_QUEUE_WAIT_MS) {
         throw unavailable('request queue wait exceeded 30 seconds.');
       }
@@ -236,6 +260,7 @@ export function createDevnetFetch({
       }
       throw error;
     } finally {
+      deadline.dispose();
       if (started) active = false;
       if (hasTurn && !slotReleased) {
         slotReleased = true;
