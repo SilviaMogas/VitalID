@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/vital-id-overview.png" alt="Vital ID — your portable health identity" width="100%" />
+  <img src="docs/brand/vital-id-banner.png" alt="Vital ID — Your health. In your hands." width="100%" />
 </p>
 
 <h1 align="center">Vital ID</h1>
@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <a href="docs/Vital_ID_Organized_Deck.pdf"><b>Pitch deck (PDF)</b></a> ·
+  <a href="docs/brand/BRANDBOOK.md"><b>Brandbook</b></a> ·
   <a href="#-demo-in-60-seconds">Demo in 60 seconds</a> ·
   <a href="#-architecture">Architecture</a> ·
   <a href="#-security--privacy-model">Security model</a> ·
@@ -272,7 +272,7 @@ Everything landed through reviewed pull requests with lint + type-check + build 
 | [`docs/COMMUNITY-WELLNESS.md`](docs/COMMUNITY-WELLNESS.md) | Community and private workout/supplement use, setup and privacy boundaries |
 | [`docs/DESIGN_PASS.md`](docs/DESIGN_PASS.md) | Visual system, mascot, splash |
 | [`docs/DEVICE_PARTNERSHIPS.md`](docs/DEVICE_PARTNERSHIPS.md) | Device-maker partnerships: free hardware, affiliate links, paid placement |
-| [`docs/Vital_ID_Organized_Deck.pdf`](docs/Vital_ID_Organized_Deck.pdf) | Pitch deck |
+| [`docs/brand/BRANDBOOK.md`](docs/brand/BRANDBOOK.md) | Brandbook: logo, colour, type, mascot crew, voice; logos, crew art and the Instagram launch series in `docs/brand/` |
 
 ## License
 
