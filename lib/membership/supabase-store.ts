@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { isPlanId, planRank, type PlanId } from '@/lib/plans';
 import { DEMO_USER_KEY } from './constants';
 import type { MembershipRecord, MembershipStore } from './types';
+import { applySolReadExpiry } from './sol';
 
 const TABLE = 'vital_id_memberships';
 
@@ -25,7 +26,7 @@ interface Row {
 }
 
 function toRecord(row: Row): MembershipRecord {
-  return {
+  return applySolReadExpiry({
     userKey: row.user_key,
     displayName: row.display_name,
     email: row.email,
@@ -41,7 +42,7 @@ function toRecord(row: Row): MembershipRecord {
     onboardingCompletedAt: row.onboarding_completed_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-  };
+  });
 }
 
 function toRow(record: MembershipRecord): Row {

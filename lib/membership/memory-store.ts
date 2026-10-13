@@ -1,6 +1,7 @@
 import { isPlanId, planRank, type PlanId } from "@/lib/plans";
 import { DEMO_USER_KEY } from "./constants";
 import type { MembershipRecord, MembershipStore } from "./types";
+import { applySolReadExpiry } from "./sol";
 
 interface MemoryGlobal {
   __vitalIdMembershipStore?: Map<string, MembershipRecord>;
@@ -26,7 +27,7 @@ export class MemoryMembershipStore implements MembershipStore {
 
   async get(userKey: string): Promise<MembershipRecord | null> {
     const record = this.map.get(userKey);
-    return record ? structuredClone(record) : null;
+    return record ? applySolReadExpiry(structuredClone(record)) : null;
   }
 
   private blank(userKey: string, now: string): MembershipRecord {

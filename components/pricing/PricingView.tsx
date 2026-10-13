@@ -9,6 +9,7 @@ import { useMembership } from "@/components/providers/MembershipProvider";
 import { BILLING_INTERVALS, PLAN_ORDER, PLANS, planRank, type BillingInterval, type PlanId } from "@/lib/plans";
 import { Companion } from "@/components/companions/Companion";
 import { HackathonSmallPrint } from "./HackathonSmallPrint";
+import { SolPayButton } from "./SolPayButton";
 
 function CheckIcon() {
   return (
@@ -78,6 +79,17 @@ export function PricingView() {
       setError(t("common.error"));
     } finally {
       setBusyPlan(null);
+    }
+  }
+
+  async function handleSolPaid() {
+    setError(null);
+    try {
+      await refresh();
+      const snap = await refreshAuth();
+      router.push(snap?.next ?? "/");
+    } catch {
+      router.push("/");
     }
   }
 
@@ -258,6 +270,12 @@ export function PricingView() {
                         ? t("common.loading")
                         : t("pricing.getPlan", { plan: t(plan.nameKey) })}
                     </button>
+                    <SolPayButton
+                      plan={planId}
+                      interval={interval}
+                      disabled={busyPlan !== null}
+                      onPaid={handleSolPaid}
+                    />
                     <div className="mt-2">
                       <HackathonSmallPrint short />
                     </div>
