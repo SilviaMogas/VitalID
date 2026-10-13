@@ -2,12 +2,14 @@ import {Buffer} from 'buffer';
 import {Transaction, PublicKey} from '@solana/web3.js';
 import {derivePresentation, enrollmentBytes, hex, unhex} from './crypto.mjs';
 import {createController} from './controller.mjs';
+import {
+  createRefreshController, refreshInFinally, submitWithFreshRefresh,
+} from './refresh-controller.mjs';
 
 const $ = id => document.getElementById(id);
 let keys, session, activeChallenge, pendingPresentation, previewSnapshot, displayedReference;
 let previewGeneration = 0;
 let working = false;
-let refreshPromise;
 const receiverOnly = location.pathname === '/receiver';
 const text = (id, value) => { if ($(id)) $(id).textContent = value; };
 const show = (id, value) => { if ($(id)) $(id).hidden = !value; };
@@ -108,11 +110,11 @@ function renderPermissions(items, owner) {
     if (owner) {
       button(actions, p.localRevoked ? 'Retry chain revocation' : 'Revoke — block access now', async () => {
         // The server sets the local deny flag before any chain work.
-        try {
+        await refreshInFinally(async () => {
           const result = await api('revoke', {reference: p.reference});
           const transaction = await signTransaction(result.prepared.transaction);
           await api('submit', {reference: p.reference, operation: 'revoke', transaction});
-        } finally { await refresh(); }
+        }, refresh);
       }, 'danger');
     } else if (p.mode === 'proof') {
       button(actions, '1. Create one-time challenge', async () => {
@@ -142,38 +144,53 @@ function renderPermissions(items, owner) {
   if (!target.childNodes.length) target.textContent = 'No permissions in this session yet.';
 }
 
-function refresh() {
-  if (!session) return Promise.resolve();
-  if (refreshPromise) return refreshPromise;
-  const current = (async () => {
-    try {
-      const state = await api('status');
-      if (state.session.id !== session.id) throw new Error('Session changed. Use separate browser profiles for holder and recipient.');
-      renderPermissions(state.permissions, true); renderPermissions(state.permissions, false);
-      const displayed = state.permissions.find(p => p.reference === displayedReference);
-      if (displayedReference && (!displayed || displayed.localRevoked || Date.parse(displayed.expiresAt) <= Date.now() || displayed.createState !== 'confirmed')) {
-        text('verification', '');
-        text('verification-status', 'Access is no longer current. Previous copies cannot be recalled.');
-        displayedReference = undefined;
-      }
-      const deployment = $('deployment'); deployment.replaceChildren();
-      const p = document.createElement('p');
-      p.textContent = state.config.program ? 'Solana devnet configured — each access still requires a live check.' : 'BLOCKED: devnet program/sponsor is not configured. No simulated permission will grant access.';
-      deployment.append(p);
-      link(deployment, 'Program on Solana devnet ↗', state.config.program, 'address');
-      const key = document.createElement('p'); key.className = 'mono';
-      key.textContent = `Trusted ephemeral VitalID Demo issuer key: ${state.config.issuerPublicKey}`;
-      deployment.append(key);
-    } catch (error) {
-      text('verification', ''); text('verification-status', 'State check failed — prior results are not a current access grant.');
-      throw error;
+const refreshController = createRefreshController({
+  fetchStatus: () => api('status'),
+  onFreshStart() {
+    text('verification', '');
+    text('verification-status', 'Refreshing current permission state…');
+    displayedReference = undefined;
+    for (const id of ['owner-permissions', 'receiver-permissions']) {
+      const target = $(id);
+      if (!target) continue;
+      target.replaceChildren();
+      target.textContent = 'Refreshing current permission state…';
     }
-  })();
-  const wrapped = current.finally(() => {
-    if (refreshPromise === wrapped) refreshPromise = undefined;
-  });
-  refreshPromise = wrapped;
-  return wrapped;
+  },
+  render(state) {
+    if (state.session.id !== session.id) throw new Error('Session changed. Use separate browser profiles for holder and recipient.');
+    renderPermissions(state.permissions, true); renderPermissions(state.permissions, false);
+    const displayed = state.permissions.find(p => p.reference === displayedReference);
+    if (displayedReference && (!displayed || displayed.localRevoked || Date.parse(displayed.expiresAt) <= Date.now() || displayed.createState !== 'confirmed')) {
+      text('verification', '');
+      text('verification-status', 'Access is no longer current. Previous copies cannot be recalled.');
+      displayedReference = undefined;
+    }
+    const deployment = $('deployment'); deployment.replaceChildren();
+    const p = document.createElement('p');
+    p.textContent = state.config.program ? 'Solana devnet configured — each access still requires a live check.' : 'BLOCKED: devnet program/sponsor is not configured. No simulated permission will grant access.';
+    deployment.append(p);
+    link(deployment, 'Program on Solana devnet ↗', state.config.program, 'address');
+    const key = document.createElement('p'); key.className = 'mono';
+    key.textContent = `Trusted ephemeral VitalID Demo issuer key: ${state.config.issuerPublicKey}`;
+    deployment.append(key);
+  },
+  renderUnavailable({fresh}) {
+    text('verification', '');
+    text('verification-status', 'State check failed — current permission state is unavailable. Prior results are not a current access grant.');
+    if (!fresh) return;
+    for (const id of ['owner-permissions', 'receiver-permissions']) {
+      const target = $(id);
+      if (!target) continue;
+      target.replaceChildren();
+      target.textContent = 'Permission state unavailable — retry status refresh.';
+    }
+  },
+});
+
+function refresh(options) {
+  if (!session) return Promise.resolve();
+  return refreshController.refresh(options);
 }
 
 on('start', async () => {
@@ -208,9 +225,11 @@ on('create', async () => {
     expectedSnapshot: $('mode').value === 'summary' ? previewSnapshot : undefined,
   });
   const transaction = await signTransaction(result.prepared.transaction);
-  await api('submit', {reference: result.permission.reference, operation: 'create', transaction});
-  $('consent').checked = false;
-  await refresh();
+  await submitWithFreshRefresh(
+    () => api('submit', {reference: result.permission.reference, operation: 'create', transaction}),
+    refresh,
+    () => { $('consent').checked = false; },
+  );
 });
 on('present', async () => {
   pendingPresentation = undefined;
