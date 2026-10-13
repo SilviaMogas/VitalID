@@ -84,7 +84,6 @@ function useCursorList<T extends { id: string; createdAt: string }>(url: string 
     pending.current?.abort();
     const controller = new AbortController();
     pending.current = controller;
-    if (!append) loadedPages.current = 0;
     setLoading(true);
     const result = await fetchPage(controller, append ? last : undefined);
     if (!result || controller.signal.aborted) return;
