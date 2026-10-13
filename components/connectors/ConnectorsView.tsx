@@ -15,10 +15,12 @@ import { providerName } from "@/lib/connectors-i18n";
 import type { TranslationKey } from "@/lib/i18n";
 import { PLANS } from "@/lib/plans";
 import { ConnectorCard } from "@/components/connectors/ConnectorCard";
+import { WhoopConnectorCard } from "@/components/connectors/WhoopConnectorCard";
+import type { WhoopConnectionPublic } from "@/lib/connectors/whoop/types";
 import { SectionTitle } from "@/components/vital-id/VitalIdSections";
 import { MascotNote } from "@/components/mascot/MascotNote";
 
-type Filter = "all" | "wearables" | "sleep" | "diet" | "fitness" | "healthRecords" | "habits";
+type Filter = "all" | "wearables" | "sleep" | "diet" | "fitness" | "healthRecords" | "habits" | "mental";
 
 const FILTERS: { id: Filter; key: TranslationKey; category: ConnectorCategory | null }[] = [
   { id: "all", key: "connectors.filter.all", category: null },
@@ -28,11 +30,12 @@ const FILTERS: { id: Filter; key: TranslationKey; category: ConnectorCategory | 
   { id: "fitness", key: "connectors.filter.fitness", category: "activity" },
   { id: "healthRecords", key: "connectors.filter.healthRecords", category: "records" },
   { id: "habits", key: "connectors.filter.habits", category: "hydration" },
+  { id: "mental", key: "connectors.cat.mental", category: "mental" },
 ];
 
 const catLabel = (cat: ConnectorCategory) => `connectors.cat.${cat}` as TranslationKey;
 
-export function ConnectorsView() {
+export function ConnectorsView({ whoop }: { whoop: WhoopConnectionPublic }) {
   const { t } = useLocale();
   const { plan } = useMembership();
   const { count, limit } = useConnectorSelection();
@@ -83,13 +86,22 @@ export function ConnectorsView() {
         </p>
       </section>
 
+      <div id="whoop-connection" className="rise scroll-mt-24" style={{ ["--i" as string]: 1 }}>
+        <WhoopConnectorCard status={whoop} />
+      </div>
+
+      <p className="rise rounded-2xl border border-line bg-white px-4 py-3 text-xs leading-relaxed text-ink-2" style={{ ["--i" as string]: 1 }}>
+        {t("connectors.honesty")}
+      </p>
+
       <div className="rise space-y-3" style={{ ["--i" as string]: 1 }}>
-        <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 md:mx-0 md:flex-wrap md:px-0">
+        <div className="segmented-control">
           {FILTERS.map((f) => (
             <button
               key={f.id}
               type="button"
               onClick={() => setFilter(f.id)}
+              aria-pressed={filter === f.id}
               className={`press shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
                 filter === f.id
                   ? "bg-brand text-white shadow-sm"
@@ -105,6 +117,7 @@ export function ConnectorsView() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("connectors.search")}
+          aria-label={t("connectors.search")}
           className="w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-brand"
         />
       </div>
@@ -133,7 +146,7 @@ export function ConnectorsView() {
       )}
 
       <div className="rise mb-2 flex justify-center" style={{ ["--i" as string]: 10 }}>
-        <MascotNote state="neutral" size={48}>
+        <MascotNote>
           {t("mascot.connectors")}
         </MascotNote>
       </div>

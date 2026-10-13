@@ -17,6 +17,7 @@ import type { UserSetup } from "@/lib/onboarding/types";
 import { DailyChallenge } from "./DailyChallenge";
 import { WorkdayNudge } from "./WorkdayNudge";
 import { EmptyDataActions } from "@/components/ui/EmptyDataActions";
+import { WellnessArt, WellnessRibbon } from "@/components/mascot/WellnessArt";
 
 export function Dashboard({
   metrics,
@@ -48,18 +49,29 @@ export function Dashboard({
   return (
     <div className="space-y-7">
       <div className="rise" style={{ ["--i" as string]: 0 }}>
-        <SyncToggleCard whoop={whoop} hasData={!isEmpty} />
-      </div>
-
-      <div className="rise pt-4" style={{ ["--i" as string]: 1 }}>
         <HeyGreeting
           firstName={firstName}
           dateLabel={d(today ?? new Date().toISOString().slice(0, 10), { weekday: "long", day: "numeric", month: "long" })}
         />
       </div>
 
-      <div className="flex items-center justify-between gap-3 pt-6">
+      <div className="rise" style={{ ["--i" as string]: 1 }}>
+        <SyncToggleCard whoop={whoop} hasData={!isEmpty} />
+      </div>
+
+      <div className="flex items-center justify-between gap-3 pt-2">
         <SectionRule>{t("home.section.today")}</SectionRule>
+      </div>
+      <WellnessRibbon />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link href="/wellness?kind=workout" className="card flex items-center gap-3 p-4 transition hover:border-brand">
+          <WellnessArt kind="movement" size={42} />
+          <span><span className="block text-sm font-semibold">{t("wellness.workouts")}</span><span className="mt-1 block text-xs text-muted">{t("wellness.workoutSub")}</span></span>
+        </Link>
+        <Link href="/wellness?kind=supplement" className="card flex items-center gap-3 p-4 transition hover:border-brand">
+          <WellnessArt kind="supplements" size={42} />
+          <span><span className="block text-sm font-semibold">{t("wellness.supplements")}</span><span className="mt-1 block text-xs text-muted">{t("wellness.supplementSub")}</span></span>
+        </Link>
       </div>
       <div className="-mt-3 flex flex-wrap items-center gap-2">
         <PlanBadge />
@@ -74,8 +86,8 @@ export function Dashboard({
 
       {isEmpty ? (
         <section className="alert-banner rise rounded-[1.75rem] p-6 md:p-8" style={{ ["--i" as string]: 1 }}>
-          <p className="display-italic text-lg text-white/90 sm:text-xl">{t("empty.dashboard.title")}</p>
-          <p className="mt-3 max-w-prose text-sm text-white/90">{t("empty.dashboard.body")}</p>
+          <p className="display-italic text-lg text-ink sm:text-xl">{t("empty.dashboard.title")}</p>
+          <p className="mt-3 max-w-prose text-sm text-ink-2">{t("empty.dashboard.body")}</p>
           <EmptyDataActions showManual={editable} />
         </section>
       ) : (

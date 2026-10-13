@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
@@ -8,6 +7,7 @@ import { METRIC_META } from "@/lib/demo-data";
 import type { Recommendation } from "@/lib/coach";
 import type { TranslationKey } from "@/lib/i18n";
 import type { HealthMetric } from "@/types";
+import { WellnessArt } from "@/components/mascot/WellnessArt";
 
 type Intent = "today" | "sleep" | "goals" | "share" | "fallback";
 type Msg = { id: number; from: "me" | "coach"; text?: string; intent?: Intent };
@@ -135,12 +135,13 @@ export function CoachChat({
 
   return (
     <section className="space-y-3">
-      <div className="flex flex-col items-center pb-2">
-        <span className="grid h-20 w-20 place-items-center overflow-hidden rounded-full bg-[#ea9a5b] shadow-card">
-          <Image src="/coach/doctor.png" width={234} height={360} alt={t("coach.doctorAlt")} className="mt-8 h-auto w-14" priority />
-        </span>
-        <span className="-mt-2 rounded-full bg-white px-5 py-1.5 text-xl font-bold tracking-tight shadow-card">
-          {t("nav.coach")}
+      <div className="flex items-center justify-between gap-4 pb-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">{t("nav.coach")}</h1>
+          <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted">{t("coach.subtitle")}</p>
+        </div>
+        <span className="rounded-2xl bg-fuchsia-50 p-3">
+          <WellnessArt kind="meditation" size={44} />
         </span>
       </div>
 
@@ -206,7 +207,7 @@ export function CoachChat({
 function Bubble({ children, tail = false }: { children: ReactNode; tail?: boolean }) {
   return (
     <div
-      className={`rise w-fit max-w-[92%] rounded-[1.75rem] bg-[#f1f2f1] px-5 py-4 text-[1.05rem] leading-relaxed text-ink ${
+      className={`rise w-fit max-w-[92%] rounded-[1.5rem] bg-white px-5 py-4 text-base leading-relaxed text-ink shadow-card ${
         tail ? "rounded-es-md" : ""
       }`}
     >

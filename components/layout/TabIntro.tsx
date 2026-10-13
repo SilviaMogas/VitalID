@@ -35,7 +35,7 @@ function markSeen(id: TabId) {
 }
 
 /**
- * Thine-style first-visit intro card: one per main tab, shown once, dismissed with "Done!".
+ * First-visit help sheet, shown once per main tab.
  * The header "?" button re-opens it on demand (window event `vitalid:intro`).
  */
 export function TabIntro() {
@@ -83,35 +83,31 @@ export function TabIntro() {
         aria-modal="true"
         aria-labelledby="tab-intro-title"
         onClick={(e) => e.stopPropagation()}
-        className="anim-sheet w-full max-w-md overflow-hidden rounded-[2.25rem] p-6 text-white shadow-lift"
-        style={{ background: tab.tint }}
+        className="anim-sheet w-full max-w-md overflow-hidden rounded-[2rem] bg-white p-7 text-ink shadow-lift"
       >
         <div
-          className="relative grid h-48 place-items-center overflow-hidden rounded-[1.25rem]"
-          style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.5))" }}
+          className="relative grid h-32 place-items-center overflow-hidden rounded-[1.25rem] bg-canvas"
         >
           <Wave />
           <div className="relative flex items-center gap-2" dir="ltr">
-            <Bubble size={38} tint={tab.tint} />
-            <Bubble size={50} tint={tab.tint} />
-            <span className="grid h-28 w-28 place-items-center rounded-full border-2 border-white/80 bg-white/25 text-center text-xl font-bold tracking-tight backdrop-blur">
+            <Bubble size={40} tint={tab.tint} />
+            <span className="grid h-20 w-20 place-items-center rounded-3xl bg-white text-center text-base font-semibold tracking-tight shadow-card">
               {tab.center}
             </span>
-            <Bubble size={62} tint={tab.tint} />
-            <Bubble size={38} tint={tab.tint} />
+            <Bubble size={40} tint={tab.tint} />
           </div>
         </div>
-        <h2 id="tab-intro-title" className="mt-7 text-3xl font-semibold tracking-tight">
+        <h2 id="tab-intro-title" className="mt-6 text-2xl font-semibold tracking-tight">
           {t(`intro.${tab.id}.title` as TranslationKey)}
         </h2>
-        <p className="mt-4 text-lg leading-relaxed text-white/95">
+        <p className="mt-3 text-base leading-relaxed text-muted">
           {t(`intro.${tab.id}.body` as TranslationKey)}
         </p>
         <button
           type="button"
           onClick={close}
           autoFocus
-          className="press mt-8 w-full rounded-full bg-sky-soft py-4 text-base font-bold text-ink outline-none focus-visible:ring-4 focus-visible:ring-white/60"
+          className="press mt-7 w-full rounded-full bg-brand py-3.5 text-base font-semibold text-white"
         >
           {t("intro.done")}
         </button>

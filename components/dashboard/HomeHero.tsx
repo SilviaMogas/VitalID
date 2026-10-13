@@ -41,7 +41,7 @@ export function SyncToggleCard({ whoop, hasData }: { whoop: WhoopConnectionPubli
   const body = (
     <>
       <span className="min-w-0">
-        <span className="display block text-[1.7rem] leading-[1.1] text-ink">{label}</span>
+        <span className="block text-base font-semibold leading-snug text-ink">{label}</span>
         {whoop.lastSyncedAt && (
           <span className="mt-1.5 block text-xs text-muted">
             {t("home.sync.lastSynced", {
@@ -52,12 +52,12 @@ export function SyncToggleCard({ whoop, hasData }: { whoop: WhoopConnectionPubli
       </span>
       <span
         aria-hidden
-        className={`relative flex h-14 w-[6.2rem] shrink-0 items-center rounded-full p-1 ring-4 ring-black/[0.03] transition-colors ${
-          live ? "bg-brand" : "bg-coral"
+        className={`relative flex h-9 w-16 shrink-0 items-center rounded-full p-0.5 transition-colors ${
+          live ? "bg-brand" : "bg-line"
         } ${busy ? "anim-glow" : ""}`}
       >
         <span
-          className={`grid h-12 w-12 place-items-center rounded-full bg-white shadow-card transition-all duration-300 ${
+          className={`grid h-8 w-8 place-items-center rounded-full bg-white shadow-card transition-all duration-300 ${
             live ? "ms-auto" : ""
           }`}
         >
@@ -67,7 +67,7 @@ export function SyncToggleCard({ whoop, hasData }: { whoop: WhoopConnectionPubli
     </>
   );
 
-  const cls = "press soft-card flex w-full items-center justify-between gap-4 px-6 py-6 text-start";
+  const cls = "press soft-card flex w-full items-center justify-between gap-4 px-5 py-4 text-start";
 
   if (whoop.connected) {
     return (
@@ -101,16 +101,15 @@ function WaveIcon({ muted, busy }: { muted: boolean; busy: boolean }) {
 export function HeyGreeting({ firstName, dateLabel }: { firstName: string; dateLabel: string }) {
   const { t } = useLocale();
   return (
-    <section className="flex flex-col items-center text-center">
-      <p className="eyebrow">{dateLabel}</p>
-      <h1 className="display mt-3 text-[2.1rem] uppercase leading-none tracking-wide md:text-5xl">
+    <section className="relative">
+      <p className="mb-2 text-sm text-muted">{dateLabel}</p>
+      <h1 className="display text-3xl leading-tight md:text-4xl">
         {t("home.hey", { name: firstName })}
       </h1>
-      <PaintedPath className="mt-6 w-[78%] max-w-sm overflow-hidden rounded-[1.5rem] shadow-lift" />
-      <p className="display mt-8 max-w-sm text-[1.7rem] leading-tight text-ink md:text-3xl">{t("home.lede")}</p>
+      <p className="mt-3 max-w-xl text-base leading-relaxed text-muted">{t("home.lede")}</p>
       <Link
         href="/more"
-        className="bubble-tail press mt-8 inline-flex items-center gap-2.5 rounded-full border-2 border-sky/50 bg-white px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-ink shadow-[0_8px_30px_-10px_rgba(91,164,199,0.7)]"
+        className="press mt-3 inline-flex items-center gap-2 text-sm font-medium text-brand"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5 rtl:-scale-x-100">
           <path d="M21 3 10 14M21 3l-7 18-4-7-7-4 18-7z" strokeLinejoin="round" />
@@ -203,14 +202,14 @@ export function PaintedPath({ className = "" }: { className?: string }) {
 /* ------------------------------------------------------------------ */
 
 export function SectionRule({ children }: { children: React.ReactNode }) {
-  return <h2 className="section-rule display text-[2rem] uppercase text-brand/80">{children}</h2>;
+  return <h2 className="section-rule text-xl font-semibold tracking-tight text-ink">{children}</h2>;
 }
 
 function PillCta({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <Link
       href={href}
-      className="press inline-flex shrink-0 items-center gap-1.5 rounded-full bg-canvas px-5 py-3 text-sm font-bold uppercase tracking-wide text-muted ring-1 ring-line"
+      className="press inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand-soft px-4 py-2 text-sm font-medium text-brand"
     >
       {children}
       <span aria-hidden className="text-base rtl:-scale-x-100">›</span>

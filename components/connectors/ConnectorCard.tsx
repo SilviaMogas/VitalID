@@ -12,7 +12,6 @@ import {
 } from "@/lib/connectors";
 import type { TranslationKey } from "@/lib/i18n";
 import { PLANS, planRank } from "@/lib/plans";
-import { UpgradeChip, LockIcon } from "@/components/membership/UpgradeChip";
 import { ConnectorBadge, ProviderMark } from "@/components/connectors/ConnectorBadge";
 import { providerName } from "@/lib/connectors-i18n";
 
@@ -53,7 +52,7 @@ export function ConnectorCard({
             </p>
           </div>
         </div>
-        {provider.requiredPlan !== "free" && (
+        {provider.requiredPlan !== "free" && provider.integration !== "none" && (
           <span className="shrink-0 rounded-full border border-line bg-canvas px-2.5 py-1 text-[10px] font-semibold text-ink-2">
             {t("connectors.planRequired", { plan: t(PLANS[provider.requiredPlan].nameKey) })}
           </span>
@@ -78,9 +77,9 @@ export function ConnectorCard({
 
       <div className="mt-3 space-y-1">
         <ConnectorBadge status={status} />
-        {provider.sampleData && (
+        {provider.integration === "none" && canSelectProvider(provider) && (
           <p className="text-[11px] text-muted">
-            {t("connectors.apiStatus", { status: t("connectors.status.waiting") })}
+            {t(provider.sampleData ? "connectors.sampleOnly" : "connectors.preferenceOnly")}
           </p>
         )}
         {selected && status !== "sample_data" && (
@@ -94,9 +93,28 @@ export function ConnectorCard({
         </Link>
       )}
 
+      {provider.integration === "none" && (
+        <details className="mt-3 rounded-xl border border-line p-3 text-xs text-ink-2">
+          <summary className="cursor-pointer font-semibold text-brand">{t("connectors.integrationDetails")}</summary>
+          <p className="mt-2 leading-relaxed">{t("connectors.integrationPending")}</p>
+          {provider.website && (
+            <a href={provider.website} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block font-semibold text-brand underline">
+              {t("connectors.providerWebsite")}
+            </a>
+          )}
+        </details>
+      )}
+
       <div className="mt-4 flex-1" />
 
-      {selected ? (
+      {provider.integration === "oauth" ? (
+        <a
+          href="#whoop-connection"
+          className="press w-full rounded-2xl bg-brand py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-brand-deep"
+        >
+          {t("connectors.manageConnection")}
+        </a>
+      ) : selected ? (
         <button
           type="button"
           onClick={() => toggle(provider.id)}
@@ -105,30 +123,20 @@ export function ConnectorCard({
           {t("connectors.remove")}
         </button>
       ) : !canSelectProvider(provider) ? (
-        <button
-          type="button"
-          disabled
-          className="w-full cursor-not-allowed rounded-2xl border border-line bg-canvas py-2.5 text-sm font-semibold text-muted opacity-70"
-        >
+        <p className="text-xs text-muted">
           {t("connectors.status.comingSoon")}
-        </button>
+        </p>
       ) : locked ? (
-        <UpgradeChip plan={provider.requiredPlan as "plus" | "pro"} />
+        <p className="text-xs text-muted">{t("connectors.integrationPending")}</p>
       ) : atLimit ? (
-        <Link
-          href="/pricing"
-          className="inline-flex items-center gap-1.5 rounded-full border border-line bg-canvas px-3 py-1.5 text-xs font-semibold text-muted"
-        >
-          <LockIcon className="h-3.5 w-3.5" />
-          {t("connectors.upgradeToConnectMore")}
-        </Link>
+        <p className="text-xs text-muted">{t("connectors.preferenceLimit")}</p>
       ) : (
         <button
           type="button"
           onClick={() => toggle(provider.id)}
           className="press w-full rounded-2xl bg-brand py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-deep"
         >
-          {t("connectors.select")}
+          {t("connectors.notifyMe")}
         </button>
       )}
     </div>

@@ -3,7 +3,7 @@
 import { useLocale } from "@/components/providers/LocaleProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import type { Insight } from "@/types";
-import { Broccoli } from "@/components/mascot/Broccoli";
+import { Companion } from "@/components/companions/Companion";
 import { ReadAloud } from "@/components/voice/ReadAloud";
 
 export function InsightCard({ insight, compact = false }: { insight: Insight; compact?: boolean }) {
@@ -34,14 +34,10 @@ export function InsightCard({ insight, compact = false }: { insight: Insight; co
     <div
       className={`relative overflow-hidden rounded-[1.75rem] border p-5 shadow-card md:p-6 ${
         attention
-          ? "border-warn/15 bg-gradient-to-br from-white via-white to-warn-soft/70"
-          : "border-line bg-gradient-to-br from-white via-white to-sage"
+          ? "border-warn/20 bg-white"
+          : "border-line bg-white"
       }`}
     >
-      <svg aria-hidden className="pointer-events-none absolute -end-10 -top-10 h-40 w-40 opacity-60" viewBox="0 0 100 100">
-        <ellipse cx="50" cy="50" rx="50" ry="40" fill={attention ? "#fef3c7" : "#e2f1ea"} />
-      </svg>
-
       <div className="relative flex items-start gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
@@ -56,8 +52,8 @@ export function InsightCard({ insight, compact = false }: { insight: Insight; co
           <ReadAloud text={insightText} owner={`insight-${insight.id}`} className="mt-3" />
         </div>
         <div className="hidden w-40 shrink-0 flex-col items-center sm:flex">
-          <Broccoli state={attention ? "alert" : "happy"} size={64} className="anim-float" />
-          <p className="surface -mt-1 w-full rounded-2xl px-2.5 py-1.5 text-center text-[11px] font-medium leading-snug text-ink-2">
+          <Companion name="heart" size={52} />
+          <p className="mt-2 w-full text-center text-xs leading-relaxed text-ink-2">
             {t(attention ? "mascot.insightAttention" : "mascot.insightCalm")}
           </p>
         </div>

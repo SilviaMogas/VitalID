@@ -17,11 +17,19 @@ const componentPath = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../components/share/ShareClient.tsx",
 );
+const disclosurePreviewPath = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../components/share/DisclosurePreview.tsx",
+);
 
 const passThrough = ({ children }) => children ?? null;
 const noop = () => null;
 const translate = (key, params) =>
   key === "share.history" ? `share.history.${params?.count ?? 0}` : key;
+let configurableExpiryEnabled = false;
+const localeProviderMock = {
+  useLocale: () => ({ d: (value) => value, locale: "en", t: translate }),
+};
 const testInsurer = {
   color: "#087F5B",
   id: "daman",
@@ -36,8 +44,8 @@ const testRecipient = {
   sentAt: "2026-01-01T00:00:00.000Z",
 };
 
-function loadShareClient() {
-  const source = fs.readFileSync(componentPath, "utf8");
+function loadTranspiledModule(modulePath, mocks) {
+  const source = fs.readFileSync(modulePath, "utf8");
   const { outputText } = ts.transpileModule(source, {
     compilerOptions: {
       esModuleInterop: true,
@@ -45,18 +53,42 @@ function loadShareClient() {
       module: ts.ModuleKind.CommonJS,
       target: ts.ScriptTarget.ES2022,
     },
-    fileName: componentPath,
+    fileName: modulePath,
   });
+  const componentModule = new Module(modulePath);
+  componentModule.filename = modulePath;
+  componentModule.paths = Module._nodeModulePaths(path.dirname(modulePath));
+  const originalLoad = Module._load;
+  Module._load = function load(request, parent, isMain) {
+    if (parent?.filename === modulePath && mocks.has(request)) return mocks.get(request);
+    return originalLoad.call(this, request, parent, isMain);
+  };
+  try {
+    componentModule._compile(outputText, modulePath);
+    return componentModule.exports;
+  } finally {
+    Module._load = originalLoad;
+  }
+}
+
+const DisclosurePreview = loadTranspiledModule(
+  disclosurePreviewPath,
+  new Map([["@/components/providers/LocaleProvider", localeProviderMock]]),
+).DisclosurePreview;
+
+function loadShareClient() {
   const mocks = new Map([
     ["qrcode.react", { QRCodeSVG: noop }],
+    ["@/components/providers/LocaleProvider", localeProviderMock],
+    ["@/components/providers/AuthProvider", { useAuth: () => ({ account: null }) }],
     [
-      "@/components/providers/LocaleProvider",
+      "@/components/providers/MembershipProvider",
       {
-        useLocale: () => ({ d: (value) => value, locale: "en", t: translate }),
+        useMembership: () => ({
+          hasFeature: (feature) => feature === "configurableExpiry" && configurableExpiryEnabled,
+        }),
       },
     ],
-    ["@/components/providers/AuthProvider", { useAuth: () => ({ account: null }) }],
-    ["@/components/providers/MembershipProvider", { useMembership: () => ({ hasFeature: () => false }) }],
     ["@/components/membership/LockedFeature", { LockedFeature: passThrough }],
     ["@/components/membership/UpgradeChip", { LockIcon: noop, UpgradeChip: noop }],
     ["@/components/vital-id/VitalIdSections", { SectionTitle: passThrough }],
@@ -66,7 +98,7 @@ function loadShareClient() {
       "@/lib/sharing",
       {
         PURPOSE_PRESETS: { doctor: ["identity"] },
-        SHARE_DURATIONS: [60],
+        SHARE_DURATIONS: [15, 60],
         SHARE_FIELDS: ["identity"],
         SHARE_PURPOSES: ["doctor"],
       },
@@ -87,21 +119,9 @@ function loadShareClient() {
           .map((recipient) => ({ recipient, insurer: testInsurer })),
       },
     ],
+    ["@/components/share/DisclosurePreview", { DisclosurePreview }],
   ]);
-  const componentModule = new Module(componentPath);
-  componentModule.filename = componentPath;
-  componentModule.paths = Module._nodeModulePaths(path.dirname(componentPath));
-  const originalLoad = Module._load;
-  Module._load = function load(request, parent, isMain) {
-    if (parent?.filename === componentPath && mocks.has(request)) return mocks.get(request);
-    return originalLoad.call(this, request, parent, isMain);
-  };
-  try {
-    componentModule._compile(outputText, componentPath);
-    return componentModule.exports.default;
-  } finally {
-    Module._load = originalLoad;
-  }
+  return loadTranspiledModule(componentPath, mocks).default;
 }
 
 const ShareClient = loadShareClient();
@@ -153,10 +173,11 @@ function deferredInitialList(body, nextResponse) {
 }
 
 function shareCreationFetch(result, listResponse, additionalResponses = new Map()) {
+  const previewSnapshot = typeof result === "function" ? shareResult("share-preview").snapshot : result.snapshot;
   return async (input, init = {}) => {
     const url = String(input);
     if (additionalResponses.has(url)) return okResponse(additionalResponses.get(url));
-    if (url === "/api/share/preview") return okResponse({ snapshot: result.snapshot });
+    if (url === "/api/share/preview") return okResponse({ snapshot: previewSnapshot });
     if (url === "/api/share" && init.method === "POST") {
       return okResponse(typeof result === "function" ? result() : result);
     }
@@ -232,7 +253,7 @@ function revokeButtonFor(renderer, id) {
 }
 
 async function createShare(renderer) {
-  const [fieldCheckbox] = checkboxInputs(renderer);
+  const [fieldCheckbox] = checkboxInputs(renderer).slice(0, -1);
   if (!fieldCheckbox.props.checked) {
     await act(async () => fieldCheckbox.props.onChange({}));
     await flush();
@@ -247,7 +268,7 @@ async function createShare(renderer) {
     });
   });
   await act(async () => {
-    checkboxInputs(renderer)[1].props.onChange({ target: { checked: true } });
+    checkboxInputs(renderer).at(-1).props.onChange({ target: { checked: true } });
   });
 
   const generateButton = buttonsWithText(renderer, "share.generate").find((button) => !button.props.disabled);
@@ -255,11 +276,17 @@ async function createShare(renderer) {
   await act(async () => generateButton.props.onClick());
 }
 
-async function withShareClient(fetchHandler, run, { confirm = () => true } = {}) {
+async function withShareClient(
+  fetchHandler,
+  run,
+  { confirm = () => true, configurableExpiry = false } = {},
+) {
   const originalFetch = globalThis.fetch;
   const originalWindow = globalThis.window;
+  const originalConfigurableExpiry = configurableExpiryEnabled;
   let renderer;
   globalThis.fetch = fetchHandler;
+  configurableExpiryEnabled = configurableExpiry;
   globalThis.window = {
     ...(originalWindow ?? {}),
     confirm,
@@ -273,9 +300,82 @@ async function withShareClient(fetchHandler, run, { confirm = () => true } = {})
   } finally {
     if (renderer) await act(async () => renderer.unmount());
     globalThis.fetch = originalFetch;
+    configurableExpiryEnabled = originalConfigurableExpiry;
     if (originalWindow === undefined) delete globalThis.window;
     else globalThis.window = originalWindow;
   }
+}
+
+async function withDisclosurePreview(snapshot, run) {
+  let renderer;
+  try {
+    await act(async () => {
+      renderer = create(React.createElement(DisclosurePreview, { snapshot }));
+    });
+    await run(renderer);
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+  }
+}
+
+const syntheticPreviewSnapshot = {
+  identity: {
+    fullName: "Synthetic Owner",
+    vitalId: "VID-SYNTHETIC-01",
+  },
+};
+
+function shareFormFetch({
+  previewResponse = okResponse({ snapshot: syntheticPreviewSnapshot }),
+  onCreate = () => {},
+  result = shareResult("share-ui-created"),
+} = {}) {
+  return async (input, init = {}) => {
+    const url = String(input);
+    if (url === "/api/share/preview") return previewResponse;
+    if (url === "/api/share" && init.method === "POST") {
+      onCreate(JSON.parse(init.body));
+      return okResponse(result);
+    }
+    if (url === "/api/share" && (!init.method || init.method === "GET")) return okResponse([]);
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+}
+
+function recipientCodeInput(renderer) {
+  return renderer.root
+    .findAllByType("input")
+    .find((input) => input.props.type !== "checkbox" && !input.props.readOnly);
+}
+
+function disclosureConsentInput(renderer) {
+  return checkboxInputs(renderer).at(-1);
+}
+
+function generateButton(renderer) {
+  return buttonsWithText(renderer, "share.generate")[0];
+}
+
+async function selectIdentityField(renderer) {
+  const [identityCheckbox] = checkboxInputs(renderer).slice(0, -1);
+  await act(async () => identityCheckbox.props.onChange({}));
+  await flush();
+}
+
+async function setRecipientCode(renderer, value) {
+  const input = recipientCodeInput(renderer);
+  await act(async () => input.props.onChange({ target: { value } }));
+  await flush();
+}
+
+async function authorizeDisclosure(renderer) {
+  const consent = disclosureConsentInput(renderer);
+  await act(async () => consent.props.onChange({ target: { checked: true } }));
+  await flush();
+}
+
+async function waitForPreview(renderer) {
+  await waitFor(() => renderer.root.findAllByProps({ "data-testid": "disclosure-preview" }).length === 1);
 }
 
 test("stale active refresh cannot undo confirmed revoke after a failed latest refresh", async () => {
@@ -546,5 +646,224 @@ test("a confirmed revoke overlays a delayed post-create list", async () => {
     assert.ok(row);
     assert.match(textOf(row), /share\.status\.revoked/);
     assert.equal(revokeButtonFor(renderer, created.id), undefined);
+  });
+});
+
+test("disclosure preview presents allowlisted values as readable labeled fields", async () => {
+  const snapshot = {
+    identity: {
+      fullName: "Synthetic Owner",
+      localizedName: { en: "Synthetic Owner", ar: "مالك افتراضي" },
+      vitalId: "VID-SYNTHETIC-01",
+    },
+    emergencyInfo: {
+      allergies: ["Synthetic pollen"],
+      conditions: [],
+      emergencyContact: {
+        localizedName: { en: "Synthetic Contact", ar: "جهة اتصال افتراضية" },
+        name: "Synthetic Contact",
+        phone: "+971500000001",
+        relation: "friend",
+      },
+    },
+    currentSignals: [{
+      baseline: 0,
+      baselineDays: 7,
+      delta: 0,
+      deltaPercent: 0,
+      metric: "sleep",
+      polarity: "higherIsBetter",
+      sevenDayAverage: 0,
+      source: "manual",
+      status: "stable",
+      timestamp: "2026-10-12T08:15:00.000Z",
+      unit: "hours",
+      value: 0,
+    }],
+    healthProfile: {
+      heightCm: 0,
+      maxHeartRate: 0,
+      medications: [],
+      weightKg: 0,
+    },
+  };
+
+  await withDisclosurePreview(snapshot, (renderer) => {
+    const text = textOf(renderer.root);
+    for (const value of [
+      "Personal details",
+      "Synthetic Owner",
+      "Names in other languages",
+      "English",
+      "Arabic",
+      "مالك افتراضي",
+      "Recorded allergies",
+      "Synthetic pollen",
+      "Recorded conditions",
+      "No entries recorded",
+      "Emergency contact",
+      "Synthetic Contact",
+      "Relationship",
+      "friend",
+      "+971500000001",
+      "Value0",
+      "Height (cm)0",
+      "Maximum heart rate (bpm)0",
+      "Source",
+      "manual",
+      "Personal baseline0",
+      "Days in baseline7",
+      "Recorded at",
+      "2026-10-12T08:15:00.000Z",
+    ]) {
+      assert.ok(text.includes(value), `expected disclosure preview to include ${value}`);
+    }
+    assert.equal(renderer.root.findAllByType("pre").length, 0);
+    assert.equal(renderer.root.findAllByType("code").length, 0);
+    assert.doesNotMatch(text, /"fullName"\s*:/);
+  });
+});
+
+test("disclosure preview omits identity when the snapshot has no identity", async () => {
+  await withDisclosurePreview({ emergencyInfo: { allergies: [] } }, (renderer) => {
+    const summaries = renderer.root.findAllByType("summary").map(textOf);
+    assert.deepEqual(summaries, ["Emergency information"]);
+    assert.doesNotMatch(textOf(renderer.root), /Personal details|Full name/);
+  });
+});
+
+test("missing or invalid recipient keeps consent and generation disabled", async () => {
+  let createCalls = 0;
+  await withShareClient(
+    shareFormFetch({ onCreate: () => { createCalls += 1; } }),
+    async (renderer) => {
+      await selectIdentityField(renderer);
+      await waitForPreview(renderer);
+
+      assert.equal(disclosureConsentInput(renderer).props.disabled, true);
+      assert.equal(generateButton(renderer).props.disabled, true);
+
+      await setRecipientCode(renderer, "not-a-recipient-code");
+      assert.equal(recipientCodeInput(renderer).props["aria-invalid"], true);
+      assert.equal(disclosureConsentInput(renderer).props.disabled, true);
+      assert.equal(generateButton(renderer).props.disabled, true);
+      assert.equal(createCalls, 0);
+    },
+  );
+});
+
+test("a valid recipient code alone does not authorize disclosure", async () => {
+  let createCalls = 0;
+  await withShareClient(shareFormFetch({ onCreate: () => { createCalls += 1; } }), async (renderer) => {
+    await selectIdentityField(renderer);
+    await waitForPreview(renderer);
+    await setRecipientCode(renderer, "00000000-0000-4000-8000-00000000000b");
+
+    assert.equal(disclosureConsentInput(renderer).props.disabled, false);
+    assert.equal(disclosureConsentInput(renderer).props.checked, false);
+    assert.equal(generateButton(renderer).props.disabled, true);
+    assert.equal(createCalls, 0);
+  });
+});
+
+test("changing the recipient resets disclosure consent", async () => {
+  await withShareClient(shareFormFetch(), async (renderer) => {
+    await selectIdentityField(renderer);
+    await waitForPreview(renderer);
+    await setRecipientCode(renderer, "00000000-0000-4000-8000-00000000000b");
+    await authorizeDisclosure(renderer);
+    assert.equal(disclosureConsentInput(renderer).props.checked, true);
+    assert.equal(generateButton(renderer).props.disabled, false);
+
+    await setRecipientCode(renderer, "00000000-0000-4000-8000-00000000000c");
+    assert.equal(disclosureConsentInput(renderer).props.checked, false);
+    assert.equal(generateButton(renderer).props.disabled, true);
+  });
+});
+
+test("changing disclosure duration resets consent when configurable expiry is available", async () => {
+  await withShareClient(shareFormFetch(), async (renderer) => {
+    await selectIdentityField(renderer);
+    await waitForPreview(renderer);
+    await setRecipientCode(renderer, "00000000-0000-4000-8000-00000000000b");
+    await authorizeDisclosure(renderer);
+    assert.equal(disclosureConsentInput(renderer).props.checked, true);
+
+    const shorterDuration = buttonsWithText(renderer, "share.duration.15")[0];
+    assert.equal(shorterDuration.props.disabled, false);
+    await act(async () => shorterDuration.props.onClick());
+
+    assert.equal(disclosureConsentInput(renderer).props.checked, false);
+    assert.equal(generateButton(renderer).props.disabled, true);
+  }, { configurableExpiry: true });
+});
+
+test("share creation sends the selected fields and preview unchanged with a normalized recipient", async () => {
+  const expectedSnapshot = {
+    identity: {
+      fullName: "Synthetic Owner",
+      vitalId: "VID-SYNTHETIC-01",
+    },
+  };
+  let postedBody;
+  await withShareClient(shareFormFetch({
+    previewResponse: okResponse({ snapshot: expectedSnapshot }),
+    onCreate: (body) => { postedBody = body; },
+  }), async (renderer) => {
+    await selectIdentityField(renderer);
+    await waitForPreview(renderer);
+    await setRecipientCode(renderer, " 00000000-0000-4000-8000-00000000000B ");
+    await authorizeDisclosure(renderer);
+
+    await act(async () => generateButton(renderer).props.onClick());
+
+    assert.deepEqual(postedBody.selectedFields, ["identity"]);
+    assert.deepEqual(postedBody.expectedSnapshot, expectedSnapshot);
+    assert.equal(postedBody.recipientUserId, "00000000-0000-4000-8000-00000000000b");
+  });
+});
+
+test("missing preview data blocks share generation", async () => {
+  let previewRead = false;
+  let createCalls = 0;
+  const previewResponse = {
+    json: async () => {
+      previewRead = true;
+      return null;
+    },
+    ok: true,
+    status: 200,
+  };
+
+  await withShareClient(shareFormFetch({
+    previewResponse,
+    onCreate: () => { createCalls += 1; },
+  }), async (renderer) => {
+    await selectIdentityField(renderer);
+    await waitFor(() => previewRead);
+    await flush();
+    await setRecipientCode(renderer, "00000000-0000-4000-8000-00000000000b");
+
+    assert.equal(disclosureConsentInput(renderer).props.disabled, true);
+    assert.equal(generateButton(renderer).props.disabled, true);
+    assert.equal(createCalls, 0);
+  });
+});
+
+test("failed preview blocks share generation", async () => {
+  let createCalls = 0;
+  const previewResponse = { json: async () => ({}), ok: false, status: 503 };
+
+  await withShareClient(shareFormFetch({
+    previewResponse,
+    onCreate: () => { createCalls += 1; },
+  }), async (renderer) => {
+    await selectIdentityField(renderer);
+    await waitFor(() => textOf(renderer.root).includes("Preview unavailable. Sharing is blocked."));
+    await setRecipientCode(renderer, "00000000-0000-4000-8000-00000000000b");
+
+    assert.equal(disclosureConsentInput(renderer).props.disabled, true);
+    assert.equal(generateButton(renderer).props.disabled, true);
+    assert.equal(createCalls, 0);
   });
 });

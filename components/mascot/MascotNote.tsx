@@ -1,10 +1,9 @@
-import { Broccoli, type MascotState } from "@/components/mascot/Broccoli";
+import type { MascotState } from "@/components/mascot/Broccoli";
+import { LogoMark } from "@/components/layout/Logo";
 
-/** Broccoli + one line of contextual microcopy. Keep copy to one short sentence. */
 export function MascotNote({
-  state = "neutral",
   children,
-  size = 56,
+  size = 28,
   tone = "light",
   className = "",
 }: {
@@ -16,10 +15,10 @@ export function MascotNote({
 }) {
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      <Broccoli state={state} size={size} className="anim-float shrink-0" />
+      <LogoMark size={Math.min(size, 28)} tone={tone === "dark" ? "light" : "brand"} className="shrink-0" />
       <p
-        className={`relative rounded-2xl px-3.5 py-2 text-sm font-medium leading-snug ${
-          tone === "dark" ? "bg-white/15 text-white" : "bg-sage text-ink-2"
+        className={`text-sm leading-relaxed ${
+          tone === "dark" ? "text-white/90" : "text-ink-2"
         }`}
       >
         {children}

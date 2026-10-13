@@ -8,14 +8,26 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
 import { PlanBadge } from "@/components/membership/PlanBadge";
 import { HelpButton, LangButton } from "@/components/layout/AppShell";
-import { PaintedPath } from "@/components/dashboard/HomeHero";
 import { CONNECTORS_STORAGE_KEY } from "@/lib/connectors-state";
 import { HEALTH_CONSENT_STORAGE_KEY } from "@/lib/legal";
 import type { TranslationKey } from "@/lib/i18n";
+import { WellnessArt } from "@/components/mascot/WellnessArt";
 
 const ICON = "h-7 w-7";
 
 const ROWS: { href: string; title: TranslationKey; sub: TranslationKey; icon: ReactNode }[] = [
+  {
+    href: "/wellness?kind=workout",
+    title: "wellness.workouts",
+    sub: "wellness.workoutSub",
+    icon: <WellnessArt kind="movement" size={36} />,
+  },
+  {
+    href: "/wellness?kind=supplement",
+    title: "wellness.supplements",
+    sub: "wellness.supplementSub",
+    icon: <WellnessArt kind="supplements" size={36} />,
+  },
   {
     href: "/focus",
     title: "focus.title",
@@ -118,33 +130,31 @@ export function MoreView() {
       <button
         type="button"
         onClick={replayTour}
-        className="rise lift press relative block aspect-[16/9] w-full overflow-hidden rounded-[2rem] text-start shadow-lift"
+        className="rise press card flex w-full items-center justify-between gap-5 p-6 text-start"
         style={{ ["--i" as string]: 1 }}
       >
-        <PaintedPath className="absolute inset-0 h-full w-full scale-125 object-cover blur-[1.5px]" />
-        <span className="absolute inset-0 bg-gradient-to-b from-transparent via-ink/10 to-ink/75" />
-        <span className="absolute inset-x-6 bottom-6 flex items-end justify-between gap-4 text-white">
+        <span className="flex items-center gap-4">
+          <span className="rounded-2xl bg-brand-soft p-3"><WellnessArt kind="health" size={40} /></span>
           <span>
-            <span className="block text-xs font-semibold uppercase tracking-[0.2em] text-white/85">
+            <span className="block text-xs font-medium text-muted">
               {t("more.hero.eyebrow")}
             </span>
-            <span className="display mt-1 block text-5xl">{t("more.hero.title")}</span>
-          </span>
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-white/20 text-2xl backdrop-blur rtl:-scale-x-100">
-            →
+            <span className="mt-1 block text-xl font-semibold tracking-tight">{t("more.hero.title")}</span>
           </span>
         </span>
+        <span aria-hidden className="text-xl text-brand rtl:-scale-x-100">→</span>
       </button>
 
-      <ul className="rise divide-y divide-line" style={{ ["--i" as string]: 2 }}>
+      <ul className="card rise divide-y divide-line px-5" style={{ ["--i" as string]: 2 }}>
         {ROWS.map((row) => (
           <li key={row.href}>
-            <Link href={row.href} className="press flex items-center gap-5 py-5">
-              <span className="text-ink-2">{row.icon}</span>
-              <span className="min-w-0">
-                <span className="display block text-3xl leading-tight text-ink">{t(row.title)}</span>
-                <span className="mt-0.5 block text-base text-muted">{t(row.sub)}</span>
+            <Link href={row.href} className="press flex items-center gap-4 py-5">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-canvas text-brand">{row.icon}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-base font-semibold leading-tight text-ink">{t(row.title)}</span>
+                <span className="mt-1 block text-sm text-muted">{t(row.sub)}</span>
               </span>
+              <span aria-hidden className="text-xl text-muted rtl:-scale-x-100">›</span>
             </Link>
           </li>
         ))}
@@ -153,17 +163,17 @@ export function MoreView() {
             type="button"
             onClick={() => setSettingsOpen((o) => !o)}
             aria-expanded={settingsOpen}
-            className="press flex w-full items-center gap-5 py-5 text-start"
+            className="press flex w-full items-center gap-4 py-5 text-start"
           >
-            <span className="text-ink-2">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-canvas text-brand">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON}>
                 <circle cx="12" cy="12" r="3" />
                 <path d="M12 2.8l1.6 2.4 2.8-.6.6 2.8 2.4 1.6-1.2 2.6 1.2 2.6-2.4 1.6-.6 2.8-2.8-.6L12 21.2l-1.6-2.4-2.8.6-.6-2.8-2.4-1.6L5.8 12 4.6 9.4 7 7.8l.6-2.8 2.8.6z" strokeLinejoin="round" />
               </svg>
             </span>
             <span className="min-w-0 flex-1">
-              <span className="display block text-3xl leading-tight text-ink">{t("more.settings")}</span>
-              <span className="mt-0.5 block text-base text-muted">{t("more.settings.sub")}</span>
+              <span className="block text-base font-semibold leading-tight text-ink">{t("more.settings")}</span>
+              <span className="mt-1 block text-sm text-muted">{t("more.settings.sub")}</span>
             </span>
             <span aria-hidden className={`text-xl text-muted transition ${settingsOpen ? "rotate-90" : "rtl:-scale-x-100"}`}>›</span>
           </button>

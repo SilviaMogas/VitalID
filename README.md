@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>Your health identity — understood at a glance, shared on your terms.</b><br/>
-  A bilingual (English / العربية) health-credential web app: connect your wearables, see what is happening and how it is changing,<br/>
+  A bilingual (English / العربية) health-credential web app: connect WHOOP when configured, see what is happening and how it is changing,<br/>
   then share <i>only</i> what you choose, through a temporary, revocable link or QR code.
 </p>
 
@@ -70,13 +70,15 @@ Golden path: **Dashboard → Trends → Insight → Vital ID → Share → Link 
 - **Selective sharing, by design** — pick a purpose (Emergency, Doctor, Travel, Caregiver, Custom); fields are pre-selected but editable. Only those fields are copied server-side.
 - **Temporary + revocable** — 15 min / 1 h / 24 h expiry; revoke instantly; the recipient page re-polls and flips to *"expired or revoked"* live.
 - **Insurer selection metadata** — records the sender's intended insurer selection only. It does not transmit data, deliver a report, grant recipient access, or establish an insurer integration.
-- **Real wearable integration** — **WHOOP OAuth 2.0 (API v2)** with rotating refresh tokens and daily sync; catalogue of 16 providers (Oura, Garmin, Fitbit, Apple Health, MyFitnessPal, Strava, Calm, …) ready for the same flow.
+- **WHOOP connection** — the only implemented, configurable OAuth 2.0 / API v2 flow, requiring server credentials, the WHOOP migration, an authenticated member and current health-data consent. The other 15 catalogue entries have no OAuth connection: samples are explicitly labelled, selectable cards save interest only, and announced entries remain “Coming soon.” Plan upgrades do not enable an integration.
 - **Bilingual, RTL-first** — full English / Arabic UI with right-to-left layout switching.
 - **Real accounts** — Supabase Auth (email + password) with httpOnly cookie sessions and silent token refresh in middleware.
 - **Membership tiers** — Free / Plus / Pro with feature gating, powered by **Stripe Checkout** (live mode, server-verified, webhook-confirmed).
 - **Guided onboarding** — goals, providers, baseline metrics and profile photo; persisted per user.
-- **Coach & Community** — goal-based recommendations and hobby-based community matching.
-- **A friendly face** — an animated broccoli mascot and "produce crew" that react to your data.
+- **Coach** — goal-based recommendations.
+- **Member community** — real per-group member counts, aliases and rules, plain-text posts/comments, own-content deletion, and report-and-hide for the reporter. Health data is never shared automatically.
+- **Private wellbeing records** — members can keep their own workout tables and self-reported supplement records; these do not provide dosing or clinical advice.
+- **Wellbeing icon set** — heart, nutrition, activity, sleep, meditation and hydration illustrations.
 - **Try-it-now demo** — "Login as Fatima" loads a deterministic, fully synthetic demo profile (off by default; enable with `NEXT_PUBLIC_DEMO_LOGIN=1`).
 
 ## Demo in 60 seconds
@@ -93,7 +95,7 @@ npm run dev            # → http://localhost:3000
 5. With a real member account and your own data, **Share** requires the intended recipient's authenticated account ID, an exact data preview and explicit authorization. Ask the recipient to verify that ID through a trusted independent channel; names, emails and professional identities are not verified by this flow. **Revoke** prevents new reads, not retention of downloaded copies.
 6. Toggle **العربية** to see the full RTL experience.
 
-> No keys needed: without env vars the app runs on in-memory stores with the deterministic demo dataset.
+> The core demo can run without provider credentials. Real community and wellness routes require authenticated accounts, Supabase configuration and their migrations; they fail closed if the required database RPCs are unavailable and do not fall back to memory.
 
 ## Architecture
 
@@ -160,9 +162,9 @@ Every number on screen is labelled with where it came from.
 | Styling | **Tailwind CSS 4**, custom design system (see `docs/DESIGN_PASS.md`) |
 | i18n | Custom `LocaleProvider` + `lib/i18n.ts` — English & Arabic, LTR/RTL |
 | Auth | **Supabase Auth** (email + password), httpOnly cookie sessions |
-| Database | **Supabase Postgres** with RLS — 8 SQL migrations in `supabase/migrations/` |
+| Database | **Supabase Postgres** with RLS — SQL migrations in `supabase/migrations/` |
 | Payments | **Stripe** (Checkout, webhooks, server-side verification) |
-| Integrations | **WHOOP** OAuth 2.0 / API v2 (recovery, sleep, cycles, workouts, body) |
+| Integrations | **WHOOP** is the only implemented OAuth 2.0 / API v2 connection; the other 15 catalogue entries are not live integrations |
 | Sharing | Temporary tokens, QR codes via `qrcode.react` |
 | Quality | ESLint 9 + `tsc --noEmit` + production build, run in **GitHub Actions CI** |
 | Hosting | Vercel-ready (no custom server) |
@@ -187,6 +189,8 @@ Every number on screen is labelled with where it came from.
 | Onboarding | `GET / PUT /api/onboarding` |
 | Sharing | `POST / GET /api/share` · `GET /api/share/:id` · `POST /api/share/:id/revoke` · `POST /api/share/:id/send` · `POST /api/share/reset` · `GET /api/share/health` |
 | Membership | `GET /api/membership` · `POST /api/membership/choose-free` · `POST /api/membership/reset` |
+| Community | `GET /api/community` · `POST /api/community` |
+| Wellness | `GET /api/wellness?kind=workout\|supplement` · `POST /api/wellness` |
 | Payments | `POST /api/stripe/checkout` · `POST /api/stripe/webhook` · `POST /api/stripe/portal` |
 | WHOOP | `/api/connectors/whoop/{connect, callback, status, sync, disconnect}` |
 
@@ -220,7 +224,7 @@ Requirements: **Node.js 20+** and npm.
 git clone https://github.com/SilviaMogas/FISHTANK.git
 cd FISHTANK
 npm install
-cp .env.example .env.local   # optional — everything works without it (demo mode)
+cp .env.example .env.local   # optional for the core demo; community/wellness require configured Supabase + migrations
 npm run dev                  # http://localhost:3000
 ```
 
@@ -239,7 +243,7 @@ npm run dev                  # http://localhost:3000
 
 | Variables | Enables | Docs |
 |---|---|---|
-| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | Real accounts + persistent storage | [`docs/SUPABASE.md`](docs/SUPABASE.md) |
+| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | Real accounts + persistent storage, including community and wellness after their migrations | [`docs/SUPABASE.md`](docs/SUPABASE.md) |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_{PLUS,PRO}_{MONTHLY,ANNUAL}` | Paid plans | [`docs/BILLING.md`](docs/BILLING.md) |
 | `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET` | Live WHOOP connection | [`docs/CONNECTORS.md`](docs/CONNECTORS.md) |
 
@@ -265,6 +269,7 @@ Everything landed through reviewed pull requests with lint + type-check + build 
 | [`docs/SUPABASE.md`](docs/SUPABASE.md) | Database, RLS, store switching |
 | [`docs/BILLING.md`](docs/BILLING.md) | Stripe membership flow |
 | [`docs/CONNECTORS.md`](docs/CONNECTORS.md) | WHOOP integration & data mapping |
+| [`docs/COMMUNITY-WELLNESS.md`](docs/COMMUNITY-WELLNESS.md) | Community and private workout/supplement use, setup and privacy boundaries |
 | [`docs/DESIGN_PASS.md`](docs/DESIGN_PASS.md) | Visual system, mascot, splash |
 | [`docs/DEVICE_PARTNERSHIPS.md`](docs/DEVICE_PARTNERSHIPS.md) | Device-maker partnerships: free hardware, affiliate links, paid placement |
 | [`docs/Vital_ID_Organized_Deck.pdf`](docs/Vital_ID_Organized_Deck.pdf) | Pitch deck |

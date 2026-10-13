@@ -4,8 +4,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { LogoMark } from "@/components/layout/Logo";
-import { Broccoli } from "@/components/mascot/Broccoli";
 import { LegalLinks } from "@/components/legal/LegalLinks";
+import { WellnessArt } from "@/components/mascot/WellnessArt";
 
 export const inputClass =
   "w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15";
@@ -32,7 +32,7 @@ export function Field({
   );
 }
 
-/** Shared chrome for the sign-up / sign-in screens (brand header, language toggle, mascot). */
+/** Shared chrome for the sign-up / sign-in screens. */
 export function AuthFrame({
   title,
   subtitle,
@@ -46,7 +46,7 @@ export function AuthFrame({
 }) {
   const { t, toggleLocale, locale } = useLocale();
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 py-8">
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col py-6">
       <header className="flex items-center justify-between">
         <Link href="/welcome" className="pop flex items-center gap-2.5" style={{ ["--i" as string]: 0 }}>
           <LogoMark size={36} />
@@ -63,7 +63,7 @@ export function AuthFrame({
         </button>
       </header>
 
-      <main className="mt-8">
+      <main className="card my-auto p-6 sm:p-8">
         <div className="flex items-end justify-between gap-3">
           <div>
             <h1 className="rise text-3xl font-semibold tracking-tight" style={{ ["--i" as string]: 1 }}>
@@ -73,7 +73,7 @@ export function AuthFrame({
               {subtitle}
             </p>
           </div>
-          <Broccoli state="happy" size={64} className="anim-float shrink-0" />
+          <WellnessArt kind="health" size={42} />
         </div>
         <div className="rise mt-6" style={{ ["--i" as string]: 3 }}>
           {children}

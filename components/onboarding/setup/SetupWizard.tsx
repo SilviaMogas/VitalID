@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
-import { Broccoli } from "@/components/mascot/Broccoli";
+import { LogoMark } from "@/components/layout/Logo";
 import { Companion } from "@/components/companions/Companion";
 import { ConnectorBadge, ProviderMark } from "@/components/connectors/ConnectorBadge";
 import {
@@ -379,7 +379,7 @@ function StepHealth({ setup, update }: StepProps) {
     <>
       <StepHeader eyebrow={t("setup.step3.eyebrow")} title={t("setup.step3.title")} subtitle={t("setup.step3.subtitle")} companion="heart" />
       <div className="flex items-start gap-3 rounded-2xl bg-sand px-4 py-3 text-sm text-ink-2 ring-1 ring-line">
-        <Broccoli state="encouraging" size={40} className="shrink-0" />
+        <LogoMark size={28} className="shrink-0" />
         <p>{t("setup.step3.note")}</p>
       </div>
       <div className="card space-y-4 p-5">

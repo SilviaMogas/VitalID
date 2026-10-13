@@ -35,7 +35,7 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
         <DiagonalHero title={t("trends.title")} subtitle={t("trends.subtitle")} />
         <section className="alert-banner rounded-[1.75rem] p-6 md:p-8">
           <h2 className="display-italic text-lg sm:text-xl">{t("empty.trends.title")}</h2>
-          <p className="mt-3 max-w-prose text-sm text-white/90">{t("empty.trends.body")}</p>
+          <p className="mt-3 max-w-prose text-sm text-ink-2">{t("empty.trends.body")}</p>
           <EmptyDataActions />
         </section>
       </div>
@@ -52,10 +52,11 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
     <div className="space-y-6">
       <DiagonalHero title={t("trends.title")} subtitle={t("trends.subtitle")} />
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="segmented-control">
         {metrics.map((m) => (
           <button
             key={m.metric}
+            aria-pressed={m.metric === selected}
             onClick={() => setSelected(m.metric)}
             className={`press shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
               m.metric === selected
@@ -69,10 +70,11 @@ export function TrendsView({ metrics, insights }: { metrics: HealthMetric[]; ins
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-line">
+        <div className="segmented-control">
           {([7, 30] as const).map((r) => (
             <button
               key={r}
+              aria-pressed={range === r}
               onClick={() => (r === 30 && locked30d ? router.push("/pricing") : setRange(r))}
               className={`press inline-flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-semibold transition ${
                 range === r ? "bg-brand text-white shadow-card" : "text-muted hover:text-ink-2"
