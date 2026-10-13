@@ -1,14 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { loadTranspiledModule } from "./transpile-component.mjs";
 
 const require = createRequire(import.meta.url);
-const Module = require("node:module");
 const React = require("react");
-const ts = require("typescript");
 const { act, create } = require("react-test-renderer");
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -43,33 +41,6 @@ const testRecipient = {
   insurerId: "daman",
   sentAt: "2026-01-01T00:00:00.000Z",
 };
-
-function loadTranspiledModule(modulePath, mocks) {
-  const source = fs.readFileSync(modulePath, "utf8");
-  const { outputText } = ts.transpileModule(source, {
-    compilerOptions: {
-      esModuleInterop: true,
-      jsx: ts.JsxEmit.ReactJSX,
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2022,
-    },
-    fileName: modulePath,
-  });
-  const componentModule = new Module(modulePath);
-  componentModule.filename = modulePath;
-  componentModule.paths = Module._nodeModulePaths(path.dirname(modulePath));
-  const originalLoad = Module._load;
-  Module._load = function load(request, parent, isMain) {
-    if (parent?.filename === modulePath && mocks.has(request)) return mocks.get(request);
-    return originalLoad.call(this, request, parent, isMain);
-  };
-  try {
-    componentModule._compile(outputText, modulePath);
-    return componentModule.exports;
-  } finally {
-    Module._load = originalLoad;
-  }
-}
 
 const DisclosurePreview = loadTranspiledModule(
   disclosurePreviewPath,

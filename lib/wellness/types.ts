@@ -30,8 +30,19 @@ export interface WellnessEntry {
   updatedAt: string;
 }
 
+export interface WellnessDeletionMetadata {
+  id: string;
+  kind: WellnessKind;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface WellnessListResponse {
   entries: WellnessEntry[];
+}
+
+export interface WellnessDeletionMetadataResponse {
+  entries: WellnessDeletionMetadata[];
 }
 
 export interface WellnessMutationResponse {

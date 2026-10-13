@@ -70,6 +70,13 @@ function expected(action, kind, extra = {}) {
   }];
 }
 
+function metadataExpected(kind) {
+  return ["vital_id_wellness_deletion_metadata", {
+    p_user_id: USER.id,
+    p_kind: kind,
+  }];
+}
+
 const workout = {
   title: "  Strength  ",
   exercises: [{ name: " Squat ", sets: 3, reps: "8-10", note: " controlled " }],
@@ -113,6 +120,92 @@ test("stale health-data consent blocks GET/create/update but not delete", async 
     action: "delete", kind: "workout", id: ID, updatedAt: UPDATED,
   })), 200), { ok: true });
   assert.deepEqual(calls, [expected("delete", "workout", { p_id: ID, p_updated_at: UPDATED })]);
+});
+
+test("deletion metadata is available without current consent and never includes payload data", async () => {
+  const unauthenticated = setup({ user: null, consent: false });
+  assert.deepEqual(
+    await body(await GET(get("?kind=workout&view=deletion")), 401),
+    { error: "unauthenticated" },
+  );
+  assert.equal(unauthenticated.length, 0);
+
+  const crossOrigin = setup({ consent: false });
+  assert.deepEqual(
+    await body(await GET(get("?kind=workout&view=deletion", { origin: "https://evil.test" })), 403),
+    { error: "unavailable" },
+  );
+  assert.deepEqual(
+    await body(await GET(get("?kind=workout&view=deletion", { fetchSite: "cross-site" })), 403),
+    { error: "unavailable" },
+  );
+  assert.equal(crossOrigin.length, 0);
+
+  for (const kind of ["workout", "supplement"]) {
+    const calls = setup({
+      consent: false,
+      result: {
+        entries: [{
+          id: ID,
+          kind,
+          createdAt: "2026-10-12T10:20:30.123456Z",
+          updatedAt: UPDATED,
+          data: { title: "private value" },
+          user_id: OTHER.id,
+        }],
+      },
+    });
+    assert.deepEqual(
+      await body(await GET(get(`?kind=${kind}&view=deletion&userId=${OTHER.id}`)), 200),
+      {
+        entries: [{
+          id: ID,
+          kind,
+          createdAt: "2026-10-12T10:20:30.123456Z",
+          updatedAt: UPDATED,
+        }],
+      },
+    );
+    assert.deepEqual(calls, [metadataExpected(kind)]);
+  }
+
+  const stale = setup({ consentVersion: "2026-10-07", result: { entries: [] } });
+  assert.deepEqual(await body(await GET(get("?kind=workout&view=deletion")), 200), { entries: [] });
+  assert.deepEqual(stale, [metadataExpected("workout")]);
+});
+
+test("deletion metadata validates query multiplicity, rows and RPC failures", async () => {
+  const invalidQueries = [
+    "?kind=workout&kind=supplement",
+    "?kind=workout&view=deletion&view=deletion",
+    "?kind=workout&view=full",
+    "?kind=workout&view=",
+  ];
+  for (const query of invalidQueries) {
+    const calls = setup({ consent: false });
+    assert.deepEqual(await body(await GET(get(query)), 400), { error: "invalid_request" });
+    assert.equal(calls.length, 0);
+  }
+
+  const postCalls = setup({ consent: false });
+  assert.deepEqual(await body(await POST(post({
+    action: "list_deletion",
+    kind: "workout",
+  })), 400), { error: "invalid_request" });
+  assert.equal(postCalls.length, 0);
+
+  for (const result of [
+    { entries: [{ id: ID, kind: "supplement", createdAt: UPDATED, updatedAt: UPDATED }] },
+    { entries: [{ id: ID, kind: "workout", createdAt: "not-a-timestamp", updatedAt: UPDATED }] },
+    { entries: Array.from({ length: 101 }, () => ({ id: ID, kind: "workout", createdAt: UPDATED, updatedAt: UPDATED })) },
+    { entries: "not-an-array" },
+  ]) {
+    setup({ consent: false, result });
+    assert.deepEqual(await body(await GET(get("?kind=workout&view=deletion")), 503), { error: "unavailable" });
+  }
+
+  setup({ consent: false, result: { error: "internal", status: 500 } });
+  assert.deepEqual(await body(await GET(get("?kind=workout&view=deletion")), 503), { error: "unavailable" });
 });
 
 test("create, list, update and delete use exact RPC arguments and preserve microseconds", async () => {
