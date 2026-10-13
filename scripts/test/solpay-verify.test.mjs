@@ -313,6 +313,38 @@ test('anonymous SOL checkout is refused when auth is configured', async () => {
   }
 });
 
+test('an older settled request cannot roll back a newer activation', async () => {
+  const store = getMembershipStore();
+  const user = 'user-sol-order';
+  // Older request created first, newer one second.
+  const reqA = await createSolPayment(user, 'plus', 'monthly');
+  const reqB = await createSolPayment(user, 'pro', 'annual');
+  // The newer request settles and activates first.
+  const txB = transferTx({ signatureReference: reqB.reference, lamports: 500_000_000n, payer: 'payer-g' });
+  const rpcB = fakeRpc({
+    signatures: [{ signature: 'sig-newer', err: null }],
+    transactions: { 'sig-newer': txB },
+  });
+  assert.deepEqual(await confirmSolPayment(reqB.reference, user, rpcB), { state: 'paid' });
+  const afterB = await store.get(user);
+  assert.equal(afterB.plan, 'pro');
+  const periodEndB = afterB.subscriptionPeriodEnd;
+  // Now the older request settles on-chain (late scan path) — it must not
+  // regress the newer activation's plan or period.
+  const txA = transferTx({ signatureReference: reqA.reference, lamports: LAMPORTS, payer: 'payer-g' });
+  const rpcA = fakeRpc({
+    signatures: [{ signature: 'sig-older', err: null }],
+    transactions: { 'sig-older': txA },
+  });
+  assert.deepEqual(await confirmSolPayment(reqA.reference, user, rpcA), { state: 'paid' });
+  // Nor may a re-poll of the already-claimed older reference.
+  assert.deepEqual(await confirmSolPayment(reqA.reference, user, rpcA), { state: 'paid' });
+  const afterA = await store.get(user);
+  assert.equal(afterA.plan, 'pro');
+  assert.equal(afterA.subscriptionPeriodEnd, periodEndB);
+  assert.equal(afterA.stripeCheckoutSessionId, 'sol:sig-newer');
+});
+
 test('paid members can complete onboarding without the plan picker flag', async () => {
   const user = 'user-sol-onboard';
   await getMembershipStore().activatePlan({
