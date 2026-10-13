@@ -34,8 +34,10 @@ const translate = (key, params) => {
     "wellness.deleteOnlyTitle": "Delete private entries",
     "wellness.deleteOnlyUnavailable": "The deletion list is temporarily unavailable.",
     "wellness.deleted": "Entry deleted.",
+    "wellness.edit": "Edit",
     "wellness.enable": "Save consent and continue",
     "wellness.reloadLatest": "Load latest (discard my edits)",
+    "wellness.save": "Save",
     "wellness.unavailable": "Unavailable",
   };
   return values[key] ?? key;
@@ -162,14 +164,23 @@ function deletionEntry(kind, updatedAt, id = "00000000-0000-4000-8000-0000000000
 test("expired-consent deletion metadata works for workout and supplement without consent writes", async () => {
   for (const kind of ["workout", "supplement"]) {
     const calls = [];
+    const deleteBodies = [];
+    let deleted = false;
     await withWellness(kind, async (input, init = {}) => {
       const url = String(input);
       calls.push({ init, url });
+      if (url === "/api/wellness" && init.method === "POST") {
+        deleteBodies.push(JSON.parse(init.body));
+        deleted = true;
+        return response({ ok: true });
+      }
       if (url === `/api/wellness?kind=${kind}`) {
         return response({ error: "consent_required" }, 403);
       }
       if (url === `/api/wellness?kind=${kind}&view=deletion`) {
-        return response({ entries: [deletionEntry(kind, "2026-10-12T12:34:56.123456Z")] });
+        return response({
+          entries: deleted ? [] : [deletionEntry(kind, "2026-10-12T12:34:56.123456Z")],
+        });
       }
       throw new Error(`Unexpected request: ${url}`);
     }, async (renderer) => {
@@ -179,8 +190,130 @@ test("expired-consent deletion metadata works for workout and supplement without
       assert.match(textOf(panel), /Created 2026-10-12T10:20:30.123456Z/);
       assert.doesNotMatch(textOf(renderer.root), /Sensitive fixture value|Should never render/);
       assert.equal(calls.some(({ url }) => url === "/api/consent"), false);
+
+      await act(async () => buttonsWithText(renderer, "Delete")[0].props.onClick());
+      await act(async () => buttonsWithText(renderer, "Confirm delete")[0].props.onClick());
+      await flush();
+      assert.equal(deleteBodies.length, 1);
+      assert.equal(deleteBodies[0].kind, kind);
+      assert.equal(deleteBodies[0].updatedAt, "2026-10-12T12:34:56.123456Z");
+      assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 0);
+      assert.equal(calls.some(({ url }) => url === "/api/consent"), false);
     });
   }
+});
+
+test("saving after consent expires clears the editor and opens metadata deletion access", async () => {
+  const calls = [];
+  let normalReads = 0;
+  const fullEntry = {
+    id: "00000000-0000-4000-8000-0000000000c1",
+    kind: "workout",
+    data: {
+      title: "Sensitive routine fixture",
+      exercises: [{ name: "Sensitive exercise fixture", sets: 3, reps: "8", note: "Sensitive row fixture" }],
+      notes: "Sensitive notes fixture",
+    },
+    createdAt: "2026-10-12T10:20:30.123456Z",
+    updatedAt: "2026-10-12T12:34:56.123456Z",
+  };
+  const originalRaf = globalThis.requestAnimationFrame;
+  const originalDocument = globalThis.document;
+  globalThis.requestAnimationFrame = (callback) => {
+    callback();
+    return 0;
+  };
+  globalThis.document = { getElementById: () => ({ scrollIntoView() {} }) };
+  try {
+    await withWellness("workout", async (input, init = {}) => {
+      const url = String(input);
+      calls.push({ init, url });
+      if (url === "/api/wellness?kind=workout") {
+        normalReads += 1;
+        return normalReads === 1
+          ? response({ entries: [fullEntry] })
+          : response({ error: "consent_required" }, 403);
+      }
+      if (url === "/api/wellness?kind=workout&view=deletion") {
+        return response({ entries: [deletionEntry("workout", fullEntry.updatedAt)] });
+      }
+      if (url === "/api/wellness" && init.method === "POST") {
+        assert.equal(JSON.parse(init.body).action, "update");
+        return response({ error: "consent_required" }, 403);
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    }, async (renderer) => {
+      assert.match(textOf(renderer.root), /Sensitive routine fixture/);
+      await act(async () => buttonsWithText(renderer, "Edit")[0].props.onClick());
+      await act(async () => renderer.root.findAllByType("input").find((input) => input.props.id === "workout-title").props.onChange({
+        target: { value: "Unsaved draft fixture" },
+      }));
+      await act(async () => renderer.root.findByProps({ id: "wellness-editor" }).props.onSubmit({
+        preventDefault() {},
+      }));
+      await flush();
+
+      assert.equal(renderer.root.findAllByProps({ id: "wellness-editor" }).length, 0);
+      assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-workout-entry" }).length, 0);
+      assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 1);
+      assert.doesNotMatch(textOf(renderer.root), /Sensitive routine fixture|Sensitive exercise fixture|Sensitive row fixture|Sensitive notes fixture|Unsaved draft fixture/);
+      assert.ok(buttonsWithText(renderer, "Delete").length > 0);
+      assert.equal(calls.some(({ url }) => url === "/api/consent"), false);
+    });
+  } finally {
+    if (originalRaf === undefined) delete globalThis.requestAnimationFrame;
+    else globalThis.requestAnimationFrame = originalRaf;
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
+  }
+});
+
+test("metadata refresh preserves entries for a transient failure but clears them on authentication failure", async () => {
+  let metadataReads = 0;
+  await withWellness("supplement", async (input) => {
+    const url = String(input);
+    if (url === "/api/wellness?kind=supplement") return response({ error: "consent_required" }, 403);
+    if (url === "/api/wellness?kind=supplement&view=deletion") {
+      metadataReads += 1;
+      if (metadataReads === 1) {
+        return response({ entries: [deletionEntry("supplement", "2026-10-12T12:34:56.123456Z")] });
+      }
+      if (metadataReads === 2) return response({ error: "unavailable" }, 503);
+      return response({ error: "unauthenticated" }, 401);
+    }
+    if (url === "/api/wellness") return response({ ok: true });
+    throw new Error(`Unexpected request: ${url}`);
+  }, async (renderer) => {
+    await act(async () => buttonsWithText(renderer, "Delete")[0].props.onClick());
+    await act(async () => buttonsWithText(renderer, "Confirm delete")[0].props.onClick());
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 1);
+    assert.ok(textOf(renderer.root).includes("The deletion list is temporarily unavailable."));
+
+    await act(async () => buttonsWithText(renderer, "Refresh deletion list")[0].props.onClick());
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 0);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-supplement-deletion-panel" }).length, 0);
+    assert.equal(buttonsWithText(renderer, "Delete").length, 0);
+  });
+});
+
+test("a delete authentication failure clears stale deletion metadata", async () => {
+  await withWellness("workout", async (input, init = {}) => {
+    const url = String(input);
+    if (url === "/api/wellness?kind=workout") return response({ error: "consent_required" }, 403);
+    if (url === "/api/wellness?kind=workout&view=deletion") {
+      return response({ entries: [deletionEntry("workout", "2026-10-12T12:34:56.123456Z")] });
+    }
+    if (url === "/api/wellness" && init.method === "POST") {
+      return response({ error: "unauthenticated" }, 401);
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  }, async (renderer) => {
+    await act(async () => buttonsWithText(renderer, "Delete")[0].props.onClick());
+    await act(async () => buttonsWithText(renderer, "Confirm delete")[0].props.onClick());
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 0);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-workout-deletion-panel" }).length, 0);
+    assert.equal(buttonsWithText(renderer, "Delete").length, 0);
+  });
 });
 
 test("wellness conflict reloads metadata and requires a fresh explicit confirmation", async () => {

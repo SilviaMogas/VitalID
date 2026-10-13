@@ -98,13 +98,21 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
     if (controller.signal.aborted) return null;
     setDeletionLoading(false);
     if (!result.ok) {
-      setDeletionError(result.code);
+      if (result.code === "unauthenticated") {
+        setError(result.code);
+        setDeletionOnly(false);
+        clearFullState();
+        setDeletionEntries([]);
+        setDeletionError(null);
+      } else {
+        setDeletionError(result.code);
+      }
       return null;
     }
     setDeletionError(null);
     setDeletionEntries(result.data.entries);
     return result.data.entries;
-  }, [kind]);
+  }, [clearFullState, kind]);
 
   const load = useCallback(async (): Promise<Entry[] | null> => {
     pending.current?.abort();
@@ -143,6 +151,17 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
     await fetchDeletionMetadata(controller);
   }, [fetchDeletionMetadata]);
 
+  async function handleAccessFailure(code: string): Promise<boolean> {
+    if (code !== "consent_required" && code !== "unauthenticated") return false;
+    setError(code);
+    setDeletionOnly(false);
+    clearFullState();
+    setDeletionEntries([]);
+    setDeletionError(null);
+    if (code === "consent_required") await load();
+    return true;
+  }
+
   useEffect(() => {
     if (status === "member") {
       void load();
@@ -178,7 +197,11 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
       }),
     });
     setBusy(false);
-    if (!result.ok) return setError(result.code);
+    if (!result.ok) {
+      if (await handleAccessFailure(result.code)) return;
+      setError(result.code);
+      return;
+    }
     setEditing(null);
     setOpen(false);
     setNotice("wellness.saved");
@@ -193,6 +216,7 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
     });
     setBusy(false);
     if (!result.ok) {
+      if (await handleAccessFailure(result.code)) return;
       setError(result.code);
       if (result.code === "conflict") setRemoving(null);
       return;
@@ -216,7 +240,11 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
     setBusy(true);
     const result = await request("/api/consent", { method: "POST", body: JSON.stringify({ type: "health_data" }) });
     setBusy(false);
-    if (!result.ok) return setError(result.code);
+    if (!result.ok) {
+      if (await handleAccessFailure(result.code)) return;
+      setError(result.code);
+      return;
+    }
     await load();
   }
 

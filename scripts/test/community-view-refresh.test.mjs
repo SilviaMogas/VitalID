@@ -145,6 +145,16 @@ function comment(index, { mine = false } = {}) {
   };
 }
 
+function createdComment() {
+  return {
+    id: "comment-created",
+    alias: "Synthetic alias",
+    body: "New synthetic comment",
+    createdAt: dateFor(61),
+    mine: true,
+  };
+}
+
 function postPage(items, sentinel) {
   return { posts: [...items.slice(0, 30), sentinel] };
 }
@@ -153,11 +163,19 @@ function createCommunityFetch({ deferredRefresh = false, failRefresh = false } =
   const mutations = [];
   const firstGeneral = Array.from({ length: 30 }, (_, offset) => {
     const index = 60 - offset;
-    return post("general", index, { comments: index === 45 ? 0 : 0, mine: index === 45 });
+    return post("general", index);
   });
-  const secondGeneral = Array.from({ length: 30 }, (_, offset) => post("general", 30 - offset));
+  const secondGeneral = Array.from({ length: 30 }, (_, offset) => {
+    const index = 30 - offset;
+    return post("general", index, { comments: index === 15 ? 60 : 0, mine: index === 15 });
+  });
   const groupTwo = Array.from({ length: 30 }, (_, offset) => post("hobby", 30 - offset));
-  let commentCreated = false;
+  let targetCommentCount = 60;
+  let commentRows = Array.from({ length: 60 }, (_, offset) => {
+    const index = 60 - offset;
+    return comment(index, { mine: index === 60 });
+  });
+  const hiddenComments = new Set();
   let generalRefreshDeferred = deferredRefresh;
   let generalRefreshFailed = failRefresh;
   let deferredResponsePromise = null;
@@ -167,12 +185,14 @@ function createCommunityFetch({ deferredRefresh = false, failRefresh = false } =
     if (group === "general") {
       if (!beforeId) {
         generalFeedRequests += 1;
-        const posts = firstGeneral.map((item) => (
-          item.id.endsWith("-post-45") ? { ...item, comments: commentCreated ? 1 : 0 } : item
-        ));
+        const posts = firstGeneral.map((item) => ({ ...item }));
         return postPage(posts, post("general", 30));
       }
-      return { posts: secondGeneral };
+      return {
+        posts: secondGeneral.map((item) => (
+          item.id === "general-post-15" ? { ...item, comments: targetCommentCount } : { ...item }
+        )),
+      };
     }
     return { posts: groupTwo };
   }
@@ -185,7 +205,19 @@ function createCommunityFetch({ deferredRefresh = false, failRefresh = false } =
     if (init.method === "POST") {
       const body = JSON.parse(init.body);
       mutations.push(body);
-      if (body.action === "comment") commentCreated = true;
+      if (body.action === "comment") {
+        commentRows.unshift({ ...createdComment(), body: body.body });
+        targetCommentCount += 1;
+      } else if (body.action === "delete_comment") {
+        const index = commentRows.findIndex((item) => item.id === body.entityId);
+        if (index >= 0) {
+          commentRows.splice(index, 1);
+          targetCommentCount -= 1;
+        }
+      } else if (body.action === "report_comment" && !hiddenComments.has(body.entityId)) {
+        hiddenComments.add(body.entityId);
+        targetCommentCount -= 1;
+      }
       return response({ ok: true, id: "created-comment" });
     }
 
@@ -215,13 +247,10 @@ function createCommunityFetch({ deferredRefresh = false, failRefresh = false } =
     }
 
     if (view === "comments") {
-      const first = [
-        comment(60, { mine: true }),
-        comment(59),
-        ...Array.from({ length: 28 }, (_, offset) => comment(58 - offset)),
-      ];
-      const second = Array.from({ length: 30 }, (_, offset) => comment(30 - offset));
-      return response(beforeId ? { comments: second } : { comments: [...first, comment(30)] });
+      const visible = commentRows.filter((item) => !hiddenComments.has(item.id));
+      const cursorIndex = beforeId ? visible.findIndex((item) => item.id === beforeId) : -1;
+      const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+      return response({ comments: visible.slice(start, start + 31) });
     }
 
     throw new Error(`Unexpected view: ${view}`);
@@ -307,49 +336,59 @@ async function loadSecondPostPage(renderer) {
 test("loaded posts, open threads and comment pages survive comment mutations", async () => {
   const fetchState = createCommunityFetch();
   await withCommunity(fetchState, async (renderer) => {
+    assert.equal(postByBody(renderer, "Post 15"), undefined);
     await loadSecondPostPage(renderer);
-    const post45 = postByBody(renderer, "Post 45");
-    assert.ok(post45);
-    const commentsToggle = post45.findAllByType("button").find((button) => textOf(button) === "Comments 0");
+    const post15 = postByBody(renderer, "Post 15");
+    assert.ok(post15);
+    const commentsToggle = post15.findAllByType("button").find((button) => textOf(button) === "Comments 60");
     assert.ok(commentsToggle);
     await act(async () => commentsToggle.props.onClick());
-    await waitFor(() => postByBody(renderer, "Post 45").findAllByProps({ "data-testid": "community-comment" }).length === 30);
+    await waitFor(() => postByBody(renderer, "Post 15").findAllByProps({ "data-testid": "community-comment" }).length === 30);
 
-    const postWithComments = postByBody(renderer, "Post 45");
+    const postWithComments = postByBody(renderer, "Post 15");
     const loadMore = postWithComments.findAllByType("button").find((button) => textOf(button) === "Load more");
     assert.ok(loadMore);
     await act(async () => loadMore.props.onClick());
-    await waitFor(() => postByBody(renderer, "Post 45").findAllByProps({ "data-testid": "community-comment" }).length === 60);
+    await waitFor(() => postByBody(renderer, "Post 15").findAllByProps({ "data-testid": "community-comment" }).length === 60);
 
-    const form = postByBody(renderer, "Post 45").findAllByType("form")[0];
-    const input = form.findByProps({ id: "comment-general-post-45" });
+    const form = postByBody(renderer, "Post 15").findAllByType("form")[0];
+    const input = form.findByProps({ id: "comment-general-post-15" });
     await act(async () => input.props.onChange({ target: { value: "New synthetic comment" } }));
     await act(async () => form.props.onSubmit({ preventDefault() {} }));
-    await waitFor(() => textOf(postByBody(renderer, "Post 45")).includes("Comments 1"));
+    await waitFor(() => textOf(postByBody(renderer, "Post 15")).includes("Comments 61"));
     assert.equal(posts(renderer).length, 60);
     assert.ok(postByBody(renderer, "Post 1"));
-    assert.equal(postByBody(renderer, "Post 45").findAllByProps({ "data-testid": "community-comment" }).length, 60);
+    const postAfterCreate = postByBody(renderer, "Post 15");
+    assert.equal(postAfterCreate.findAllByProps({ "data-testid": "community-comment" }).length, 60);
+    assert.ok(textOf(postAfterCreate).includes("New synthetic comment"));
+    assert.ok(postAfterCreate.findAllByType("button").some((button) => textOf(button) === "Load more"));
 
-    const mineComment = postByBody(renderer, "Post 45")
+    const mineComment = postAfterCreate
       .findAllByProps({ "data-testid": "community-comment" })
       .find((item) => textOf(item).includes("Mine comment"));
     assert.ok(mineComment);
     await act(async () => mineComment.findAllByType("button").find((button) => textOf(button) === "Delete").props.onClick());
     await act(async () => mineComment.findAllByType("button").find((button) => textOf(button) === "Confirm delete").props.onClick());
-    await waitFor(() => postByBody(renderer, "Post 45").findAllByProps({ "data-testid": "community-comment" }).length === 60);
+    await waitFor(() => textOf(postByBody(renderer, "Post 15")).includes("Comments 60"));
+    const postAfterDelete = postByBody(renderer, "Post 15");
+    assert.equal(postAfterDelete.findAllByProps({ "data-testid": "community-comment" }).length, 60);
+    assert.doesNotMatch(textOf(postAfterDelete), /Mine comment/);
     assert.ok(postByBody(renderer, "Post 1"));
 
-    const reportedComment = postByBody(renderer, "Post 45")
+    const reportedComment = postAfterDelete
       .findAllByProps({ "data-testid": "community-comment" })
       .find((item) => textOf(item).includes("Reported comment"));
     assert.ok(reportedComment);
     await act(async () => reportedComment.findAllByType("button").find((button) => textOf(button) === "Report").props.onClick());
     await act(async () => reportedComment.findAllByType("button").find((button) => textOf(button) === "Spam").props.onClick());
-    await waitFor(() => postByBody(renderer, "Post 45").findAllByProps({ "data-testid": "community-comment" }).length === 60);
+    await waitFor(() => textOf(postByBody(renderer, "Post 15")).includes("Comments 59"));
 
-    const finalPost45 = postByBody(renderer, "Post 45");
-    assert.equal(finalPost45.findAllByType("button").find((button) => textOf(button).startsWith("Comments"))?.props["aria-expanded"], true);
-    assert.ok(textOf(finalPost45).includes("Comment 1"));
+    const finalPost15 = postByBody(renderer, "Post 15");
+    assert.equal(finalPost15.findAllByProps({ "data-testid": "community-comment" }).length, 59);
+    assert.equal(finalPost15.findAllByType("button").find((button) => textOf(button).startsWith("Comments"))?.props["aria-expanded"], true);
+    assert.ok(textOf(finalPost15).includes("New synthetic comment"));
+    assert.ok(textOf(finalPost15).includes("Comment 1"));
+    assert.doesNotMatch(textOf(finalPost15), /Mine comment|Reported comment/);
     assert.ok(fetchState.mutations.some((mutation) => mutation.action === "comment"));
     assert.ok(fetchState.mutations.some((mutation) => mutation.action === "delete_comment"));
     assert.ok(fetchState.mutations.some((mutation) => mutation.action === "report_comment"));
@@ -359,11 +398,12 @@ test("loaded posts, open threads and comment pages survive comment mutations", a
 test("a superseded refresh cannot replace a switched group, and failed refresh keeps old posts", async () => {
   const fetchState = createCommunityFetch({ deferredRefresh: true });
   await withCommunity(fetchState, async (renderer) => {
+    assert.equal(postByBody(renderer, "Post 15"), undefined);
     await loadSecondPostPage(renderer);
-    const post45 = postByBody(renderer, "Post 45");
-    await act(async () => post45.findAllByType("button").find((button) => textOf(button) === "Delete").props.onClick());
+    const post15 = postByBody(renderer, "Post 15");
+    await act(async () => post15.findAllByType("button").find((button) => textOf(button) === "Delete").props.onClick());
     await act(async () => {
-      void post45.findAllByType("button").find((button) => textOf(button) === "Confirm delete").props.onClick();
+      void post15.findAllByType("button").find((button) => textOf(button) === "Confirm delete").props.onClick();
     });
     await waitFor(() => fetchState.deferredResponsePromise !== null);
 
@@ -394,7 +434,7 @@ test("a superseded refresh cannot replace a switched group, and failed refresh k
       });
       await waitFor(() => posts(renderer).length === 30);
       await loadSecondPostPage(renderer);
-      const failingPost = postByBody(renderer, "Post 45");
+      const failingPost = postByBody(renderer, "Post 15");
       await act(async () => failingPost.findAllByType("button").find((button) => textOf(button) === "Delete").props.onClick());
       await act(async () => failingPost.findAllByType("button").find((button) => textOf(button) === "Confirm delete").props.onClick());
       await waitFor(() => renderer.root.findAllByProps({ role: "alert" }).length > 0);
