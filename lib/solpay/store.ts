@@ -79,6 +79,19 @@ function toRecord(row: Row): SolPayment {
 
 class SupabaseSolPaymentStore implements SolPaymentStore {
   async create(payment: SolPayment) {
+    // Keep createdAt strictly increasing per user so request order never
+    // collapses to the reference tiebreak on same-millisecond creates.
+    const { data: latest } = await getSupabaseServerClient()
+      .from(TABLE)
+      .select('created_at')
+      .eq('user_key', payment.userKey)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    const last = Array.isArray(latest) && latest.length > 0 ? String(latest[0].created_at) : null;
+    const createdAt =
+      last !== null && payment.createdAt <= last
+        ? new Date(Date.parse(last) + 1).toISOString()
+        : payment.createdAt;
     const { error } = await getSupabaseServerClient()
       .from(TABLE)
       .insert({
@@ -93,7 +106,7 @@ class SupabaseSolPaymentStore implements SolPaymentStore {
         signature: payment.signature,
         payer: payment.payer,
         expires_at: payment.expiresAt,
-        created_at: payment.createdAt,
+        created_at: createdAt,
         confirmed_at: payment.confirmedAt,
       });
     if (error) throw new Error(`sol payment create failed: ${error.message}`);
@@ -168,7 +181,18 @@ class MemorySolPaymentStore implements SolPaymentStore {
   async create(payment: SolPayment) {
     const map = this.payments();
     if (map.has(payment.reference)) throw new Error('sol payment reference collision');
-    map.set(payment.reference, structuredClone(payment));
+    // Strictly increasing createdAt per user (see SupabaseSolPaymentStore).
+    let last: string | null = null;
+    for (const record of map.values()) {
+      if (record.userKey === payment.userKey && (last === null || record.createdAt > last)) {
+        last = record.createdAt;
+      }
+    }
+    const createdAt =
+      last !== null && payment.createdAt <= last
+        ? new Date(Date.parse(last) + 1).toISOString()
+        : payment.createdAt;
+    map.set(payment.reference, structuredClone({ ...payment, createdAt }));
   }
 
   async get(reference: string) {
