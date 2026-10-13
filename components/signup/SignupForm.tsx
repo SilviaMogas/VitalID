@@ -7,6 +7,7 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useMembership } from "@/components/providers/MembershipProvider";
 import { AuthFrame, Field, inputClass } from "@/components/auth/AuthFrame";
+import { WalletButtons } from "@/components/signin/WalletButtons";
 import { HealthDataConsent, TermsConsent } from "@/components/legal/HealthDataConsent";
 import type { TranslationKey } from "@/lib/i18n";
 
@@ -132,6 +133,7 @@ export function SignupForm() {
           {busy ? t("common.loading") : t("signup.continue")}
         </button>
       </form>
+      <WalletButtons />
     </AuthFrame>
   );
 }

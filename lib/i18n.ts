@@ -237,6 +237,11 @@ const setupStrings = {
   "auth.error.invalidCredentials": ["Email or password is incorrect.", "البريد الإلكتروني أو كلمة المرور غير صحيحة."],
   "auth.error.notConfigured": ["Accounts are not available in this environment yet.", "الحسابات غير متاحة في هذه البيئة بعد."],
   "auth.signOut": ["Sign out", "تسجيل الخروج"],
+  "auth.wallet.or": ["or continue with a wallet", "أو تابع باستخدام محفظة"],
+  "auth.wallet.solflare": ["Solflare", "Solflare"],
+  "auth.wallet.phantom": ["Phantom", "Phantom"],
+  "auth.wallet.notFound": ["Wallet not detected — open this page inside your wallet's browser or install the extension.", "لم يتم العثور على المحفظة — افتح هذه الصفحة داخل متصفح محفظتك أو ثبّت الإضافة."],
+  "auth.wallet.failed": ["Wallet sign-in failed or was cancelled.", "فشل تسجيل الدخول بالمحفظة أو تم إلغاؤه."],
 
   "journey.stepPlan": ["Step 2 · Choose your plan", "الخطوة ٢ · اختر خطتك"],
   "checkout.continueOnboarding": ["Continue setup", "متابعة الإعداد"],
