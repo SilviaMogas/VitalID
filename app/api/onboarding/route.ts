@@ -39,8 +39,17 @@ export async function PUT(req: Request) {
     patch.connectors = applyPlanToConnectors(patch.connectors, membership?.plan ?? 'free');
   }
   if (patch.onboardingCompleted) {
-    const current = await store.get(user.id);
-    if (!current?.planSelected || !isProfileComplete({ ...current.profile, ...patch.profile })) {
+    const [current, membership] = await Promise.all([
+      store.get(user.id),
+      getMembershipStore().get(user.id),
+    ]);
+    // A paid plan counts as plan selected (same rule as lib/auth/next-route.ts)
+    // — paid buyers never visit the plan picker, so plan_selected stays unset.
+    const planSelected = Boolean(current?.planSelected) || (membership?.plan ?? 'free') !== 'free';
+    if (
+      !planSelected ||
+      !isProfileComplete({ ...emptySetup().profile, ...current?.profile, ...patch.profile })
+    ) {
       return NextResponse.json({ error: 'incomplete' }, { status: 409 });
     }
   }

@@ -160,7 +160,13 @@ export async function confirmSolPayment(
   const payment = await store.get(reference);
   if (!payment) return { state: 'missing' };
   if (payment.userKey !== userKey) return { state: 'forbidden' };
-  if (payment.status === 'paid') return { state: 'paid' };
+  if (payment.status === 'paid') {
+    // The signature was claimed already, but a previous poll may have failed
+    // before activatePlan ran — retry it. activatePlan is idempotent on the
+    // checkout-session id, so this is a no-op once activation has landed.
+    if (payment.signature) await activate(payment, payment.signature, payment.payer);
+    return { state: 'paid' };
+  }
   if (Date.parse(payment.expiresAt) <= Date.now()) return { state: 'expired' };
 
   const config = readSolPayConfig();
@@ -185,7 +191,12 @@ export async function confirmSolPayment(
       await activate(payment, signature, extracted.payer);
       return { state: 'paid' };
     }
-    if (claim === 'already-paid') return { state: 'paid' };
+    if (claim === 'already-paid') {
+      // Claimed by an earlier poll — retry activation in case it never ran.
+      const claimed = await store.get(reference);
+      if (claimed?.signature) await activate(claimed, claimed.signature, claimed.payer);
+      return { state: 'paid' };
+    }
     // 'signature-used': this signature settled a different request — keep scanning.
   }
   return underpaid !== null ? { state: 'underpaid', paidLamports: underpaid } : { state: 'pending' };

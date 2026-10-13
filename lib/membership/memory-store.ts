@@ -1,7 +1,7 @@
 import { isPlanId, planRank, type PlanId } from "@/lib/plans";
 import { DEMO_USER_KEY } from "./constants";
 import type { MembershipRecord, MembershipStore } from "./types";
-import { applySolReadExpiry } from "./sol";
+import { applySolReadExpiry, hasLiveStripeSubscription, SOL_SESSION_PREFIX } from "./sol";
 
 interface MemoryGlobal {
   __vitalIdMembershipStore?: Map<string, MembershipRecord>;
@@ -51,7 +51,8 @@ export class MemoryMembershipStore implements MembershipStore {
   }
 
   async upsert(input: { userKey: string; displayName?: string; email?: string }) {
-    const existing = this.map.get(input.userKey);
+    const stored = this.map.get(input.userKey);
+    const existing = stored ? applySolReadExpiry(stored) : undefined;
     const now = new Date().toISOString();
     if (!existing) {
       const record = { ...this.blank(input.userKey, now), plan: defaultPlan(input.userKey) };
@@ -81,11 +82,16 @@ export class MemoryMembershipStore implements MembershipStore {
     subscriptionPeriodEnd?: string | null;
   }) {
     const now = new Date().toISOString();
-    const existing = this.map.get(input.userKey);
+    const stored = this.map.get(input.userKey);
+    const existing = stored ? applySolReadExpiry(stored) : undefined;
     if (existing?.stripeCheckoutSessionId === input.stripeCheckoutSessionId) {
       return structuredClone(existing);
     }
     const base = existing ?? this.blank(input.userKey, now);
+    // A SOL activation must not clobber a live Stripe subscription's state —
+    // Stripe webhooks own status/period for stripe-managed members.
+    const stripeManaged =
+      input.stripeCheckoutSessionId.startsWith(SOL_SESSION_PREFIX) && hasLiveStripeSubscription(base);
     const record: MembershipRecord = {
       ...base,
       plan: planRank(input.plan) > planRank(base.plan) ? input.plan : base.plan,
@@ -93,8 +99,12 @@ export class MemoryMembershipStore implements MembershipStore {
       stripeCheckoutSessionId: input.stripeCheckoutSessionId,
       stripePaymentIntentId: input.stripePaymentIntentId ?? base.stripePaymentIntentId,
       stripeSubscriptionId: input.stripeSubscriptionId ?? base.stripeSubscriptionId,
-      subscriptionStatus: input.subscriptionStatus ?? base.subscriptionStatus,
-      subscriptionPeriodEnd: input.subscriptionPeriodEnd ?? base.subscriptionPeriodEnd,
+      subscriptionStatus: stripeManaged
+        ? base.subscriptionStatus
+        : (input.subscriptionStatus ?? base.subscriptionStatus),
+      subscriptionPeriodEnd: stripeManaged
+        ? base.subscriptionPeriodEnd
+        : (input.subscriptionPeriodEnd ?? base.subscriptionPeriodEnd),
       activatedAt: now,
       planChosenAt: base.planChosenAt ?? now,
       updatedAt: now,
@@ -165,7 +175,8 @@ export class MemoryMembershipStore implements MembershipStore {
 
   private async stamp(userKey: string, field: "planChosenAt" | "onboardingCompletedAt") {
     const now = new Date().toISOString();
-    const base = this.map.get(userKey) ?? this.blank(userKey, now);
+    const stored = this.map.get(userKey);
+    const base = (stored ? applySolReadExpiry(stored) : undefined) ?? this.blank(userKey, now);
     const record: MembershipRecord = { ...base, [field]: base[field] ?? now, updatedAt: now };
     this.map.set(userKey, record);
     return structuredClone(record);
@@ -174,7 +185,7 @@ export class MemoryMembershipStore implements MembershipStore {
   async findByEmail(email: string) {
     const target = email.trim().toLowerCase();
     for (const record of this.map.values()) {
-      if (record.email?.toLowerCase() === target) return structuredClone(record);
+      if (record.email?.toLowerCase() === target) return applySolReadExpiry(structuredClone(record));
     }
     return null;
   }

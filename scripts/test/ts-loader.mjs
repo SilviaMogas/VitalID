@@ -16,7 +16,7 @@ const STUBS = {
   'next/headers':
     'const jar = () => (globalThis.__testCookies ??= {}); export async function cookies(){ return { get(n){ const v = jar()[n]; return v === undefined ? undefined : { value: v }; }, set(n, v){ jar()[n] = v; }, delete(n){ delete jar()[n]; } }; }',
   '@/lib/auth/server':
-    'export async function getCurrentUser(){ return globalThis.__testUser ?? null; } export async function recipientAccountExists(id){ try { if (globalThis.__recipientAccountLookup) return Boolean(await globalThis.__recipientAccountLookup(id)); return id === "00000000-0000-4000-8000-00000000000b"; } catch { return false; } } export function isAuthConfigured(){ return false; } export async function signUpWithPassword(i){ return { ok: true, user: { id: globalThis.__signupId, email: i.email } }; }',
+    'export async function getCurrentUser(){ return globalThis.__testUser ?? null; } export async function recipientAccountExists(id){ try { if (globalThis.__recipientAccountLookup) return Boolean(await globalThis.__recipientAccountLookup(id)); return id === "00000000-0000-4000-8000-00000000000b"; } catch { return false; } } export function isAuthConfigured(){ return Boolean(globalThis.__testAuthConfigured); } export async function signUpWithPassword(i){ return { ok: true, user: { id: globalThis.__signupId, email: i.email } }; }',
 };
 
 function tryFile(base) {
