@@ -3,10 +3,11 @@
 This is an isolated, synthetic research demo. It does not replace the VitalID
 application and does not connect to its production services, WHOOP, Supabase or
 mainnet. It uses the fictional Fátima fixture only. The demo has an executable
-program on official Solana devnet, and its primary browser lifecycle was
-demonstrated at revision `1d42ec5e48b41206ad8c28435f99a5eb01a2d05b`. The main
-VitalID website is a separate surface and does not host this live BBS flow.
-See the revision-aware [verification report](TEST-REPORT.md).
+program on official Solana devnet. Its complete browser lifecycle was repeated
+at revision `8f86010b7e6c3fee5722ce448c48694013a35e2b`; the earlier `1d42ec5`
+observations remain separately documented. The main VitalID website is a
+separate surface and does not host this live BBS flow. See the revision-aware
+[verification report](TEST-REPORT.md).
 
 ## Requirements and local verification
 
@@ -34,10 +35,10 @@ when supported. Chrome 137 used the portable fallback from pinned
 persisting or transmitting them. This fallback is not a non-extractable
 WebCrypto or hardware-backed key; page compromise remains a risk.
 
-At PR80 revision `8f86010`, the demo suite passed 50/50 and the demo build
-passed. Those are local checks, not browser evidence for that revision; its
-targeted browser retest is in progress and no result is claimed here. The browser
-lifecycle recorded below ran at `1d42ec5`; do not attribute it to `8f86010`.
+At PR80 revision `8f86010`, the demo suite passed 50/50, the demo build passed,
+and a final targeted browser run passed consent, create, BBS preview/send,
+independent verification, confirmed revoke and denial. The private preview
+requires an awake VM and Devin sign-in; it is not a public reviewer link.
 
 ## Build and verified devnet deployment
 

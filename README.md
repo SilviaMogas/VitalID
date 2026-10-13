@@ -36,7 +36,8 @@
 
 The [Private proof lab](demos/colosseum/README.md) is an isolated synthetic demo
 with an executable Solana devnet program and a demonstrated browser BBS flow;
-it does not replace or run through this main application. See the
+the complete flow was repeated on revision `8f86010`. It does not replace or run
+through this main application. See the
 [provenance and trust model](docs/COLOSSEUM.md), [English application/demo drafts](docs/COLOSSEUM-SCRIPTS.md),
 [revision-scoped verification report](demos/colosseum/TEST-REPORT.md) and
 [public devnet evidence](demos/colosseum/evidence/devnet.json) for exact claims.

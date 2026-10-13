@@ -9,14 +9,12 @@ The browser evidence and the later code revision are identified separately.
 PR #80 merged the status-refresh fixes at `8f86010`. At that revision,
 `npm test` passed **50/50** and `npm run build` passed. The tests cover bounded
 sequential status refreshes and generation-aware post-mutation client refreshes.
-The targeted browser retest for `8f86010` is in progress; this report does not
-attribute the browser results below to that revision.
+The final targeted browser run at
+`8f86010b7e6c3fee5722ce448c48694013a35e2b` passed as recorded below.
 
-The real deployment and browser lifecycle below were verified independently.
-Deployment verification records executable devnet code, byte-for-byte artifact
-equality (including zero trailing allocation) and finalized receipts. The full
-browser lifecycle used revision
-`1d42ec5e48b41206ad8c28435f99a5eb01a2d05b`.
+The real deployment and browser lifecycles below were verified independently.
+Deployment verification records executable devnet code, exact deployed-artifact
+byte equality and finalized receipts.
 
 ## Earlier local tests — 2026-10-12
 
@@ -143,8 +141,8 @@ The program is deployed and executable on official Solana devnet
 
 - Program:
   [`5saLMUki5g345gSDuiFjaf5LNBDaxW5N4yMR4sSZEu4k`](https://explorer.solana.com/address/5saLMUki5g345gSDuiFjaf5LNBDaxW5N4yMR4sSZEu4k?cluster=devnet).
-- The deployed program bytes matched the 67,272-byte SBF artifact exactly,
-  including zero trailing allocation. Artifact SHA-256:
+- The deployed program bytes matched the 67,272-byte SBF artifact exactly.
+  Artifact SHA-256:
   `e541154cc717db0673dc8c035d34e6672abf18b8c3f7f20619f537254e65712e`.
 - Deployment signature:
   [`5azeXpbggRuVUh7Bszrh7mfesTPJVu8NVJB5PK42FmMVuE419LeaTG2Drk56HLgpSVFqD2ackUBzkzsmBbC2mSYk`](https://explorer.solana.com/tx/5azeXpbggRuVUh7Bszrh7mfesTPJVu8NVJB5PK42FmMVuE419LeaTG2Drk56HLgpSVFqD2ackUBzkzsmBbC2mSYk?cluster=devnet),
@@ -169,6 +167,43 @@ That attempt preceded funding, deployment and the evidence above; its zero
 balance and “deployment blocked” conclusion are not the current state. No
 faucet, RPC, deployment or smoke operation was repeated for this documentation
 update.
+
+## Final browser lifecycle — revision 8f86010
+
+The final targeted run at
+`8f86010b7e6c3fee5722ce448c48694013a35e2b` used one real permission and passed
+native consent, browser-controller create, holder-side BBS preview and explicit
+send, independent-recipient `verified: true` with eight claims, confirmed revoke
+and post-revocation denial.
+
+- Browser create:
+  [`4Kg1jGuuzP66HwDUUJtjHGXxJYPP3mZyeG9Z8NRXz7LuRW5dUVAc6MaQbQNxzJQKDhzzaTjpcCEuXaTYHe7FDgbR`](https://explorer.solana.com/tx/4Kg1jGuuzP66HwDUUJtjHGXxJYPP3mZyeG9Z8NRXz7LuRW5dUVAc6MaQbQNxzJQKDhzzaTjpcCEuXaTYHe7FDgbR?cluster=devnet).
+- Browser revoke:
+  [`56HcRcSbuQ3C8y8uZ1hP2bczaRRB7ieuGDi4obqWSTQCTH4pCFcvgeMk3mjr5c8LzKW51Di8SxJHoKnH8h18PXVT`](https://explorer.solana.com/tx/56HcRcSbuQ3C8y8uZ1hP2bczaRRB7ieuGDi4obqWSTQCTH4pCFcvgeMk3mjr5c8LzKW51Di8SxJHoKnH8h18PXVT?cluster=devnet).
+
+The race regression was exercised with the real UI. An unchanged status snapshot
+was held at `06:00:56.241Z` with `localRevoked: false`; real revoke submission
+returned `200` at `06:01:36.757Z`, immediately clearing cards. The old response
+was released at `06:02:09.155Z`; while the fresh request remained held, the UI
+stayed on “Refreshing current permission state…”. The fresh response had
+`localRevoked: true`, retained both receipt links and displayed chain revocation
+confirmed. Active pollers remained at maximum one status request per page.
+
+A native post-revocation challenge returned `404` at `06:02:46.139Z` with the
+exact 23-byte `{"error":"unavailable"}` body and `Cache-Control: no-store`.
+No genuine dependency `503` occurred. A status-only injected `503` cleared the
+cards from the DOM, but its transient message was not retained visually; this is
+not video proof of that error-message branch. This run did not repeat 65 real
+permissions, tamper or expiry; the older bounded evidence below remains scoped
+to its original revisions.
+
+After recording, the runtime was restarted with exact origin
+`https://4318--909906b9dabb453194a2f113c670ab76.preview.devinapps.com`, resetting
+sessions. Matching-origin transport returned `200` with a Secure, HttpOnly,
+SameSite=Strict cookie; a foreign-origin probe returned `403`. Preview-browser
+E2E was blocked at Devin login, not by an application failure. The preview is
+private, requires Silvia to sign in and depends on an awake VM; it is not a
+public reviewer URL.
 
 ## Browser lifecycle evidence — revision 1d42ec5
 
@@ -200,8 +235,9 @@ Additional bounded browser observations at this revision:
 - Deliberately response-corrupted issuer-signature encodings/scalars were
   rejected during holder derivation/send. The server did not issue invalid
   credentials.
-- An untampered presentation verified with HTTP `200` at `05:44:32.594Z`.
-  An unused challenge expired at `05:46:17.588Z`; the first native verification
+- An untampered presentation was explicitly submitted with HTTP `200` and
+  `{"submitted":true}` at `05:44:32.594Z`; no verification had occurred. The
+  unused challenge expired at `05:46:17.588Z`; the first native verification
   returned `404` at `05:46:41.057Z` while the permission remained
   confirmed/unrevoked/unexpired. The expired challenge credential returned
   `404` at `05:47:08.626Z`.
@@ -223,10 +259,11 @@ does not establish that the observed `429` caused every earlier `503`.
 
 ## Limits
 
-- The browser lifecycle evidence applies to `1d42ec5`; the targeted browser
-  retest for the later `8f86010` status-refresh code was still running when this
-  report was prepared. Do not attribute the earlier browser observations to
-  `8f86010`.
+- The final lifecycle evidence applies to `8f86010`; replay, tamper and expiry
+  details retained below apply to the older `1d42ec5` run unless stated otherwise.
+- Native WebCrypto Ed25519 in the tested browser, successful separate-summary
+  access, production Supabase sharing configuration, and error cases outside
+  bounded coverage remain untested by these demo runs.
 - Synthetic assertion semantics and issuer computation are not independently
   audited. The issuer computes and signs the synthetic claim; the holder derives
   the BBS proof in-browser. Neither proves clinical truth or privately evaluates

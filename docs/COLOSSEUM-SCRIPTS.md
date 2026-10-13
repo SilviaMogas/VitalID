@@ -9,12 +9,11 @@ admission or a prize.
 - The executable Solana devnet program and public smoke receipts are documented
   in [`demos/colosseum/TEST-REPORT.md`](../demos/colosseum/TEST-REPORT.md) and
   [`demos/colosseum/evidence/devnet.json`](../demos/colosseum/evidence/devnet.json).
-- The primary real-browser lifecycle—including holder consent, create,
+- The final real-browser lifecycle—including holder consent, create,
   independent challenge, BBS derivation, verification, revoke and denial—was
-  demonstrated at revision `1d42ec5e48b41206ad8c28435f99a5eb01a2d05b`.
-- PR #80 status-refresh code is at `8f86010`; its targeted browser retest is
-  in progress, with no result claimed here. Do not attribute the `1d42ec5`
-  browser results to `8f86010`.
+  demonstrated at revision `8f86010b7e6c3fee5722ce448c48694013a35e2b`.
+  The older `1d42ec5` run remains the source for the separately documented
+  replay, tamper and expiry observations.
 - The issuer computes and signs the synthetic credential. **The holder derives
   the BBS proof in the browser.** The recipient verifies it. BBS is off-chain;
   Solana stores only a random permission reference, controller, expiry and
@@ -26,6 +25,8 @@ admission or a prize.
 - The initial buyer and B2B verification API are hypotheses, not validated
   customer demand. Existing VitalID product work predates this isolated demo
   and should be disclosed.
+- The preview is private, requires Devin sign-in and an awake VM, and is not a
+  public reviewer link.
 
 ## Two-minute introduction
 
@@ -107,8 +108,7 @@ three-minute expiry sequence.
   cookie jar are not independent.
 - Do not show `.local/`, private keys, environment variables, tokens or real
   health data.
-- Show the actual confirmation and result; do not claim all later code revisions
-  have browser coverage when the report identifies another revision.
+- Show the actual confirmation and result from the current recording.
 - Do not describe Solana as storing health data, calculating the seven-day
   condition or verifying BBS on-chain.
 - Do not claim a production wallet, issuer, insurer, CUDIS, Muse or wearable

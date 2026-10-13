@@ -189,8 +189,7 @@ The permission program is executable on official Solana devnet, genesis
 
 - Program:
   [`5saLMUki5g345gSDuiFjaf5LNBDaxW5N4yMR4sSZEu4k`](https://explorer.solana.com/address/5saLMUki5g345gSDuiFjaf5LNBDaxW5N4yMR4sSZEu4k?cluster=devnet).
-- The deployed code matched the 67,272-byte SBF artifact byte for byte,
-  including zero trailing allocation; SHA-256
+- The deployed code matched the 67,272-byte SBF artifact byte for byte; SHA-256
   `e541154cc717db0673dc8c035d34e6672abf18b8c3f7f20619f537254e65712e`.
 - Deployment transaction
   [`5azeXpbggRuVUh7Bszrh7mfesTPJVu8NVJB5PK42FmMVuE419LeaTG2Drk56HLgpSVFqD2ackUBzkzsmBbC2mSYk`](https://explorer.solana.com/tx/5azeXpbggRuVUh7Bszrh7mfesTPJVu8NVJB5PK42FmMVuE419LeaTG2Drk56HLgpSVFqD2ackUBzkzsmBbC2mSYk?cluster=devnet)
@@ -204,19 +203,19 @@ The permission program is executable on official Solana devnet, genesis
   recreation rejected by RPC simulation as `AccountAlreadyInitialized` (not an
   extra transaction).
 
-The primary real browser lifecycle was demonstrated at revision
-`1d42ec5e48b41206ad8c28435f99a5eb01a2d05b`: minimal explicit consent, holder
+The complete real browser lifecycle was repeated at revision
+`8f86010b7e6c3fee5722ce448c48694013a35e2b`: minimal explicit consent, holder
 controller-authorized create, independent recipient challenge, real BBS proof
 derivation in the holder browser, preview and explicit send, recipient
 `verified: true`, confirmed browser revoke and subsequent denial. The primary
 browser create and revoke transactions are
-[`3uhWZCvnzfQjbB2ByXYeTUGZ8BvXZD5ofP8rsbHbGDjWEpkN98bvh1cTSWYWEQSnnDe44xvK3CXLoZjWXjoA2uD5`](https://explorer.solana.com/tx/3uhWZCvnzfQjbB2ByXYeTUGZ8BvXZD5ofP8rsbHbGDjWEpkN98bvh1cTSWYWEQSnnDe44xvK3CXLoZjWXjoA2uD5?cluster=devnet)
+[`4Kg1jGuuzP66HwDUUJtjHGXxJYPP3mZyeG9Z8NRXz7LuRW5dUVAc6MaQbQNxzJQKDhzzaTjpcCEuXaTYHe7FDgbR`](https://explorer.solana.com/tx/4Kg1jGuuzP66HwDUUJtjHGXxJYPP3mZyeG9Z8NRXz7LuRW5dUVAc6MaQbQNxzJQKDhzzaTjpcCEuXaTYHe7FDgbR?cluster=devnet)
 and
-[`5mWLPWCpRYw7LKpHCQ2tH8xEpdVyBYiVrhJXkjJ8xoXM4oTedW1w2R5ZaAHRaDNPd5GYg8QBfCxgoMBJVtDmk12N`](https://explorer.solana.com/tx/5mWLPWCpRYw7LKpHCQ2tH8xEpdVyBYiVrhJXkjJ8xoXM4oTedW1w2R5ZaAHRaDNPd5GYg8QBfCxgoMBJVtDmk12N?cluster=devnet).
+[`56HcRcSbuQ3C8y8uZ1hP2bczaRRB7ieuGDi4obqWSTQCTH4pCFcvgeMk3mjr5c8LzKW51Di8SxJHoKnH8h18PXVT`](https://explorer.solana.com/tx/56HcRcSbuQ3C8y8uZ1hP2bczaRRB7ieuGDi4obqWSTQCTH4pCFcvgeMk3mjr5c8LzKW51Di8SxJHoKnH8h18PXVT?cluster=devnet).
 The test report records bounded replay, tampered-presentation and application
-expiry observations with their exact limits and timestamps. These browser
-results apply to `1d42ec5`, not the later PR #80 code revision `8f86010`; its
-targeted browser retest is in progress and has no result claimed here.
+expiry observations from the older `1d42ec5` run, plus the final status-race
+exercise and preview boundary. The private preview requires Devin sign-in and an
+awake VM; it is not a public reviewer URL.
 
 An earlier deployment attempt failed at the devnet faucet and recorded `0 SOL`
 for the payer at that time. That historical pre-deployment observation was
@@ -270,6 +269,9 @@ assignment are owner-only.
   hardening. This process must not be horizontally scaled.
 - Browser keys are intentionally page-lifetime keys. Reloading loses the private
   key; use short-lived demo permissions. This is not a production recovery design.
+- Native WebCrypto Ed25519 in the tested browser, successful separate-summary
+  access, production Supabase sharing configuration and error cases outside the
+  report's bounded coverage remain untested by these demo runs.
 - Local tests and mocked RPC failures are not proof of production security.
   Devnet execution is supported only by the public receipts and bounded browser
   observations in the test report, not by local tests.
