@@ -33,11 +33,22 @@ export async function POST(req: NextRequest) {
       result.code === 'not_configured' ? 503 : result.code === 'consent_required' ? 400 : 500;
     return NextResponse.json({ error: result.code }, { status });
   }
-  if (result.created) {
-    // Same audit as password signup: terms + health-data consent, append-only.
-    // On failure the session is dropped so no account runs without the record.
+  // Same audit as password signup: terms + health-data consent, append-only.
+  // Written for a new account AND for an existing one whose records are
+  // missing (e.g. a previous attempt failed after the user was created) —
+  // otherwise a retried login would slide in with no consent on file.
+  const store = getConsentStore();
+  let needsAudit = Boolean(result.created);
+  if (!needsAudit) {
+    const latest = await store.latest(result.user.id).catch(() => null);
+    needsAudit = !latest?.health_data;
+  }
+  if (needsAudit) {
+    if (!result.created && (body.consentTerms !== true || body.consentHealthData !== true)) {
+      await clearSessionCookies();
+      return NextResponse.json({ error: 'consent_required' }, { status: 400 });
+    }
     try {
-      const store = getConsentStore();
       await store.record(result.user.id, 'privacy_policy', PRIVACY_VERSION);
       await store.record(result.user.id, 'terms_of_service', TERMS_VERSION);
       await store.record(result.user.id, 'health_data', PRIVACY_VERSION);
