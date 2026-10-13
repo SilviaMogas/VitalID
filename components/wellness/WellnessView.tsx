@@ -130,7 +130,6 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
       } else if (result.code === "consent_required" || result.code === "unavailable") {
         setDeletionReason(result.code);
         clearFullState();
-        setDeletionEntries([]);
         setDeletionError(null);
         await fetchDeletionMetadata(controller);
       }
