@@ -18,7 +18,7 @@
   <img alt="Supabase" src="https://img.shields.io/badge/Supabase-Auth_%2B_Postgres-3ECF8E?logo=supabase&logoColor=white" />
   <img alt="Stripe" src="https://img.shields.io/badge/Stripe-Checkout-635BFF?logo=stripe&logoColor=white" />
   <img alt="WHOOP" src="https://img.shields.io/badge/WHOOP-OAuth_2.0_API_v2-111111" />
-  <a href="https://github.com/SilviaMogas/FISHTANK/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/SilviaMogas/FISHTANK/actions/workflows/ci.yml/badge.svg" /></a>
+  <a href="https://github.com/SilviaMogas/VitalID/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/SilviaMogas/VitalID/actions/workflows/ci.yml/badge.svg" /></a>
   <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-green" />
 </p>
 
@@ -221,8 +221,8 @@ docs/                Build plan, coordination, sharing, billing, connectors, Sup
 Requirements: **Node.js 20+** and npm.
 
 ```bash
-git clone https://github.com/SilviaMogas/FISHTANK.git
-cd FISHTANK
+git clone https://github.com/SilviaMogas/VitalID.git
+cd VitalID
 npm install
 cp .env.example .env.local   # optional for the core demo; community/wellness require configured Supabase + migrations
 npm run dev                  # http://localhost:3000

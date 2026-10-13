@@ -3,7 +3,7 @@ name: fishtank-ui-testing
 description: Run Supabase-backed signup/onboarding UI checks in an isolated Next.js checkout, including mobile and Arabic.
 ---
 
-# FISHTANK UI testing
+# Vital ID UI testing
 
 Use a detached worktree pinned to the requested commit when another session may
 change the main checkout. Install with `npm ci`, then run
