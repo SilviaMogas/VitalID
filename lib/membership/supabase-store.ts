@@ -3,7 +3,7 @@ import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { isPlanId, planRank, type PlanId } from '@/lib/plans';
 import { DEMO_USER_KEY } from './constants';
 import type { MembershipRecord, MembershipStore } from './types';
-import { applySolReadExpiry } from './sol';
+import { applySolReadExpiry, hasLiveStripeSubscription, SOL_SESSION_PREFIX } from './sol';
 
 const TABLE = 'vital_id_memberships';
 
@@ -144,6 +144,10 @@ export class SupabaseMembershipStore implements MembershipStore {
     }
     const now = new Date().toISOString();
     const base = existing ?? blank(input.userKey, now);
+    // A SOL activation must not clobber a live Stripe subscription's state —
+    // Stripe webhooks own status/period for stripe-managed members.
+    const stripeManaged =
+      input.stripeCheckoutSessionId.startsWith(SOL_SESSION_PREFIX) && hasLiveStripeSubscription(base);
     return this.write({
       ...base,
       plan: planRank(input.plan) > planRank(base.plan) ? input.plan : base.plan,
@@ -151,8 +155,12 @@ export class SupabaseMembershipStore implements MembershipStore {
       stripeCheckoutSessionId: input.stripeCheckoutSessionId,
       stripePaymentIntentId: input.stripePaymentIntentId ?? base.stripePaymentIntentId,
       stripeSubscriptionId: input.stripeSubscriptionId ?? base.stripeSubscriptionId,
-      subscriptionStatus: input.subscriptionStatus ?? base.subscriptionStatus,
-      subscriptionPeriodEnd: input.subscriptionPeriodEnd ?? base.subscriptionPeriodEnd,
+      subscriptionStatus: stripeManaged
+        ? base.subscriptionStatus
+        : input.subscriptionStatus ?? base.subscriptionStatus,
+      subscriptionPeriodEnd: stripeManaged
+        ? base.subscriptionPeriodEnd
+        : input.subscriptionPeriodEnd ?? base.subscriptionPeriodEnd,
       activatedAt: now,
       planChosenAt: base.planChosenAt ?? now,
       updatedAt: now,

@@ -18,7 +18,9 @@ interface SolPaymentRequest {
 type Phase = "idle" | "creating" | "awaiting" | "paid" | "expired";
 
 const POLL_MS = 4_000;
-const MAX_POLLS = 225; // ~15 minutes
+// Requests stay payable until their server-side expiresAt; poll until then
+// (with a short grace for clock skew) instead of a fixed client-side cap.
+const EXPIRY_GRACE_MS = 60_000;
 
 export function SolPayButton({
   plan,
@@ -36,7 +38,6 @@ export function SolPayButton({
   const [request, setRequest] = useState<SolPaymentRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const polls = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onPaidRef = useRef(onPaid);
   onPaidRef.current = onPaid;
@@ -51,13 +52,8 @@ export function SolPayButton({
   useEffect(() => stopPolling, [stopPolling]);
 
   const poll = useCallback(
-    (reference: string) => {
+    (reference: string, expiresAt: string) => {
       stopPolling();
-      if (polls.current >= MAX_POLLS) {
-        setPhase("expired");
-        return;
-      }
-      polls.current += 1;
       timer.current = setTimeout(async () => {
         try {
           const res = await fetch(`/api/sol/status?reference=${encodeURIComponent(reference)}`, {
@@ -69,14 +65,20 @@ export function SolPayButton({
             onPaidRef.current();
             return;
           }
-          if (res.ok && (data.state === "expired" || data.state === "missing")) {
+          // The route answers 404 for a missing reference and 200 with a state
+          // otherwise — both mean the request can no longer be paid.
+          if (res.status === 404 || (res.ok && (data.state === "expired" || data.state === "missing"))) {
             setPhase("expired");
             return;
           }
         } catch {
           // Network hiccup — keep polling.
         }
-        poll(reference);
+        if (Date.parse(expiresAt) + EXPIRY_GRACE_MS <= Date.now()) {
+          setPhase("expired");
+          return;
+        }
+        poll(reference, expiresAt);
       }, POLL_MS);
     },
     [stopPolling],
@@ -85,7 +87,6 @@ export function SolPayButton({
   async function start() {
     setError(null);
     setCopied(false);
-    polls.current = 0;
     setPhase("creating");
     try {
       const res = await fetch("/api/sol/checkout", {
@@ -106,7 +107,7 @@ export function SolPayButton({
       }
       setRequest(data);
       setPhase("awaiting");
-      poll(data.reference);
+      poll(data.reference, data.expiresAt);
     } catch {
       setError(t("common.error"));
       setPhase("idle");

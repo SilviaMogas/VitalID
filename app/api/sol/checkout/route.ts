@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { isBillingInterval, PAID_PLANS } from '@/lib/plans';
 import { isSolPayConfigured } from '@/lib/solpay/config';
 import { createSolPayment } from '@/lib/solpay/service';
-import { getCurrentUserKey } from '@/lib/membership/session';
+import { DEMO_USER_KEY, getCurrentUserKey } from '@/lib/membership/session';
+import { isAuthConfigured } from '@/lib/auth/server';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -27,6 +28,11 @@ export async function POST(req: Request) {
   }
   try {
     const userKey = await getCurrentUserKey();
+    // With auth configured, unauthenticated visitors resolve to the shared demo
+    // user — paying under it would upgrade the demo account for everyone.
+    if (userKey === DEMO_USER_KEY && isAuthConfigured()) {
+      return NextResponse.json({ error: 'demo_not_allowed' }, { status: 403 });
+    }
     const request = await createSolPayment(userKey, plan as 'plus' | 'pro', interval);
     return NextResponse.json(request, { headers: { 'Cache-Control': 'no-store' } });
   } catch (err) {

@@ -41,7 +41,14 @@ export function solPayLamports(plan: 'plus' | 'pro', interval: BillingInterval):
   const raw = process.env[envKey];
   if (raw === undefined || raw === '') return DEFAULT_LAMPORTS[plan][interval];
   if (!/^\d+$/.test(raw)) throw new Error(`${envKey} must be a lamports integer`);
-  return BigInt(raw);
+  const lamports = BigInt(raw);
+  // Zero would let a dust transfer activate the plan; values above
+  // Number.MAX_SAFE_INTEGER would lose precision in the int8 column.
+  if (lamports <= BigInt(0)) throw new Error(`${envKey} must be positive`);
+  if (lamports > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error(`${envKey} exceeds the safe integer range`);
+  }
+  return lamports;
 }
 
 export function readSolPayConfig(): SolPayConfig | null {
