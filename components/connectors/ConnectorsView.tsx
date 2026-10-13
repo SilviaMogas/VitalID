@@ -16,6 +16,7 @@ import type { TranslationKey } from "@/lib/i18n";
 import { PLANS } from "@/lib/plans";
 import { ConnectorCard } from "@/components/connectors/ConnectorCard";
 import { WhoopConnectorCard } from "@/components/connectors/WhoopConnectorCard";
+import { SolanaWearables } from "@/components/connectors/SolanaWearables";
 import type { WhoopConnectionPublic } from "@/lib/connectors/whoop/types";
 import { SectionTitle } from "@/components/vital-id/VitalIdSections";
 import { MascotNote } from "@/components/mascot/MascotNote";
@@ -86,6 +87,9 @@ export function ConnectorsView({ whoop }: { whoop: WhoopConnectionPublic }) {
         </p>
       </section>
 
+      <SolanaWearables />
+
+      <h2 className="text-lg font-semibold">{t("solanaWearables.connectorsHeading")}</h2>
       <div id="whoop-connection" className="rise scroll-mt-24" style={{ ["--i" as string]: 1 }}>
         <WhoopConnectorCard status={whoop} />
       </div>

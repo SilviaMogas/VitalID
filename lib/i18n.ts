@@ -368,6 +368,55 @@ const setupStrings = {
 } as const satisfies Record<string, readonly [string, string]>;
 
 const connectorStrings = {
+  "solanaWearables.eyebrow": ["Ecosystem discovery", "اكتشف المنظومة"],
+  "solanaWearables.title": ["Featured Solana wearables", "أجهزة Solana القابلة للارتداء المميّزة"],
+  "solanaWearables.disclosure": [
+    "Explore wearables with a publicly documented Solana connection. These are discovery listings, not active Vital ID integrations: none of the devices below sync data here. Health wearables, payment devices and collectibles are labelled separately.",
+    "اكتشف أجهزة قابلة للارتداء لها ارتباط معلن وموثّق بـ Solana. هذه قائمة للتعرّف على المنتجات، وليست تكاملات نشطة مع Vital ID: لا يزامن أيّ من الأجهزة أدناه بياناته هنا. نميّز بين أجهزة الصحة وأجهزة الدفع والمقتنيات.",
+  ],
+  "solanaWearables.category.wellness": ["Health · Smart ring", "الصحة · خاتم ذكي"],
+  "solanaWearables.category.smartwatch": ["Smartwatch · Announced health sensors", "ساعة ذكية · مستشعرات صحية معلنة"],
+  "solanaWearables.category.signer": ["Payments · Wrist signer", "المدفوعات · جهاز توقيع على المعصم"],
+  "solanaWearables.category.glasses": ["Payments · Smart glasses", "المدفوعات · نظارات ذكية"],
+  "solanaWearables.category.collectible": ["Collectible · Mechanical watch", "مقتنيات · ساعة ميكانيكية"],
+  "solanaWearables.status.product": ["Product listed for sale", "منتج معروض للبيع"],
+  "solanaWearables.status.preorder": ["Pre-order page · Shipping unverified", "صفحة طلب مسبق · الشحن غير مؤكّد"],
+  "solanaWearables.status.prototype": ["Prototype · Not production-ready", "نموذج أولي · غير جاهز للإنتاج"],
+  "solanaWearables.status.waitlist": ["Announced · Waitlist", "مُعلن · قائمة انتظار"],
+  "solanaWearables.status.limited": ["Limited edition · Reservation page", "إصدار محدود · صفحة حجز"],
+  "solanaWearables.cudis.description": [
+    "A health-tracking ring in the Solana-based CUDIS ecosystem. The maker advertises sleep, activity and heart-rate tracking; device features do not imply API availability.",
+    "خاتم لتتبّع الصحة ضمن منظومة CUDIS القائمة على Solana. تعلن الشركة عن تتبّع النوم والنشاط ومعدّل النبض؛ ولا تعني ميزات الجهاز إتاحتها عبر واجهة API.",
+  ],
+  "solanaWearables.cudis.integration": [
+    "Vital ID: not connected. CUDIS API access is invitation-only; public v1 docs still mark sleep and steps as unavailable.",
+    "Vital ID: غير متصل. الوصول إلى واجهة CUDIS API بالدعوة فقط؛ ولا تزال وثائق الإصدار الأول العامة تصنّف النوم والخطوات على أنهما غير متاحين.",
+  ],
+  "solanaWearables.showtime.description": [
+    "A Solana-focused smartwatch project combining wallet features and an AI companion. Its site advertises heart-rate and SpO₂ sensors, but current shipping and health-data API access are unverified.",
+    "مشروع ساعة ذكية يركّز على Solana ويجمع ميزات المحفظة ورفيق ذكاء اصطناعي. يعلن موقعه عن مستشعرات النبض وتشبع الأكسجين، لكن الشحن الحالي وإتاحة واجهة البيانات الصحية غير مؤكّدين.",
+  ],
+  "solanaWearables.solwear.description": [
+    "An open-source prototype for approving Solana transactions from the wrist via a phone and NFC. Production security features remain on its roadmap. Not a health tracker.",
+    "نموذج أولي مفتوح المصدر للموافقة على معاملات Solana من المعصم عبر الهاتف وNFC. لا تزال ميزات الأمان للإنتاج ضمن خارطة الطريق. ليس جهازًا لتتبّع الصحة.",
+  ],
+  "solanaWearables.glasses.description": [
+    "An announced smart-glasses project for hands-free Solana payments and DeFi. The team lists QR/NFC and recording features; the site currently offers a waitlist, not verified shipping hardware.",
+    "مشروع نظارات ذكية مُعلن لمدفوعات Solana والتمويل اللامركزي دون استخدام اليدين. يذكر الفريق ميزات QR وNFC والتسجيل؛ ويقدّم الموقع حاليًا قائمة انتظار لا أجهزة مؤكّدة الشحن.",
+  ],
+  "solanaWearables.franckMuller.description": [
+    "A limited-edition mechanical watch celebrating Solana, with a QR code linked to a wallet address. A collectible, not a health sensor or an on-device transaction signer.",
+    "ساعة ميكانيكية بإصدار محدود تحتفي بـ Solana، مع رمز QR مرتبط بعنوان محفظة. قطعة مقتنيات وليست مستشعرًا صحيًا أو جهازًا لتوقيع المعاملات.",
+  ],
+  "solanaWearables.integration.none": ["Vital ID: no integration available.", "Vital ID: لا يوجد تكامل متاح."],
+  "solanaWearables.integration.nonHealth": ["No Vital ID integration · Not a health-data source.", "لا يوجد تكامل مع Vital ID · ليس مصدر بيانات صحية."],
+  "solanaWearables.website": ["Visit project", "زيارة المشروع"],
+  "solanaWearables.source": ["Technical source", "المصدر التقني"],
+  "solanaWearables.reviewed": [
+    "Sources reviewed {date}. Product capabilities and availability are manufacturer claims, not tested by Vital ID. This curated list is not an exhaustive registry or a partnership endorsement.",
+    "تمت مراجعة المصادر في {date}. إمكانات المنتجات وتوفّرها ادعاءات من الشركات المصنّعة ولم يختبرها Vital ID. هذه قائمة منتقاة وليست سجلًا شاملًا أو تأييدًا لشراكة.",
+  ],
+  "solanaWearables.connectorsHeading": ["Vital ID connectors", "موصلات Vital ID"],
   "connectors.title": ["Connectors", "الموصلات"],
   "connectors.subtitle": [
     "Vital ID is an aggregation layer: connect the wearables, nutrition, fitness and health tools you already use — one portable identity.",
