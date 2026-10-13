@@ -67,7 +67,7 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
   const [deletionEntries, setDeletionEntries] = useState<WellnessDeletionMetadata[]>([]);
   const [deletionError, setDeletionError] = useState<string | null>(null);
   const [deletionLoading, setDeletionLoading] = useState(false);
-  const [deletionOnly, setDeletionOnly] = useState(false);
+  const [deletionReason, setDeletionReason] = useState<"consent_required" | "unavailable" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<TranslationKey | null>(null);
   const [busy, setBusy] = useState(false);
@@ -100,7 +100,7 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
     if (!result.ok) {
       if (result.code === "unauthenticated") {
         setError(result.code);
-        setDeletionOnly(false);
+        setDeletionReason(null);
         clearFullState();
         setDeletionEntries([]);
         setDeletionError(null);
@@ -123,12 +123,12 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
     if (!result.ok) {
       setError(result.code);
       if (result.code === "unauthenticated") {
-        setDeletionOnly(false);
+        setDeletionReason(null);
         clearFullState();
         setDeletionEntries([]);
         setDeletionError(null);
-      } else if (result.code === "consent_required") {
-        setDeletionOnly(true);
+      } else if (result.code === "consent_required" || result.code === "unavailable") {
+        setDeletionReason(result.code);
         clearFullState();
         setDeletionEntries([]);
         setDeletionError(null);
@@ -137,7 +137,7 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
       return null;
     }
     setError(null);
-    setDeletionOnly(false);
+    setDeletionReason(null);
     setDeletionEntries([]);
     setDeletionError(null);
     setEntries(result.data.entries);
@@ -154,7 +154,7 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
   async function handleAccessFailure(code: string): Promise<boolean> {
     if (code !== "consent_required" && code !== "unauthenticated") return false;
     setError(code);
-    setDeletionOnly(false);
+    setDeletionReason(code === "consent_required" ? code : null);
     clearFullState();
     setDeletionEntries([]);
     setDeletionError(null);
@@ -167,7 +167,7 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
       void load();
     } else {
       pending.current?.abort();
-      setDeletionOnly(false);
+      setDeletionReason(null);
       clearFullState();
       setDeletionEntries([]);
       setDeletionError(null);
@@ -225,10 +225,12 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
       setOpen(false);
       setEditing(null);
     }
+    setDeletionEntries((current) => current.filter((item) => item.id !== entry.id));
+    setEntries((current) => current === null ? null : current.filter((item) => item.id !== entry.id));
     setRemoving(null);
     setNotice("wellness.deleted");
     if (entries === null) {
-      setError("consent_required");
+      setError(deletionReason ?? "unavailable");
       await refreshDeletion();
     } else {
       await load();
@@ -250,7 +252,7 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
 
   const titleKey = isWorkout ? "wellness.workouts" : "wellness.supplements";
   const canEdit = entries !== null && status === "member" && error !== "consent_required" && error !== "unauthenticated";
-  const showDeletion = status === "member" && entries === null && deletionOnly;
+  const showDeletion = status === "member" && entries === null && deletionReason !== null;
 
   return (
     <div className="space-y-5">
@@ -302,7 +304,7 @@ function WellnessContent({ kind }: { kind: WellnessKind }) {
               disabled={busy}
               onClick={async () => {
                 if (error === "conflict" && entries === null) {
-                  setError("consent_required");
+                  setError(deletionReason ?? "unavailable");
                   await refreshDeletion();
                   return;
                 }

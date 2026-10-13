@@ -126,11 +126,7 @@ function createdComment() {
   };
 }
 
-function postPage(items, sentinel) {
-  return { posts: [...items.slice(0, 30), sentinel] };
-}
-
-function createCommunityFetch({ deferredRefresh = false, failRefresh = false } = {}) {
+function createCommunityFetch({ deferredRefresh = false, failRefresh = false, failPostReload = false } = {}) {
   const mutations = [];
   const firstGeneral = Array.from({ length: 30 }, (_, offset) => {
     const index = 60 - offset;
@@ -149,23 +145,26 @@ function createCommunityFetch({ deferredRefresh = false, failRefresh = false } =
   const hiddenComments = new Set();
   let generalRefreshDeferred = deferredRefresh;
   let generalRefreshFailed = failRefresh;
+  let failNextPostReload = failPostReload;
+  let postReloadFailurePending = false;
+  let createdGeneralPost = null;
   let deferredResponsePromise = null;
   let generalFeedRequests = 0;
+  let generalFeedCursorRequests = 0;
 
   function feedPage(group, beforeId) {
-    if (group === "general") {
-      if (!beforeId) {
-        generalFeedRequests += 1;
-        const posts = firstGeneral.map((item) => ({ ...item }));
-        return postPage(posts, post("general", 30));
-      }
-      return {
-        posts: secondGeneral.map((item) => (
-          item.id === "general-post-15" ? { ...item, comments: targetCommentCount } : { ...item }
-        )),
-      };
-    }
-    return { posts: groupTwo };
+    const items = group === "general"
+      ? [...(createdGeneralPost ? [createdGeneralPost] : []), ...firstGeneral, ...secondGeneral]
+      : groupTwo;
+    if (group === "general" && beforeId) generalFeedCursorRequests += 1;
+    else if (group === "general") generalFeedRequests += 1;
+    const cursorIndex = beforeId ? items.findIndex((item) => item.id === beforeId) : -1;
+    const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+    return {
+      posts: items.slice(start, start + 31).map((item) => (
+        item.id === "general-post-15" ? { ...item, comments: targetCommentCount } : { ...item }
+      )),
+    };
   }
 
   const fetchHandler = async (input, init = {}) => {
@@ -176,7 +175,11 @@ function createCommunityFetch({ deferredRefresh = false, failRefresh = false } =
     if (init.method === "POST") {
       const body = JSON.parse(init.body);
       mutations.push(body);
-      if (body.action === "comment") {
+      if (body.action === "post") {
+        createdGeneralPost = post("general", 61, { mine: true });
+        postReloadFailurePending = failNextPostReload;
+        failNextPostReload = false;
+      } else if (body.action === "comment") {
         commentRows.unshift({ ...createdComment(), body: body.body });
         targetCommentCount += 1;
       } else if (body.action === "delete_comment") {
@@ -205,6 +208,10 @@ function createCommunityFetch({ deferredRefresh = false, failRefresh = false } =
     const group = url.searchParams.get("group") === "hobby:running" ? "hobby" : "general";
     const beforeId = url.searchParams.get("beforeId");
     if (view === "feed") {
+      if (group === "general" && !beforeId && postReloadFailurePending) {
+        postReloadFailurePending = false;
+        return response({ error: "synthetic post refresh failure" }, 500);
+      }
       if (group === "general" && !beforeId && generalFeedRequests > 0 && generalRefreshDeferred) {
         generalRefreshDeferred = false;
         deferredResponsePromise = deferred();
@@ -234,6 +241,9 @@ function createCommunityFetch({ deferredRefresh = false, failRefresh = false } =
     },
     get generalFeedRequests() {
       return generalFeedRequests;
+    },
+    get generalFeedCursorRequests() {
+      return generalFeedCursorRequests;
     },
     mutations,
   };
@@ -304,6 +314,17 @@ async function loadSecondPostPage(renderer) {
   await waitFor(() => posts(renderer).length === 60);
 }
 
+function postForm(renderer) {
+  return renderer.root.findAllByType("form").find((form) => (
+    form.findAllByProps({ id: "community-post" }).length > 0
+  ));
+}
+
+async function fillPostForm(form, body) {
+  const input = form.findByProps({ id: "community-post" });
+  await act(async () => input.props.onChange({ target: { value: body } }));
+}
+
 test("loaded posts, open threads and comment pages survive comment mutations", async () => {
   const fetchState = createCommunityFetch();
   await withCommunity(fetchState, async (renderer) => {
@@ -363,6 +384,98 @@ test("loaded posts, open threads and comment pages survive comment mutations", a
     assert.ok(fetchState.mutations.some((mutation) => mutation.action === "comment"));
     assert.ok(fetchState.mutations.some((mutation) => mutation.action === "delete_comment"));
     assert.ok(fetchState.mutations.some((mutation) => mutation.action === "report_comment"));
+  });
+});
+
+test("failed publish reload preserves two loaded feed pages until a comment refresh succeeds", async () => {
+  const fetchState = createCommunityFetch({ failPostReload: true });
+  await withCommunity(fetchState, async (renderer) => {
+    await loadSecondPostPage(renderer);
+    const targetPost = postByBody(renderer, "Post 15");
+    await act(async () => targetPost.findAllByType("button").find((button) => textOf(button) === "Comments 60").props.onClick());
+    await waitFor(() => postByBody(renderer, "Post 15").findAllByProps({ "data-testid": "community-comment" }).length === 30);
+    const commentMore = postByBody(renderer, "Post 15").findAllByType("button").find((button) => textOf(button) === "Load more");
+    await act(async () => commentMore.props.onClick());
+    await waitFor(() => postByBody(renderer, "Post 15").findAllByProps({ "data-testid": "community-comment" }).length === 60);
+
+    const form = postForm(renderer);
+    await fillPostForm(form, "Synthetic new post");
+    await act(async () => form.props.onSubmit({ preventDefault() {} }));
+    await waitFor(() => renderer.root.findAllByProps({ role: "alert" }).length > 0);
+    assert.equal(posts(renderer).length, 60);
+    assert.ok(postByBody(renderer, "Post 15"));
+    assert.equal(postByBody(renderer, "Post 15").findAllByType("button").find((button) => textOf(button).startsWith("Comments"))?.props["aria-expanded"], true);
+    assert.equal(postByBody(renderer, "Post 15").findAllByProps({ "data-testid": "community-comment" }).length, 60);
+
+    const post15 = postByBody(renderer, "Post 15");
+    const commentForm = post15.findAllByType("form")[0];
+    const commentInput = commentForm.findByProps({ id: "comment-general-post-15" });
+    await act(async () => commentInput.props.onChange({ target: { value: "Comment after failed post refresh" } }));
+    await act(async () => commentForm.props.onSubmit({ preventDefault() {} }));
+    await waitFor(() => textOf(postByBody(renderer, "Post 15")).includes("Comments 61"));
+
+    const refreshedPost = postByBody(renderer, "Post 15");
+    assert.equal(posts(renderer).length, 60);
+    assert.equal(refreshedPost.findAllByType("button").find((button) => textOf(button).startsWith("Comments"))?.props["aria-expanded"], true);
+    assert.equal(refreshedPost.findAllByProps({ "data-testid": "community-comment" }).length, 60);
+    assert.ok(textOf(refreshedPost).includes("Comment after failed post refresh"));
+    assert.ok(refreshedPost.findAllByType("button").some((button) => textOf(button) === "Load more"));
+  });
+});
+
+test("successful nonappend post reload resets the loaded page count to one", async () => {
+  const fetchState = createCommunityFetch();
+  await withCommunity(fetchState, async (renderer) => {
+    await loadSecondPostPage(renderer);
+    assert.equal(fetchState.generalFeedCursorRequests, 1);
+    await fillPostForm(postForm(renderer), "Synthetic new post");
+    await act(async () => postForm(renderer).props.onSubmit({ preventDefault() {} }));
+    await waitFor(() => posts(renderer).length === 30 && postByBody(renderer, "Post 61"));
+    assert.equal(postByBody(renderer, "Post 15"), undefined);
+
+    const visiblePost = postByBody(renderer, "Post 45");
+    const commentsToggle = visiblePost.findAllByType("button").find((button) => textOf(button).startsWith("Comments"));
+    await act(async () => commentsToggle.props.onClick());
+    await waitFor(() => visiblePost.findAllByProps({ "data-testid": "community-comment" }).length === 30);
+    const form = visiblePost.findAllByType("form")[0];
+    const input = form.findByProps({ id: "comment-general-post-45" });
+    await act(async () => input.props.onChange({ target: { value: "Refresh one page" } }));
+    await act(async () => form.props.onSubmit({ preventDefault() {} }));
+    await waitFor(() => fetchState.mutations.some((mutation) => mutation.action === "comment"));
+    assert.equal(posts(renderer).length, 30);
+    assert.equal(postByBody(renderer, "Post 15"), undefined);
+    assert.equal(fetchState.generalFeedCursorRequests, 1);
+  });
+});
+
+test("a superseded nonappend publish reload keeps the loaded page count", async () => {
+  const fetchState = createCommunityFetch({ deferredRefresh: true });
+  await withCommunity(fetchState, async (renderer) => {
+    await loadSecondPostPage(renderer);
+    const post15 = postByBody(renderer, "Post 15");
+    await act(async () => post15.findAllByType("button").find((button) => textOf(button) === "Comments 60").props.onClick());
+    await waitFor(() => postByBody(renderer, "Post 15").findAllByProps({ "data-testid": "community-comment" }).length === 30);
+
+    const form = postForm(renderer);
+    await fillPostForm(form, "Synthetic new post");
+    let publish;
+    await act(async () => {
+      publish = form.props.onSubmit({ preventDefault() {} });
+    });
+    await waitFor(() => fetchState.deferredResponsePromise !== null);
+
+    const commentForm = postByBody(renderer, "Post 15").findAllByType("form")[0];
+    const commentInput = commentForm.findByProps({ id: "comment-general-post-15" });
+    await act(async () => commentInput.props.onChange({ target: { value: "Comment supersedes reload" } }));
+    await act(async () => commentForm.props.onSubmit({ preventDefault() {} }));
+    await waitFor(() => textOf(postByBody(renderer, "Post 15")).includes("Comments 61"));
+    fetchState.deferredResponsePromise.resolve({ posts: [] });
+    await act(async () => publish);
+
+    assert.equal(posts(renderer).length, 60);
+    assert.ok(postByBody(renderer, "Post 15"));
+    assert.equal(postByBody(renderer, "Post 15").findAllByType("button").find((button) => textOf(button).startsWith("Comments"))?.props["aria-expanded"], true);
+    assert.equal(fetchState.generalFeedCursorRequests, 2);
   });
 });
 

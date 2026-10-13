@@ -21,8 +21,10 @@ const translate = (key, params) => {
     "community.cancel": "Cancel",
     "community.confirmDelete": "Confirm delete",
     "community.delete": "Delete",
+    "community.retry": "Retry",
     "common.loading": "Loading",
     "wellness.consentNeeded": "Health-data consent is required",
+    "wellness.conflict": "This entry changed",
     "wellness.deleteOnlyConfirm": "Delete this numbered record permanently?",
     "wellness.deleteOnlyCreated": `Created ${params?.date ?? ""}`,
     "wellness.deleteOnlyEmpty": "No private entries are available to delete.",
@@ -132,6 +134,22 @@ function deletionEntry(kind, updatedAt, id = "00000000-0000-4000-8000-0000000000
   };
 }
 
+function savedEntry(kind, id, name) {
+  return {
+    id,
+    kind,
+    data: kind === "workout"
+      ? {
+          title: name,
+          exercises: [{ name: "Fixture exercise", sets: 3, reps: "8", note: "" }],
+          notes: "",
+        }
+      : { name, amount: "1 capsule", schedule: "daily", note: "" },
+    createdAt: "2026-10-12T10:20:30.123456Z",
+    updatedAt: "2026-10-12T12:34:56.123456Z",
+  };
+}
+
 test("expired-consent deletion metadata works for workout and supplement without consent writes", async () => {
   for (const kind of ["workout", "supplement"]) {
     const calls = [];
@@ -170,6 +188,52 @@ test("expired-consent deletion metadata works for workout and supplement without
       assert.equal(deleteBodies[0].updatedAt, "2026-10-12T12:34:56.123456Z");
       assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 0);
       assert.equal(calls.some(({ url }) => url === "/api/consent"), false);
+    });
+  }
+});
+
+test("unavailable full reads open metadata deletion and retry only recovers on a later full read", async () => {
+  for (const kind of ["workout", "supplement"]) {
+    const calls = [];
+    const recovered = savedEntry(
+      kind,
+      "00000000-0000-4000-8000-0000000000c2",
+      `Recovered ${kind} fixture`,
+    );
+    let fullReads = 0;
+    await withWellness(kind, async (input, init = {}) => {
+      const url = String(input);
+      calls.push({ init, url });
+      if (url === `/api/wellness?kind=${kind}`) {
+        fullReads += 1;
+        return fullReads === 1
+          ? response({ error: "unavailable" }, 503)
+          : response({ entries: [recovered] });
+      }
+      if (url === `/api/wellness?kind=${kind}&view=deletion`) {
+        return response({
+          entries: [deletionEntry(kind, recovered.updatedAt, recovered.id)],
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    }, async (renderer) => {
+      const panel = renderer.root.findByProps({ "data-testid": `wellness-${kind}-deletion-panel` });
+      assert.match(textOf(panel), /Record 1/);
+      assert.match(textOf(panel), /Created 2026-10-12T10:20:30.123456Z/);
+      assert.doesNotMatch(textOf(renderer.root), /Recovered workout fixture|Recovered supplement fixture|Sensitive fixture value|Should never render/);
+      assert.equal(renderer.root.findAllByProps({ id: "wellness-editor" }).length, 0);
+      assert.equal(renderer.root.findAllByProps({ id: "wellness-consent" }).length, 0);
+      assert.equal(buttonsWithText(renderer, "Save consent and continue").length, 0);
+      assert.equal(buttonsWithText(renderer, "Retry").length, 1);
+      assert.equal(calls.filter(({ url }) => url.startsWith("/api/consent")).length, 0);
+
+      await act(async () => buttonsWithText(renderer, "Retry")[0].props.onClick());
+      await flush();
+
+      assert.equal(fullReads, 2);
+      assert.equal(renderer.root.findAllByProps({ "data-testid": `wellness-${kind}-deletion-panel` }).length, 0);
+      assert.match(textOf(renderer.root), new RegExp(`Recovered ${kind} fixture`));
+      assert.equal(calls.filter(({ url }) => url.startsWith("/api/consent")).length, 0);
     });
   }
 });
@@ -239,17 +303,29 @@ test("saving after consent expires clears the editor and opens metadata deletion
   }
 });
 
-test("metadata refresh preserves entries for a transient failure but clears them on authentication failure", async () => {
+test("metadata refresh removes confirmed deletes, preserves remaining entries on failure, and clears on authentication failure", async () => {
   let metadataReads = 0;
+  const first = deletionEntry(
+    "supplement",
+    "2026-10-12T12:34:56.123456Z",
+    "00000000-0000-4000-8000-0000000000c1",
+  );
+  const remaining = {
+    ...deletionEntry(
+      "supplement",
+      "2026-10-11T12:34:56.123456Z",
+      "00000000-0000-4000-8000-0000000000c2",
+    ),
+    createdAt: "2026-10-11T10:20:30.123456Z",
+  };
   await withWellness("supplement", async (input) => {
     const url = String(input);
     if (url === "/api/wellness?kind=supplement") return response({ error: "consent_required" }, 403);
     if (url === "/api/wellness?kind=supplement&view=deletion") {
       metadataReads += 1;
-      if (metadataReads === 1) {
-        return response({ entries: [deletionEntry("supplement", "2026-10-12T12:34:56.123456Z")] });
-      }
+      if (metadataReads === 1) return response({ entries: [first, remaining] });
       if (metadataReads === 2) return response({ error: "unavailable" }, 503);
+      if (metadataReads === 3) return response({ entries: [remaining] });
       return response({ error: "unauthenticated" }, 401);
     }
     if (url === "/api/wellness") return response({ ok: true });
@@ -259,11 +335,136 @@ test("metadata refresh preserves entries for a transient failure but clears them
     await act(async () => buttonsWithText(renderer, "Confirm delete")[0].props.onClick());
     assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 1);
     assert.ok(textOf(renderer.root).includes("The deletion list is temporarily unavailable."));
+    assert.match(textOf(renderer.root), /Created 2026-10-11T10:20:30.123456Z/);
 
     await act(async () => buttonsWithText(renderer, "Refresh deletion list")[0].props.onClick());
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 1);
+    assert.doesNotMatch(textOf(renderer.root), /temporarily unavailable/);
+
+    await act(async () => buttonsWithText(renderer, "Delete")[0].props.onClick());
+    await act(async () => buttonsWithText(renderer, "Confirm delete")[0].props.onClick());
+    await flush();
+    assert.equal(metadataReads, 4);
     assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 0);
     assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-supplement-deletion-panel" }).length, 0);
     assert.equal(buttonsWithText(renderer, "Delete").length, 0);
+  });
+});
+
+test("unavailable deletion and metadata conflicts preserve the unavailable reason", async () => {
+  const first = deletionEntry(
+    "workout",
+    "2026-10-12T12:34:56.123456Z",
+    "00000000-0000-4000-8000-0000000000c1",
+  );
+  const second = {
+    ...deletionEntry(
+      "workout",
+      "2026-10-11T12:34:56.123456Z",
+      "00000000-0000-4000-8000-0000000000c2",
+    ),
+    createdAt: "2026-10-11T10:20:30.123456Z",
+  };
+  const freshSecond = { ...second, updatedAt: "2026-10-12T12:34:56.654321Z" };
+  let metadataReads = 0;
+  const deleteBodies = [];
+  await withWellness("workout", async (input, init = {}) => {
+    const url = String(input);
+    if (url === "/api/wellness?kind=workout") return response({ error: "unavailable" }, 503);
+    if (url === "/api/wellness?kind=workout&view=deletion") {
+      metadataReads += 1;
+      if (metadataReads === 1) return response({ entries: [first, second] });
+      if (metadataReads === 2) return response({ error: "unavailable" }, 503);
+      if (metadataReads === 3) return response({ entries: [second] });
+      if (metadataReads === 4) return response({ entries: [freshSecond] });
+      return response({ entries: [] });
+    }
+    if (url === "/api/wellness" && init.method === "POST") {
+      const body = JSON.parse(init.body);
+      deleteBodies.push(body);
+      if (body.id === first.id || deleteBodies.filter((item) => item.id === second.id).length > 1) {
+        return response({ ok: true });
+      }
+      return response({ error: "conflict" }, 409);
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  }, async (renderer) => {
+    assert.match(textOf(renderer.root), /Unavailable/);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 2);
+
+    await act(async () => buttonsWithText(renderer, "Delete")[0].props.onClick());
+    await act(async () => buttonsWithText(renderer, "Confirm delete")[0].props.onClick());
+    await flush();
+    assert.equal(deleteBodies[0].id, first.id);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 1);
+    assert.match(textOf(renderer.root), /Unavailable/);
+    assert.ok(textOf(renderer.root).includes("The deletion list is temporarily unavailable."));
+    assert.equal(buttonsWithText(renderer, "Save consent and continue").length, 0);
+    assert.equal(renderer.root.findAllByProps({ id: "wellness-consent" }).length, 0);
+
+    await act(async () => buttonsWithText(renderer, "Refresh deletion list")[0].props.onClick());
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 1);
+    await act(async () => buttonsWithText(renderer, "Delete")[0].props.onClick());
+    await act(async () => buttonsWithText(renderer, "Confirm delete")[0].props.onClick());
+    await flush();
+    assert.equal(deleteBodies[1].id, second.id);
+    assert.equal(deleteBodies[1].updatedAt, second.updatedAt);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 1);
+    assert.match(textOf(renderer.root), /This entry changed/);
+
+    await act(async () => buttonsWithText(renderer, "Load latest (discard my edits)")[0].props.onClick());
+    await flush();
+    assert.equal(metadataReads, 4);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 1);
+    assert.match(textOf(renderer.root), /Unavailable/);
+    assert.doesNotMatch(textOf(renderer.root), /Health-data consent is required/);
+    assert.equal(buttonsWithText(renderer, "Save consent and continue").length, 0);
+    assert.equal(renderer.root.findAllByProps({ id: "wellness-consent" }).length, 0);
+
+    await act(async () => buttonsWithText(renderer, "Delete")[0].props.onClick());
+    await act(async () => buttonsWithText(renderer, "Confirm delete")[0].props.onClick());
+    await flush();
+    assert.equal(deleteBodies[2].updatedAt, freshSecond.updatedAt);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 0);
+    assert.match(textOf(renderer.root), /Unavailable/);
+    assert.equal(buttonsWithText(renderer, "Save consent and continue").length, 0);
+  });
+});
+
+test("full-data delete removes the confirmed entry before an unavailable refresh enters deletion mode", async () => {
+  const first = savedEntry("workout", "00000000-0000-4000-8000-0000000000c1", "Private first fixture");
+  const second = savedEntry("workout", "00000000-0000-4000-8000-0000000000c2", "Private second fixture");
+  let fullReads = 0;
+  let deleteBody;
+  await withWellness("workout", async (input, init = {}) => {
+    const url = String(input);
+    if (url === "/api/wellness?kind=workout") {
+      fullReads += 1;
+      return fullReads === 1
+        ? response({ entries: [first, second] })
+        : response({ error: "unavailable" }, 503);
+    }
+    if (url === "/api/wellness?kind=workout&view=deletion") {
+      return response({ entries: [deletionEntry("workout", second.updatedAt, second.id)] });
+    }
+    if (url === "/api/wellness" && init.method === "POST") {
+      deleteBody = JSON.parse(init.body);
+      return response({ ok: true });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  }, async (renderer) => {
+    assert.match(textOf(renderer.root), /Private first fixture/);
+    assert.match(textOf(renderer.root), /Private second fixture/);
+    await act(async () => buttonsWithText(renderer, "Delete")[0].props.onClick());
+    await act(async () => buttonsWithText(renderer, "Confirm delete")[0].props.onClick());
+    await flush();
+
+    assert.equal(deleteBody.id, first.id);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "wellness-deletion-entry" }).length, 1);
+    assert.match(textOf(renderer.root), /Record 1/);
+    assert.doesNotMatch(textOf(renderer.root), /Private first fixture|Private second fixture/);
+    assert.equal(renderer.root.findAllByProps({ id: "wellness-editor" }).length, 0);
+    assert.match(textOf(renderer.root), /Unavailable/);
   });
 });
 
