@@ -121,9 +121,7 @@ async function readJsonObject(request: Request): Promise<ParsedBody> {
 
 function isVersionSet(value: unknown): value is Record<(typeof VERSION_KEYS)[number], string> {
   if (!isObject(value)) return false;
-  const keys = Object.keys(value).sort();
-  return keys.length === VERSION_KEYS.length &&
-    keys.every((key, index) => key === [...VERSION_KEYS].sort()[index]) &&
+  return Object.keys(value).length === VERSION_KEYS.length &&
     VERSION_KEYS.every((key) => typeof value[key] === 'string');
 }
 
