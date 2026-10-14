@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { readServerSupabaseEnv } from '@/lib/supabase/env';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { getRequestAuthUser } from '@/lib/auth/request-user';
 
 /**
  * Supabase Auth (email + password) with httpOnly cookie sessions.
@@ -177,7 +178,7 @@ export async function signOut(): Promise<void> {
  * Currently signed-in Supabase user, or null. Read-only (safe in server
  * components); does not refresh tokens.
  */
-export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
+const getCookieCurrentUser = cache(async (): Promise<AuthUser | null> => {
   if (!isAuthConfigured()) return null;
   const store = await cookies();
   const at = store.get(ACCESS_COOKIE)?.value;
@@ -186,6 +187,10 @@ export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   if (error || !data.user) return null;
   return toAuthUser(data.user);
 });
+
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  return getRequestAuthUser() ?? getCookieCurrentUser();
+}
 
 export async function recipientAccountExists(userId: string): Promise<boolean> {
   try {

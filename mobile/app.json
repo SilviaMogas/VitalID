@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Vital ID",
+    "slug": "vital-id-native",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "../public/icons/vitalid-512.png",
+    "scheme": "vitalid",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "site.vitalid.app",
+      "buildNumber": "1"
+    },
+    "android": {
+      "package": "site.vitalid.app",
+      "versionCode": 1,
+      "allowBackup": false,
+      "usesCleartextTraffic": false,
+      "permissions": []
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-localization"
+    ]
+  }
+}
