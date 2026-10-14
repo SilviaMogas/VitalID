@@ -156,6 +156,7 @@ class ApiCore {
   }
 
   private async clearLocal(generation = this.generation): Promise<void> {
+    if (generation !== this.generation) return;
     this.session = null;
     try {
       await this.queueStorage(async () => {
@@ -176,6 +177,9 @@ class ApiCore {
         return true;
       });
     } catch {
+      if (generation !== this.generation) {
+        throw new ApiError(401, "session_changed");
+      }
       await this.clearLocal(generation);
       throw new ApiError(0, "storage_error");
     }
@@ -216,8 +220,10 @@ class ApiCore {
 
   private async exchangeRefresh(refreshToken: string, generation: number): Promise<MemorySession> {
     const response = await this.fetchJson("auth/refresh", { refreshToken });
+    if (generation !== this.generation) throw new ApiError(401, "session_changed");
     if (response.status === 401) {
       if (generation === this.generation) await this.clearLocal(generation);
+      if (generation !== this.generation) throw new ApiError(401, "session_changed");
       throw new ApiError(401, "unauthenticated");
     }
     if (response.status >= 500) throw new ApiError(response.status, "unavailable");
@@ -263,11 +269,12 @@ class ApiCore {
       try {
         refreshToken = await this.storage.get();
       } catch {
+        if (generation !== this.generation) throw new ApiError(401, "session_changed");
         await this.clearLocal(generation);
         throw new ApiError(0, "storage_error");
       }
-      if (!refreshToken) return false;
       if (generation !== this.generation) throw new ApiError(401, "session_changed");
+      if (!refreshToken) return false;
       try {
         await this.exchangeRefresh(refreshToken, generation);
         return generation === this.generation;
@@ -296,9 +303,11 @@ class ApiCore {
         if (generation === this.generation) await this.storage.clear();
       });
     } catch {
+      if (generation !== this.generation) throw new ApiError(401, "session_changed");
       throw new ApiError(0, "storage_error");
     }
-    const response = await this.rawRequest("auth/signin", { email, password });
+    if (generation !== this.generation) throw new ApiError(401, "session_changed");
+    const response = await this.rawRequest("auth/signin", { email, password }, undefined, "POST");
     if (generation !== this.generation) throw new ApiError(401, "session_changed");
     if (response.status === 401) throw new ApiError(401, responseCode(response.payload));
     if (response.status >= 500) throw new ApiError(response.status, "unavailable");
@@ -322,14 +331,17 @@ class ApiCore {
     } catch (error) {
       localError = error;
     }
+    if (generation !== this.generation) return;
     let remoteError: unknown = null;
     if (accessToken) {
       try {
         const response = await this.rawRequest("auth/signout", undefined, accessToken, "POST");
+        if (generation !== this.generation) return;
         if (response.status < 200 || response.status >= 300) {
           remoteError = new ApiError(response.status, responseCode(response.payload));
         }
       } catch (error) {
+        if (generation !== this.generation) return;
         remoteError = error;
       }
     }
@@ -343,13 +355,26 @@ class ApiCore {
     const generation = this.generation;
     const session = await this.validSession();
     if (generation !== this.generation) throw new ApiError(401, "session_changed");
-    let response = await this.rawRequest(path, method === "POST" ? options.body : undefined, session.accessToken);
+    let response = await this.rawRequest(
+      path,
+      method === "POST" ? options.body : undefined,
+      session.accessToken,
+      method,
+    );
+    if (generation !== this.generation) throw new ApiError(401, "session_changed");
     if (response.status === 401) {
       const next = await this.refresh();
       if (generation !== this.generation) throw new ApiError(401, "session_changed");
-      response = await this.rawRequest(path, method === "POST" ? options.body : undefined, next.accessToken);
+      response = await this.rawRequest(
+        path,
+        method === "POST" ? options.body : undefined,
+        next.accessToken,
+        method,
+      );
+      if (generation !== this.generation) throw new ApiError(401, "session_changed");
       if (response.status === 401) {
         await this.clearLocal(generation);
+        if (generation !== this.generation) throw new ApiError(401, "session_changed");
         throw new ApiError(401, "unauthenticated");
       }
     }

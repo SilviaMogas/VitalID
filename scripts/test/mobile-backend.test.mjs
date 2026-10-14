@@ -12,7 +12,25 @@ const users = {
 };
 globalThis.__mobileAuthUsers = users;
 globalThis.__mobilePlans = {};
-globalThis.__mobileSetups = {};
+const setup = (firstName, lastName) => ({
+  profile: {
+    firstName, lastName, dob: "", gender: "", nationality: "", country: "ES", city: "",
+    heightCm: null, weightKg: null, photoUrl: "",
+  },
+  goals: [], health: {
+    allergies: "", medications: "", conditions: "", bloodType: "",
+    emergencyContactName: "", emergencyContactPhone: "", notes: "",
+  },
+  baseline: {
+    sleepHours: null, restingHr: null, steps: null, workoutsPerWeek: null,
+    activityLevel: "",
+  },
+  connectors: [], planSelected: false, onboardingStep: 1, onboardingCompleted: true,
+});
+globalThis.__mobileSetups = {
+  [users["token-a"].id]: setup("Alice", "Alpha"),
+  [users["token-b"].id]: setup("Bob", "Beta"),
+};
 globalThis.__mobileConsents = new Map();
 globalThis.__mobileShares = new Map();
 globalThis.__mobileUsersByEmail = Object.fromEntries(Object.values(users).map((user) => [user.email, user]));
@@ -101,11 +119,20 @@ test("two concurrent authenticated accounts remain isolated", async () => {
   assert.equal((await body(b)).user.id, users["token-b"].id);
 });
 
+test("concurrent identity reads resolve each onboarding profile through request scope", async () => {
+  const [a, b] = await Promise.all([
+    call("GET", "identity", { token: "token-a" }),
+    call("GET", "identity", { token: "token-b" }),
+  ]);
+  assert.equal((await body(a)).snapshot.identity.fullName, "Alice Alpha");
+  assert.equal((await body(b)).snapshot.identity.fullName, "Bob Beta");
+});
+
 test("identity is member-only and returns an allowlisted projection", async () => {
   const response = await call("GET", "identity", { token: "token-a" });
   assert.equal(response.status, 200);
   const value = await body(response);
-  assert.equal(value.snapshot.identity.fullName, "Vital ID member");
+  assert.equal(value.snapshot.identity.fullName, "Alice Alpha");
   assert.equal("metrics" in value.snapshot, false);
   assert.equal("history" in value.snapshot, false);
 });
@@ -202,6 +229,20 @@ test("A creates selected fields, B can read, C cannot, and revoke denies B", asy
   const createdBody = await body(created);
   assert.deepEqual(Object.keys(createdBody.snapshot), ["identity"]);
 
+  const freeDuration = await call("POST", "shares", {
+    token: "token-a",
+    body: {
+      purpose: "custom",
+      selectedFields: ["identity"],
+      durationMinutes: 15,
+      recipientUserId: users["token-b"].id,
+      expectedSnapshot: snapshot,
+      authorized: true,
+    },
+  });
+  assert.equal(freeDuration.status, 403);
+  assert.equal((await body(freeDuration)).error, "duration_not_available");
+
   const recipient = await call("GET", `shares/${createdBody.id}`, { token: "token-b" });
   assert.equal(recipient.status, 200);
   assert.deepEqual(Object.keys((await body(recipient)).snapshot), ["identity"]);
@@ -225,6 +266,7 @@ test("A creates selected fields, B can read, C cannot, and revoke denies B", asy
   assert.equal(revoked.status, 200);
   const deniedAfterRevoke = await call("GET", `shares/${createdBody.id}`, { token: "token-b" });
   assert.equal(deniedAfterRevoke.status, 404);
+  assert.deepEqual(await body(deniedAfterRevoke), { status: "unavailable" });
 });
 
 test("auth responses are no-store, never set cookies, and never expose the service key", async () => {

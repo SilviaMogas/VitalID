@@ -34,7 +34,7 @@ export interface MobileShareSummary {
 }
 
 export interface MobileShare extends MobileShareSummary {
-  sharedBy: string;
+  sharedBy?: string;
   snapshot: Partial<VitalIdSnapshot>;
 }
 

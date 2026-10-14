@@ -116,6 +116,93 @@ test("network failure never retries a POST", async () => {
   assert.equal(calls, 2);
 });
 
+test("forwards an explicit POST method when the body is absent", async () => {
+  const methods = [];
+  const transport = createApiTransport({
+    origin: "https://www.vitalid.site",
+    storage: fakeStorage(),
+    fetcher: async (_url, init) => {
+      methods.push([init.method, init.body]);
+      const body = init.body ? JSON.parse(init.body) : null;
+      return body?.email ? response(200, session()) : response(200, { revoked: true });
+    },
+  });
+  await transport.signIn("a@example.test", "password");
+  await transport.request("shares/abc/revoke", { method: "POST" });
+  assert.deepEqual(methods.at(-1), ["POST", undefined]);
+});
+
+test("a delayed response from an old generation cannot update the session", async () => {
+  const storage = fakeStorage();
+  let release;
+  const held = new Promise((resolve) => { release = resolve; });
+  let accountCall = false;
+  const transport = createApiTransport({
+    origin: "https://www.vitalid.site",
+    storage,
+    fetcher: async (_url, init) => {
+      const body = init.body ? JSON.parse(init.body) : null;
+      if (body?.email) return response(200, session(
+        body.email.startsWith("b") ? "access-b" : "access-a",
+        body.email.startsWith("b") ? "refresh-b" : "refresh-a",
+      ));
+      if (_url.endsWith("/account")) {
+        accountCall = true;
+        await held;
+        return response(200, { user: "old-account" });
+      }
+      return response(200, { ok: true });
+    },
+  });
+  await transport.signIn("a@example.test", "password");
+  const oldRequest = transport.request("account");
+  while (!accountCall) await new Promise((resolve) => setTimeout(resolve, 0));
+  await transport.signOut();
+  await transport.signIn("b@example.test", "password");
+  release();
+  await assert.rejects(() => oldRequest, (error) =>
+    error instanceof ApiError && error.code === "session_changed");
+  assert.equal(storage.value(), "refresh-b");
+});
+
+test("a delayed old 401 cannot refresh or clear a newer account", async () => {
+  const storage = fakeStorage();
+  let release;
+  const held = new Promise((resolve) => { release = resolve; });
+  let oldCall = false;
+  let refreshCalls = 0;
+  const transport = createApiTransport({
+    origin: "https://www.vitalid.site",
+    storage,
+    fetcher: async (_url, init) => {
+      const body = init.body ? JSON.parse(init.body) : null;
+      if (body?.email) return response(200, session(
+        body.email.startsWith("b") ? "access-b" : "access-a",
+        body.email.startsWith("b") ? "refresh-b" : "refresh-a",
+      ));
+      if (body?.refreshToken) {
+        refreshCalls++;
+        return response(200, session("access-refreshed", "refresh-refreshed"));
+      }
+      if (_url.endsWith("/account")) {
+        oldCall = true;
+        await held;
+        return response(401, { error: "unauthenticated" });
+      }
+      return response(200, { ok: true });
+    },
+  });
+  await transport.signIn("a@example.test", "password");
+  const oldRequest = transport.request("account");
+  while (!oldCall) await new Promise((resolve) => setTimeout(resolve, 0));
+  await transport.signIn("b@example.test", "password");
+  release();
+  await assert.rejects(() => oldRequest, (error) =>
+    error instanceof ApiError && error.code === "session_changed");
+  assert.equal(refreshCalls, 0);
+  assert.equal(storage.value(), "refresh-b");
+});
+
 test("logout invalidates pending sign-in and serializes late storage writes", async () => {
   const storage = fakeStorage();
   let release;

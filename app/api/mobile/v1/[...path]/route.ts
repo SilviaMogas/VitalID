@@ -167,6 +167,7 @@ async function delegatedJson(
   project?: (body: unknown) => unknown,
 ): Promise<Response> {
   if (response.status >= 500) return json({ error: 'unavailable' }, 503);
+  if (response.status < 200 || response.status >= 300) return response;
   if (!project) return response;
   const body: unknown = await response.json();
   return json(project(body), response.status);
@@ -333,9 +334,9 @@ async function dispatchAuthorized(
           expiresAt: typeof body.expiresAt === 'string' ? body.expiresAt : '',
           revoked: body.revoked === true,
           selectedFields: selectedFields as MobileShare['selectedFields'],
-          sharedBy: typeof body.sharedBy === 'string' ? body.sharedBy : '',
           snapshot: isObject(body.snapshot) ? body.snapshot as MobileShare['snapshot'] : {},
         };
+        if (typeof body.sharedBy === 'string') share.sharedBy = body.sharedBy;
         return share;
       });
     }

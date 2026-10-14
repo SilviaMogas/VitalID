@@ -30,5 +30,5 @@ export const api = {
 
 export function publicShareUrl(id: string): string {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(id)) throw new Error("invalid_share_id");
-  return `https://www.vitalid.site/shared/${id}`;
+  return `${API_ORIGIN}/shared/${id}`;
 }

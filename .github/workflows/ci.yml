@@ -19,6 +19,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
+      - run: npm run test:mobile
       - run: npm run test:isolation
       - run: npm run lint
       - run: ./node_modules/.bin/tsc --noEmit -p .

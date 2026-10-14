@@ -9,8 +9,7 @@ export default [
   },
   js.configs.recommended,
   {
-    files: ["src/**/*.{ts,tsx}", "test/**/*.{js,mjs,ts,tsx}"],
-    linterOptions: { reportUnusedDisableDirectives: false },
+    files: ["App.tsx", "index.ts", "src/**/*.{ts,tsx}", "test/**/*.{js,mjs,ts,tsx}"],
     languageOptions: {
       parser: tsParser,
       parserOptions: { ecmaVersion: "latest", sourceType: "module" },
@@ -34,13 +33,8 @@ export default [
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
       "no-console": "error",
-      "react-hooks/exhaustive-deps": "off",
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
     }
-  },
-  {
-    files: ["src/screens.tsx", "src/ui.tsx"],
-    rules: {
-      "@typescript-eslint/no-unused-vars": "off",
-    },
   },
 ];

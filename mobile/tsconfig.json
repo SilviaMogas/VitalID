@@ -9,5 +9,5 @@
       "@mobile/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "../types/mobile.ts", "../types/health.ts"]
+  "include": ["App.tsx", "index.ts", "src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "../types/mobile.ts", "../types/health.ts"]
 }
