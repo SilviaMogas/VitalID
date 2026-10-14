@@ -40,3 +40,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Expo / native CNG (recreated with `expo prebuild`)
+/mobile/node_modules/
+/mobile/.expo/
+/mobile/android/
+/mobile/ios/
+/mobile/dist/
+/mobile/web-build/
+/mobile/coverage/
+/mobile/.env*
+!/mobile/.env.example
+/mobile/*.jks
+/mobile/*.keystore
+/mobile/*.p8
+/mobile/*.p12
+/mobile/*.mobileprovision
+/mobile/credentials.json
+/mobile/secrets.json
