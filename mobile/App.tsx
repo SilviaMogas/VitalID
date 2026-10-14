@@ -10,7 +10,7 @@ import { Button, colors, errorLabel, FailureContext, JobState, LocaleContext, No
 import type { Label, Locale } from "./src/strings";
 
 type Tab = "share" | "identity" | "access";
-function Shell({ locale, setLocale }: { locale: Locale; setLocale: (value: Locale) => void }) {
+export function Shell({ locale, setLocale }: { locale: Locale; setLocale: (value: Locale) => void }) {
   const { t } = useCopy();
   const [account, setAccount] = useState<MobileAccount | null>(null);
   const [starting, setStarting] = useState(true);
@@ -69,7 +69,11 @@ function Shell({ locale, setLocale }: { locale: Locale; setLocale: (value: Local
     <Notice error>{t(error)}</Notice><Button label={t("retry")} onPress={() => void restore()} />
     <Button label={t("forget")} secondary onPress={() => void signOut()} />
   </Page>;
-  else if (!account) content = <SignIn onSignedIn={async () => { setError(null); setKnownShares([]); setRevokedIds(new Set()); await loadAccount(); }} />;
+  else if (!account) content = <SignIn onSignedIn={async () => {
+    setError(null); setKnownShares([]); setRevokedIds(new Set());
+    try { await loadAccount(); }
+    catch (e) { setError(errorLabel(e)); }
+  }} />;
   else if (tab === "access") content = <AccessScreen account={account} knownShares={knownShares} revokedIds={revokedIds} onRevoked={revoked} />;
   else if (requiresConsent) content = <Consent key={JSON.stringify(account.versions)} account={account} onSaved={loadAccount} onAccess={() => setTab("access")} />;
   else if (tab === "identity") content = <IdentityScreen account={account} onSignOut={() => void signOut()} />;
