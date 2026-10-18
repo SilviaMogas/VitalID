@@ -10,8 +10,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/$", "/pricing", "/brand", "/llms.txt"],
+        allow: ["/pricing", "/brand", "/llms.txt"],
         disallow: [
+          "/$",
           "/api/",
           "/shared/",
           "/share",
@@ -27,6 +28,7 @@ export default function robots(): MetadataRoute.Robots {
           "/focus",
           "/more",
           "/vital-id",
+          "/wellness",
         ],
       },
     ],

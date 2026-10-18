@@ -4,8 +4,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Shared health credentials: keep them out of every index, including
-        // crawlers that ignore robots.txt and HTML meta tags.
+        // Indexing hints only; access checks remain responsible for privacy.
         source: "/shared/:path*",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }],
       },
@@ -13,6 +12,15 @@ const nextConfig: NextConfig = {
         source: "/api/:path*",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
+      ...[
+        "/", "/share/:path*", "/checkout/:path*", "/onboarding/:path*",
+        "/signin/:path*", "/signup/:path*", "/welcome/:path*", "/trends/:path*",
+        "/coach/:path*", "/community/:path*", "/connectors/:path*", "/focus/:path*",
+        "/more/:path*", "/vital-id/:path*", "/wellness/:path*",
+      ].map((source) => ({
+        source,
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }],
+      })),
     ];
   },
 };
