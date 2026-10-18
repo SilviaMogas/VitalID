@@ -121,18 +121,42 @@ async function signSolana(wallet, message) {
   return base58Encode(new Uint8Array(signature));
 }
 
-function request(url, body, origin) {
+function request(url, body, origin, host) {
   const headers = { 'content-type': 'application/json' };
   if (origin) headers.origin = origin;
+  if (host) headers.host = host;
   return new Request(url, { method: 'POST', headers, body: typeof body === 'string' ? body : JSON.stringify(body) });
 }
 
 test('Ethereum personal_sign verifies canonical messages and rejects replay, signer, chain and origin tampering', async () => {
   const wallet = Wallet.createRandom();
   const message = issueEthereumMessage(wallet.address, 1, ORIGIN);
+  const lines = message.split('\n');
+  assert.deepEqual(lines.slice(0, 8), [
+    `${ORIGIN.host} wants you to sign in with your Ethereum account:`,
+    wallet.address,
+    '',
+    'Sign in to Vital ID. No transaction or health data is sent to the blockchain.',
+    '',
+    `URI: ${ORIGIN.origin}`,
+    'Version: 1',
+    'Chain ID: 1',
+  ]);
+  assert.equal(lines.length, 11);
+  assert.match(lines[8], /^Nonce: [a-f0-9]{96}$/);
+  assert.match(lines[9], /^Issued At: \d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
+  assert.match(lines[10], /^Expiration Time: \d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
   const signature = await wallet.signMessage(message);
   assert.equal(await verifyEthereumMessage(wallet.address, 1, signature, message, ORIGIN), 'ok');
   assert.equal(await verifyEthereumMessage(wallet.address, 1, signature, message, ORIGIN), 'expired');
+
+  const loopbackOrigin = new URL('http://127.0.0.1:3000');
+  const loopbackMessage = issueEthereumMessage(wallet.address, 1, loopbackOrigin);
+  assert.match(loopbackMessage, /^http:\/\/127\.0\.0\.1:3000 wants you to sign in/);
+  assert.equal(
+    await verifyEthereumMessage(wallet.address, 1, await wallet.signMessage(loopbackMessage), loopbackMessage, loopbackOrigin),
+    'ok',
+  );
 
   const second = Wallet.createRandom();
   const otherMessage = issueEthereumMessage(second.address, 1, ORIGIN);
@@ -214,11 +238,28 @@ test('Ethereum message endpoint rejects malformed payloads and foreign origins w
   const malformed = await ethMessageRoute.POST(request('https://vitalid.example/api/auth/eth/message', '[]'));
   assert.equal(malformed.status, 400);
   assert.equal(malformed.headers.get('cache-control'), 'no-store');
+  const loopback = await ethMessageRoute.POST(request(
+    'http://localhost:3000/api/auth/eth/message',
+    { address: Wallet.createRandom().address, chainId: 1 },
+    'http://127.0.0.1:3000',
+    '127.0.0.1:3000',
+  ));
+  assert.equal(loopback.status, 200);
+  assert.match((await loopback.json()).message, /^http:\/\/127\.0\.0\.1:3000 wants you to sign in/);
   const foreign = await ethMessageRoute.POST(
     request('https://vitalid.example/api/auth/eth/message', { address: Wallet.createRandom().address, chainId: 1 }, 'https://evil.example'),
   );
   assert.equal(foreign.status, 403);
   assert.equal(foreign.headers.get('cache-control'), 'no-store');
+  const loopbackForeign = await ethMessageRoute.POST(
+    request(
+      'http://localhost:3000/api/auth/eth/message',
+      { address: Wallet.createRandom().address, chainId: 1 },
+      'https://evil.example',
+      '127.0.0.1:3000',
+    ),
+  );
+  assert.equal(loopbackForeign.status, 403);
 });
 
 test('Ethereum consent audit failure clears the newly created session and fails closed', async () => {
@@ -234,6 +275,30 @@ test('Ethereum consent audit failure clears the newly created session and fails 
   assert.equal((await response.json()).error, 'consent_audit_failed');
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.deepEqual(cookieJar(), {});
+});
+
+test('Ethereum wallet completion clears cookies when account lookup throws', async () => {
+  const wallet = Wallet.createRandom();
+  const created = await signInWithWallet(wallet.address, CONSENTS, 'ethereum');
+  assert.equal(created.ok, true);
+  for (const name of Object.keys(cookieJar())) delete cookieJar()[name];
+  const message = issueEthereumMessage(wallet.address, 1, ORIGIN);
+  const signature = await wallet.signMessage(message);
+  const originalGetUserById = admin.getUserById;
+  admin.getUserById = async () => {
+    throw new Error('auth lookup unavailable');
+  };
+  try {
+    const response = await ethVerifyRoute.POST(request(
+      'https://vitalid.example/api/auth/eth/verify',
+      { address: wallet.address, chainId: 1, signature, message, ...CONSENTS },
+    ));
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).error, 'unavailable');
+    assert.deepEqual(cookieJar(), {});
+  } finally {
+    admin.getUserById = originalGetUserById;
+  }
 });
 
 test('EIP-4361 nonce MAC is bound to all request fields', () => {

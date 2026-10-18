@@ -23,7 +23,14 @@ const STUBS = {
     export function isSameOrigin(request) {
       const origin = request.headers.get("origin");
       if (!origin) return true;
-      try { return new URL(origin).origin === new URL(request.url).origin; } catch { return false; }
+      try {
+        const target = new URL(request.url);
+        const host = request.headers.get("host");
+        const expected = target.hostname === "localhost" && host && /^(127\\.0\\.0\\.1|\\[::1\\])(?::\\d+)?$/.test(host)
+          ? new URL(target.protocol + "//" + host).origin
+          : target.origin;
+        return new URL(origin).origin === expected;
+      } catch { return false; }
     }
   `,
 };

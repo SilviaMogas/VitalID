@@ -9,9 +9,17 @@ const NONCE_TTL_MS = 5 * 60 * 1000;
 const MAX_MESSAGE_LENGTH = 2048;
 const MAX_SIGNATURE_LENGTH = 256;
 const NONCE_RE = /^[a-f0-9]{96}$/;
+const SIWE_STATEMENT = 'Sign in to Vital ID. No transaction or health data is sent to the blockchain.';
+const LOOPBACK_HOST_RE = /^(localhost|127\.0\.0\.1|\[::1\])$/;
 
 function normalizedAddress(address: string): string {
   return getAddress(address);
+}
+
+function siweDomain(origin: URL): string {
+  return origin.protocol === 'http:' && LOOPBACK_HOST_RE.test(origin.hostname)
+    ? `${origin.protocol}//${origin.host}`
+    : origin.host;
 }
 
 function nonceMac(
@@ -49,8 +57,10 @@ export function issueEthereumMessage(address: string, chainId: number, origin: U
   const randomNonce = randomBytes(16).toString('hex');
   const mac = nonceMac(randomNonce, account, chainId, origin.host, origin.origin, issued, expires);
   const nonce = `${randomNonce}${mac}`;
-  return `${origin.host} wants you to sign in with your Ethereum account:
+  return `${siweDomain(origin)} wants you to sign in with your Ethereum account:
 ${account}
+
+${SIWE_STATEMENT}
 
 URI: ${origin.origin}
 Version: 1
@@ -68,22 +78,24 @@ function parseMessage(
 ): { nonce: string; issuedAt: string; expirationTime: string } | null {
   const lines = message.split('\n');
   if (
-    lines.length !== 9 ||
-    lines[0] !== `${origin.host} wants you to sign in with your Ethereum account:` ||
+    lines.length !== 11 ||
+    lines[0] !== `${siweDomain(origin)} wants you to sign in with your Ethereum account:` ||
     lines[1] !== normalizedAddress(address) ||
     lines[2] !== '' ||
-    lines[3] !== `URI: ${origin.origin}` ||
-    lines[4] !== 'Version: 1' ||
-    lines[5] !== `Chain ID: ${chainId}` ||
-    !/^Nonce: [a-f0-9]{96}$/.test(lines[6]) ||
-    !/^Issued At: \d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(lines[7]) ||
-    !/^Expiration Time: \d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(lines[8])
+    lines[3] !== SIWE_STATEMENT ||
+    lines[4] !== '' ||
+    lines[5] !== `URI: ${origin.origin}` ||
+    lines[6] !== 'Version: 1' ||
+    lines[7] !== `Chain ID: ${chainId}` ||
+    !/^Nonce: [a-f0-9]{96}$/.test(lines[8]) ||
+    !/^Issued At: \d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(lines[9]) ||
+    !/^Expiration Time: \d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(lines[10])
   ) {
     return null;
   }
-  const nonce = lines[6].slice('Nonce: '.length);
-  const issuedAt = lines[7].slice('Issued At: '.length);
-  const expirationTime = lines[8].slice('Expiration Time: '.length);
+  const nonce = lines[8].slice('Nonce: '.length);
+  const issuedAt = lines[9].slice('Issued At: '.length);
+  const expirationTime = lines[10].slice('Expiration Time: '.length);
   const issued = Date.parse(issuedAt);
   const expires = Date.parse(expirationTime);
   if (
