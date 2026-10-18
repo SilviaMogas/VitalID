@@ -33,6 +33,10 @@ export const ACCESS_COOKIE = 'vitalid_at';
 export const REFRESH_COOKIE = 'vitalid_rt';
 const YEAR = 60 * 60 * 24 * 365;
 
+function isUserNotFoundError(error: { code?: string; status?: number; message?: string }): boolean {
+  return error.code === 'user_not_found' || /user not found/i.test(error.message ?? '');
+}
+
 export interface AuthUser {
   id: string;
   email: string | null;
@@ -151,9 +155,10 @@ export async function signInWithWallet(
   const email = walletEmail(identity.address, chain);
   const password = walletPasswordForChain(identity.address, chain);
   const admin = getSupabaseServerClient();
-  const first = await signInWithPassword({ email, password });
-  if (first.ok) {
-    const { data, error } = await admin.auth.admin.getUserById(first.user.id);
+
+  const completePasswordSignIn = async (attempt: AuthResult): Promise<AuthResult> => {
+    if (!attempt.ok) return attempt;
+    const { data, error } = await admin.auth.admin.getUserById(attempt.user.id);
     if (error || !data.user) {
       await clearSessionCookies();
       return { ok: false, code: 'unknown', message: error?.message ?? 'wallet user not found' };
@@ -162,7 +167,7 @@ export async function signInWithWallet(
       await clearSessionCookies();
       return { ok: false, code: 'invalid_credentials', message: 'wallet account binding mismatch' };
     }
-    if (trustedWalletFromAppMetadata(data.user.email, data.user.app_metadata)) return first;
+    if (trustedWalletFromAppMetadata(data.user.email, data.user.app_metadata)) return attempt;
     const { data: updated, error: updateError } = await admin.auth.admin.updateUserById(data.user.id, {
       app_metadata: { ...data.user.app_metadata, vitalid_wallet: identity },
     });
@@ -171,7 +176,10 @@ export async function signInWithWallet(
       return { ok: false, code: 'unknown', message: updateError?.message ?? 'wallet metadata update failed' };
     }
     return { ok: true, user: toAuthUser(updated.user) };
-  }
+  };
+
+  const first = await completePasswordSignIn(await signInWithPassword({ email, password }));
+  if (first.ok) return first;
   if (first.code !== 'invalid_credentials') return first;
   // Password grant failed: either the wallet has no account yet or its
   // derived password predates a secret rotation. Tell them apart by a
@@ -180,7 +188,10 @@ export async function signInWithWallet(
     type: 'recovery',
     email,
   });
-  const existingUser = linkError || !link?.user ? null : link.user;
+  if (linkError && !isUserNotFoundError(linkError)) {
+    return { ok: false, code: 'unknown', message: linkError.message };
+  }
+  const existingUser = link?.user ?? null;
   if (existingUser) {
     if (!hasWalletBinding(existingUser, identity)) {
       return { ok: false, code: 'invalid_credentials', message: 'wallet account binding mismatch' };
@@ -195,10 +206,19 @@ export async function signInWithWallet(
   }
   if (chain === 'solana') {
     const legacyEmail = legacySolanaWalletEmail(identity.address);
-    const { data: legacyLink } = await admin.auth.admin.generateLink({
+    // Prefer the current derived secret so an ordinary legacy sign-in does
+    // not write credentials through the admin API.
+    const legacy = await completePasswordSignIn(await signInWithPassword({ email: legacyEmail, password }));
+    if (legacy.ok) return legacy;
+    if (legacy.code !== 'invalid_credentials') return legacy;
+
+    const { data: legacyLink, error: legacyLinkError } = await admin.auth.admin.generateLink({
       type: 'recovery',
       email: legacyEmail,
     });
+    if (legacyLinkError && !isUserNotFoundError(legacyLinkError)) {
+      return { ok: false, code: 'unknown', message: legacyLinkError.message };
+    }
     const legacyUser = legacyLink?.user ?? null;
     if (legacyUser && hasWalletBinding(legacyUser, identity)) {
       const { error } = await admin.auth.admin.updateUserById(legacyUser.id, {

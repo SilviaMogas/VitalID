@@ -14,6 +14,8 @@ process.env.NODE_ENV = 'test';
 globalThis.crypto ??= webcrypto;
 
 const users = new Map();
+let generateLinkErrors = new Map();
+let updateCalls = [];
 let nextUser = 1;
 const cookieJar = () => (globalThis.__walletCookies ??= {});
 
@@ -35,7 +37,11 @@ const admin = {
     return { data: { user }, error: null };
   },
   async generateLink({ email }) {
-    const record = users.get(email.toLowerCase());
+    const key = email.toLowerCase();
+    if (generateLinkErrors.has(key)) {
+      return { data: { user: null }, error: generateLinkErrors.get(key) };
+    }
+    const record = users.get(key);
     return { data: { user: record?.user ?? null }, error: null };
   },
   async getUserById(id) {
@@ -43,6 +49,7 @@ const admin = {
     return { data: { user: record?.user ?? null }, error: null };
   },
   async updateUserById(id, changes) {
+    updateCalls.push({ id, changes });
     const record = [...users.values()].find((value) => value.user.id === id);
     if (!record) return { data: { user: null }, error: { message: 'missing user' } };
     if ('password' in changes) record.password = changes.password;
@@ -88,7 +95,7 @@ globalThis.__vitalIdConsentStore = {
   },
 };
 
-const { issueMessage, verifyWalletMessage, isSolanaPublicKey } =
+const { issueMessage, verifyWalletMessage, isSolanaPublicKey, walletPassword } =
   await import('../../lib/solpay/wallet-auth.ts');
 const { base58Encode } = await import('../../lib/solpay/base58.ts');
 const { walletEmail, legacySolanaWalletEmail } =
@@ -106,6 +113,8 @@ const CONSENTS = { consentTerms: true, consentHealthData: true };
 beforeEach(() => {
   process.env.SOL_WALLET_SECRET = 'wallet-test-secret';
   users.clear();
+  generateLinkErrors = new Map();
+  updateCalls = [];
   nextUser = 1;
   consentRows = new Map();
   failConsentRecord = false;
@@ -186,6 +195,43 @@ test('Solana signatures require the exact canonical message and bounded payloads
   assert.equal(await verifyWalletMessage(wallet.publicKey, signature, `${message}${'x'.repeat(3000)}`, HOST), 'bad_message');
   assert.equal(await verifyWalletMessage(wallet.publicKey, `${signature}${'x'.repeat(200)}`, message, HOST), 'bad_signature');
   assert.equal(await verifyWalletMessage(wallet.publicKey, signature, message, HOST), 'expired');
+});
+
+test('legacy Solana sign-in reuses credentials and lookup failures do not split accounts', async () => {
+  const wallet = await makeSolanaWallet();
+  const legacyEmail = legacySolanaWalletEmail(wallet.publicKey);
+  const identity = { chain: 'solana', address: wallet.publicKey };
+  await admin.createUser({
+    email: legacyEmail,
+    password: walletPassword(wallet.publicKey),
+    email_confirm: true,
+    app_metadata: { vitalid_wallet: identity },
+    user_metadata: { solana_wallet: wallet.publicKey },
+  });
+
+  const ordinary = await signInWithWallet(wallet.publicKey, CONSENTS);
+  assert.equal(ordinary.ok, true);
+  assert.equal(users.size, 1);
+  assert.equal(updateCalls.length, 0);
+
+  const stored = users.get(legacyEmail.toLowerCase());
+  stored.password = 'stale-password';
+  generateLinkErrors.set(legacyEmail.toLowerCase(), {
+    code: 'unexpected_failure',
+    message: 'auth lookup timed out',
+  });
+
+  const unavailable = await signInWithWallet(wallet.publicKey, CONSENTS);
+  assert.equal(unavailable.ok, false);
+  assert.equal(unavailable.code, 'unknown');
+  assert.equal(users.size, 1);
+  assert.equal(users.get(walletEmail(wallet.publicKey, 'solana').toLowerCase()), undefined);
+
+  generateLinkErrors.clear();
+  const rotated = await signInWithWallet(wallet.publicKey, CONSENTS);
+  assert.equal(rotated.ok, true);
+  assert.equal(rotated.user.id, ordinary.user.id);
+  assert.equal(stored.password, walletPassword(wallet.publicKey));
 });
 
 test('case-fold-colliding Solana wallets get separate accounts and legacy wallet sign-in still works', async () => {
