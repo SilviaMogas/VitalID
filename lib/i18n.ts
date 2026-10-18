@@ -1,4 +1,5 @@
 import solanaWearablesStrings from "./solana-wearables.strings.json";
+import walletStrings from "./wallet.strings.json";
 import type { Locale } from "@/types";
 
 export const LOCALES: Locale[] = ["en", "ar"];
@@ -1007,6 +1008,7 @@ const en = {
   ...pickLocale(setupStrings, 0),
   ...pickLocale(connectorStrings, 0),
   ...solanaWearablesStrings.en,
+  ...walletStrings.en,
   ...pickLocale(whoopStrings, 0),
   ...pickLocale(dataStrings, 0),
   ...pickLocale(coachStrings, 0),
@@ -1153,6 +1155,7 @@ const ar: Record<TranslationKey, string> = {
   ...pickLocale(setupStrings, 1),
   ...pickLocale(connectorStrings, 1),
   ...solanaWearablesStrings.ar,
+  ...walletStrings.ar,
   ...pickLocale(whoopStrings, 1),
   ...pickLocale(dataStrings, 1),
   ...pickLocale(coachStrings, 1),

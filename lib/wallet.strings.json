@@ -1,0 +1,32 @@
+{
+  "en": {
+    "auth.wallet.metamask": "MetaMask",
+    "auth.wallet.explainer": "Sign a message to prove wallet ownership. No transaction, gas fee, or health data is sent to the blockchain. Different wallets create separate accounts; this does not link an existing email account.",
+    "auth.wallet.rejected": "Signature cancelled. Try again when you are ready.",
+    "auth.wallet.unavailable": "Wallet sign-in is temporarily unavailable. Please try again later.",
+    "digitalId.title": "Digital ID",
+    "digitalId.account": "Private account identifier",
+    "digitalId.wallet": "Wallet verified at sign-in",
+    "digitalId.email": "No verified wallet on this account",
+    "digitalId.demo": "Demo identity — no wallet verified",
+    "digitalId.notice": "This identifies your Vital ID account and proves control of the signing wallet only. It is not a government ID, KYC check, or medically verified credential. Your health data stays off-chain.",
+    "digitalId.copy": "Copy account ID",
+    "digitalId.copied": "Account ID copied",
+    "digitalId.copyFailed": "Could not copy. Select the account ID to copy it manually."
+  },
+  "ar": {
+    "auth.wallet.metamask": "MetaMask",
+    "auth.wallet.explainer": "وقّع رسالة لإثبات ملكية المحفظة. لا توجد معاملة أو رسوم شبكة، ولا تُرسل بيانات صحية إلى البلوكشين. تُنشئ المحافظ المختلفة حسابات منفصلة؛ ولا يربط هذا حساب بريد إلكتروني موجودًا.",
+    "auth.wallet.rejected": "أُلغي التوقيع. حاول مجددًا عندما تكون مستعدًا.",
+    "auth.wallet.unavailable": "تسجيل الدخول بالمحفظة غير متاح مؤقتًا. يرجى المحاولة لاحقًا.",
+    "digitalId.title": "الهوية الرقمية",
+    "digitalId.account": "معرّف الحساب الخاص",
+    "digitalId.wallet": "تم التحقق من المحفظة عند تسجيل الدخول",
+    "digitalId.email": "لا توجد محفظة موثّقة لهذا الحساب",
+    "digitalId.demo": "هوية تجريبية — لم يتم التحقق من محفظة",
+    "digitalId.notice": "يعرّف هذا حسابك في Vital ID ويثبت التحكم في المحفظة الموقّعة فقط. ليس هوية حكومية أو فحص KYC أو شهادة طبية موثّقة. تبقى بياناتك الصحية خارج البلوكشين.",
+    "digitalId.copy": "نسخ معرّف الحساب",
+    "digitalId.copied": "تم نسخ معرّف الحساب",
+    "digitalId.copyFailed": "تعذّر النسخ. حدّد معرّف الحساب لنسخه يدويًا."
+  }
+}

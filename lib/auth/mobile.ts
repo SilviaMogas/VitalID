@@ -3,6 +3,7 @@ import { createClient, type User } from '@supabase/supabase-js';
 import { readServerSupabaseEnv } from '@/lib/supabase/env';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import type { AuthUser } from '@/lib/auth/server';
+import { trustedWalletFromAppMetadata } from '@/lib/auth/wallet-identity';
 
 export type MobileAuthFailure = {
   ok: false;
@@ -29,7 +30,11 @@ function authClient() {
 }
 
 function authUser(user: User): AuthUser {
-  return { id: user.id, email: user.email ?? null };
+  return {
+    id: user.id,
+    email: user.email ?? null,
+    wallet: trustedWalletFromAppMetadata(user.email, user.app_metadata),
+  };
 }
 
 function makeSession(data: {

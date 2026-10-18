@@ -1,6 +1,7 @@
 // Wallet sign-in: message issuance, nonce freshness and Ed25519 verification.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
 
 process.env.SOL_WALLET_SECRET = 'test-wallet-secret';
 process.env.SUPABASE_URL = '';
@@ -53,14 +54,17 @@ test('a message for a different key or host cannot be reused', async () => {
 
 test('stale or forged nonces are rejected', async () => {
   const w = await makeWallet();
-  const stale = issueMessage(w.publicKey, HOST).replace(
-    /Issued At: .*/,
-    'Issued At: 2020-01-01T00:00:00.000Z',
-  );
-  // Forge an old nonce with a guessed tag — invalid mac AND stale.
-  const forged = stale.replace(/Nonce: (\d+)\.([a-f0-9]+)\.[a-f0-9]+/, 'Nonce: 1577836800000.$2.deadbeef');
-  const sig = await sign(w, forged);
-  assert.equal(await verifyWalletMessage(w.publicKey, sig, forged, HOST), 'expired');
+  const body = '1577836800000.0123456789abcdef';
+  const tag = createHmac('sha256', process.env.SOL_WALLET_SECRET).update(body).digest('hex').slice(0, 32);
+  const stale = `${HOST} wants you to sign in with your Solana account:
+${w.publicKey}
+
+URI: https://${HOST}
+Nonce: ${body}.${tag}
+Issued At: 2020-01-01T00:00:00.000Z`;
+  assert.equal(await verifyWalletMessage(w.publicKey, await sign(w, stale), stale, HOST), 'expired');
+  const forged = stale.replace(/Nonce: .*/, `Nonce: ${body}.deadbeef`);
+  assert.equal(await verifyWalletMessage(w.publicKey, await sign(w, forged), forged, HOST), 'bad_message');
   // A real message with the nonce line stripped never reaches signature check.
   const stripped = issueMessage(w.publicKey, HOST).replace(/Nonce: .*\n/, '');
   assert.equal(

@@ -3,6 +3,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { base58Decode } from './base58';
 import { readServerSupabaseEnv } from '@/lib/supabase/env';
 import { getWalletNonceStore } from '@/lib/auth/wallet-nonce';
+import { walletEmail as syntheticWalletEmail, type WalletChain } from '@/lib/auth/wallet-identity';
 
 /**
  * Sign-in with a Solana wallet (Solflare, Phantom, …): the server issues a
@@ -15,7 +16,8 @@ import { getWalletNonceStore } from '@/lib/auth/wallet-nonce';
  */
 
 const NONCE_TTL_MS = 5 * 60 * 1000;
-const NONCE_RE = /^Nonce: (\S+)/m;
+const MAX_MESSAGE_LENGTH = 2048;
+const MAX_SIGNATURE_LENGTH = 128;
 
 export function solWalletSecret(): string {
   const secret = process.env.SOL_WALLET_SECRET ?? readServerSupabaseEnv()?.secretKey;
@@ -33,8 +35,13 @@ export function walletPassword(publicKey: string): string {
   return createHmac('sha256', solWalletSecret()).update(`solana:${publicKey}`).digest('hex');
 }
 
-export function walletEmail(publicKey: string): string {
-  return `sol.${publicKey}@wallet.vitalid.site`;
+export function walletEmail(publicKey: string, chain: WalletChain = 'solana'): string {
+  return syntheticWalletEmail(publicKey, chain);
+}
+
+export function walletPasswordForChain(address: string, chain: WalletChain): string {
+  if (chain === 'solana') return walletPassword(address);
+  return createHmac('sha256', solWalletSecret()).update(`ethereum:${address.toLowerCase()}`).digest('hex');
 }
 
 export function isSolanaPublicKey(value: string): boolean {
@@ -59,18 +66,17 @@ Nonce: ${body}.${mac(body)}
 Issued At: ${issued.toISOString()}`;
 }
 
-export type WalletVerify = 'ok' | 'bad_message' | 'expired' | 'bad_signature';
+export type WalletVerify = 'ok' | 'bad_message' | 'expired' | 'bad_signature' | 'unavailable';
 
-function freshNonce(nonce: string): boolean {
-  const lastDot = nonce.lastIndexOf('.');
-  if (lastDot <= 0) return false;
-  const body = nonce.slice(0, lastDot);
-  const tag = nonce.slice(lastDot + 1);
+function nonceTimestamp(nonce: string): number | null {
+  const match = /^(\d{13})\.([a-f0-9]{16})\.([a-f0-9]{32})$/.exec(nonce);
+  if (!match) return null;
+  const [, timestamp, random, tag] = match;
+  const body = `${timestamp}.${random}`;
   const expected = Buffer.from(mac(body), 'utf8');
   const given = Buffer.from(tag, 'utf8');
-  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return false;
-  const ts = Number(body.slice(0, body.indexOf('.')));
-  return Number.isFinite(ts) && Math.abs(Date.now() - ts) <= NONCE_TTL_MS;
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
+  return Number(timestamp);
 }
 
 export async function verifyWalletMessage(
@@ -79,17 +85,29 @@ export async function verifyWalletMessage(
   message: string,
   host: string,
 ): Promise<WalletVerify> {
-  if (!isSolanaPublicKey(publicKey)) return 'bad_message';
-  // The message must be one we issued: nonce HMAC valid and fresh, and it must
-  // name this key and host — otherwise a signature for another site/key works.
-  const nonce = message.match(NONCE_RE)?.[1];
-  if (!nonce || !message.includes(`\n${publicKey}\n`) || !message.startsWith(`${host} wants you to sign in`)) {
+  if (!isSolanaPublicKey(publicKey) || message.length > MAX_MESSAGE_LENGTH) return 'bad_message';
+  if (signature.length > MAX_SIGNATURE_LENGTH) return 'bad_signature';
+  const lines = message.split('\n');
+  if (
+    lines.length !== 6 ||
+    lines[0] !== `${host} wants you to sign in with your Solana account:` ||
+    lines[1] !== publicKey ||
+    lines[2] !== '' ||
+    lines[3] !== `URI: https://${host}` ||
+    !/^Nonce: \d{13}\.[a-f0-9]{16}\.[a-f0-9]{32}$/.test(lines[4]) ||
+    !/^Issued At: \d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(lines[5])
+  ) {
     return 'bad_message';
   }
-  if (!freshNonce(nonce)) return 'expired';
+  const nonce = lines[4].slice('Nonce: '.length);
+  const timestamp = nonceTimestamp(nonce);
+  const issuedAt = lines[5].slice('Issued At: '.length);
+  if (timestamp === null || new Date(timestamp).toISOString() !== issuedAt) return 'bad_message';
+  if (Math.abs(Date.now() - timestamp) > NONCE_TTL_MS) return 'expired';
   let signatureBytes: Uint8Array;
   try {
     signatureBytes = base58Decode(signature);
+    if (signatureBytes.length !== 64) return 'bad_signature';
   } catch {
     return 'bad_signature';
   }
@@ -104,6 +122,10 @@ export async function verifyWalletMessage(
   // Single-use: burn the nonce only once the signature checked out, so a
   // replay of the same verified request is refused while failures — or a
   // corrupted forgery burning someone else's nonce — never consume it.
-  if (!(await getWalletNonceStore().claim(nonce))) return 'expired';
+  try {
+    if (!(await getWalletNonceStore().claim(nonce))) return 'expired';
+  } catch {
+    return 'unavailable';
+  }
   return 'ok';
 }
