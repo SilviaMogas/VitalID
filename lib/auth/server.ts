@@ -5,6 +5,15 @@ import { createClient, type SupabaseClient, type User } from '@supabase/supabase
 import { readServerSupabaseEnv } from '@/lib/supabase/env';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { getRequestAuthUser } from '@/lib/auth/request-user';
+import {
+  hasWalletBinding,
+  normalizeWalletAddress,
+  trustedWalletFromAppMetadata,
+  walletEmail,
+  type WalletChain,
+  type WalletIdentity,
+} from '@/lib/auth/wallet-identity';
+import { isSolanaPublicKey, walletPasswordForChain } from '@/lib/solpay/wallet-auth';
 
 /**
  * Supabase Auth (email + password) with httpOnly cookie sessions.
@@ -26,6 +35,7 @@ const YEAR = 60 * 60 * 24 * 365;
 export interface AuthUser {
   id: string;
   email: string | null;
+  wallet: WalletIdentity | null;
 }
 
 export function isAuthConfigured(): boolean {
@@ -65,10 +75,14 @@ export async function clearSessionCookies(): Promise<void> {
 
 export type AuthResult =
   | { ok: true; user: AuthUser; created?: boolean }
-  | { ok: false; code: 'invalid_credentials' | 'email_taken' | 'weak_password' | 'not_configured' | 'consent_required' | 'unknown'; message: string };
+  | { ok: false; code: 'invalid_credentials' | 'email_taken' | 'weak_password' | 'not_configured' | 'consent_required' | 'reserved_email' | 'unknown'; message: string };
 
 function toAuthUser(u: User): AuthUser {
-  return { id: u.id, email: u.email ?? null };
+  return {
+    id: u.id,
+    email: u.email ?? null,
+    wallet: trustedWalletFromAppMetadata(u.email, u.app_metadata),
+  };
 }
 
 export async function signUpWithPassword(input: {
@@ -80,6 +94,9 @@ export async function signUpWithPassword(input: {
   city: string;
 }): Promise<AuthResult> {
   if (!isAuthConfigured()) return { ok: false, code: 'not_configured', message: 'auth not configured' };
+  if (input.email.trim().toLowerCase().endsWith('@wallet.vitalid.site')) {
+    return { ok: false, code: 'reserved_email', message: 'wallet email addresses are reserved' };
+  }
   const admin = getSupabaseServerClient();
   const { error } = await admin.auth.admin.createUser({
     email: input.email,
@@ -121,26 +138,57 @@ export async function signInWithPassword(input: { email: string; password: strin
  * server secret — created on first login, re-derived on every later one.
  */
 export async function signInWithWallet(
-  publicKey: string,
+  address: string,
   consents: { consentTerms: boolean; consentHealthData: boolean },
+  chain: WalletChain = 'solana',
 ): Promise<AuthResult> {
   if (!isAuthConfigured()) return { ok: false, code: 'not_configured', message: 'auth not configured' };
-  const { walletEmail, walletPassword } = await import('@/lib/solpay/wallet-auth');
-  const email = walletEmail(publicKey);
-  const password = walletPassword(publicKey);
+  if (chain === 'solana' ? !isSolanaPublicKey(address) : !/^0x[0-9a-fA-F]{40}$/.test(address)) {
+    return { ok: false, code: 'invalid_credentials', message: 'invalid wallet identity' };
+  }
+  const identity: WalletIdentity = { chain, address: normalizeWalletAddress(address, chain) };
+  const email = walletEmail(identity.address, chain);
+  const password = walletPasswordForChain(identity.address, chain);
   const admin = getSupabaseServerClient();
   const first = await signInWithPassword({ email, password });
-  if (first.ok || first.code !== 'invalid_credentials') return first;
+  if (first.ok) {
+    const { data, error } = await admin.auth.admin.getUserById(first.user.id);
+    if (error || !data.user) {
+      await clearSessionCookies();
+      return { ok: false, code: 'unknown', message: error?.message ?? 'wallet user not found' };
+    }
+    if (!hasWalletBinding(data.user, identity)) {
+      await clearSessionCookies();
+      return { ok: false, code: 'invalid_credentials', message: 'wallet account binding mismatch' };
+    }
+    if (trustedWalletFromAppMetadata(data.user.email, data.user.app_metadata)) return first;
+    const { data: updated, error: updateError } = await admin.auth.admin.updateUserById(data.user.id, {
+      app_metadata: { ...data.user.app_metadata, vitalid_wallet: identity },
+    });
+    if (updateError || !updated.user) {
+      await clearSessionCookies();
+      return { ok: false, code: 'unknown', message: updateError?.message ?? 'wallet metadata update failed' };
+    }
+    return { ok: true, user: toAuthUser(updated.user) };
+  }
+  if (first.code !== 'invalid_credentials') return first;
   // Password grant failed: either the wallet has no account yet or its
-  // derived password predates a secret rotation. Tell them apart by user.
+  // derived password predates a secret rotation. Tell them apart by a
+  // cryptographically verified wallet binding, not the case-folded email.
   const { data: link, error: linkError } = await admin.auth.admin.generateLink({
     type: 'recovery',
     email,
   });
   const existingUser = linkError || !link?.user ? null : link.user;
   if (existingUser) {
+    if (!hasWalletBinding(existingUser, identity)) {
+      return { ok: false, code: 'invalid_credentials', message: 'wallet account binding mismatch' };
+    }
     // Known wallet, rotated secret: reset to the current derived password.
-    const { error } = await admin.auth.admin.updateUserById(existingUser.id, { password });
+    const { error } = await admin.auth.admin.updateUserById(existingUser.id, {
+      password,
+      app_metadata: { ...existingUser.app_metadata, vitalid_wallet: identity },
+    });
     if (error) return { ok: false, code: 'unknown', message: error.message };
     return signInWithPassword({ email, password });
   }
@@ -153,7 +201,8 @@ export async function signInWithWallet(
     email,
     password,
     email_confirm: true,
-    user_metadata: { solana_wallet: publicKey },
+    ...(chain === 'solana' ? { user_metadata: { solana_wallet: identity.address } } : {}),
+    app_metadata: { vitalid_wallet: identity },
   });
   if (error) return { ok: false, code: 'unknown', message: error.message };
   const created = await signInWithPassword({ email, password });

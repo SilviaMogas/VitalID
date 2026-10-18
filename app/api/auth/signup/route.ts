@@ -38,6 +38,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'consent_required' }, { status: 400 });
   }
   if (!EMAIL_RE.test(email)) return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
+  if (email.endsWith('@wallet.vitalid.site')) {
+    return NextResponse.json({ error: 'reserved_email' }, { status: 400 });
+  }
   if (password.length < 8 || password.length > 72) {
     return NextResponse.json({ error: 'weak_password' }, { status: 400 });
   }

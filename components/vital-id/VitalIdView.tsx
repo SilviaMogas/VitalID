@@ -6,6 +6,7 @@ import { PremiumShowcase } from "@/components/membership/PremiumShowcase";
 import type { VitalIdSnapshot } from "@/types";
 import { CredentialCard } from "@/components/vital-id/CredentialCard";
 import { PhotoUploader } from "@/components/vital-id/PhotoUploader";
+import { WalletIdentity } from "@/components/vital-id/WalletIdentity";
 import { MascotNote } from "@/components/mascot/MascotNote";
 import {
   EmergencySection,
@@ -42,6 +43,8 @@ export function VitalIdView({
       <div className="rise" style={{ ["--i" as string]: 1 }}>
         <CredentialCard identity={identity} emergencyInfo={emergencyInfo} />
       </div>
+
+      <WalletIdentity />
 
       {canEditPhoto && (
         <div className="rise" style={{ ["--i" as string]: 2 }}>
