@@ -15,6 +15,7 @@ globalThis.crypto ??= webcrypto;
 
 const users = new Map();
 let generateLinkErrors = new Map();
+let ambiguousGenerateLinkEmails = new Set();
 let updateCalls = [];
 let nextUser = 1;
 const cookieJar = () => (globalThis.__walletCookies ??= {});
@@ -38,11 +39,16 @@ const admin = {
   },
   async generateLink({ email }) {
     const key = email.toLowerCase();
+    if (ambiguousGenerateLinkEmails.has(key)) {
+      return { data: { user: null }, error: null };
+    }
     if (generateLinkErrors.has(key)) {
       return { data: { user: null }, error: generateLinkErrors.get(key) };
     }
     const record = users.get(key);
-    return { data: { user: record?.user ?? null }, error: null };
+    return record
+      ? { data: { user: record.user }, error: null }
+      : { data: { user: null }, error: { code: 'user_not_found', message: 'User not found' } };
   },
   async getUserById(id) {
     const record = [...users.values()].find((value) => value.user.id === id);
@@ -114,6 +120,7 @@ beforeEach(() => {
   process.env.SOL_WALLET_SECRET = 'wallet-test-secret';
   users.clear();
   generateLinkErrors = new Map();
+  ambiguousGenerateLinkEmails = new Set();
   updateCalls = [];
   nextUser = 1;
   consentRows = new Map();
@@ -232,6 +239,39 @@ test('legacy Solana sign-in reuses credentials and lookup failures do not split 
   assert.equal(rotated.ok, true);
   assert.equal(rotated.user.id, ordinary.user.id);
   assert.equal(stored.password, walletPassword(wallet.publicKey));
+});
+
+test('empty wallet account lookup responses fail closed', async () => {
+  const canonicalWallet = await makeSolanaWallet();
+  const canonicalEmail = walletEmail(canonicalWallet.publicKey, 'solana');
+  await admin.createUser({
+    email: canonicalEmail,
+    password: 'stale-canonical-password',
+    email_confirm: true,
+    app_metadata: { vitalid_wallet: { chain: 'solana', address: canonicalWallet.publicKey } },
+  });
+  ambiguousGenerateLinkEmails.add(canonicalEmail.toLowerCase());
+
+  const canonical = await signInWithWallet(canonicalWallet.publicKey, CONSENTS);
+  assert.equal(canonical.ok, false);
+  assert.equal(canonical.code, 'unknown');
+  assert.equal(users.size, 1);
+
+  const legacyWallet = await makeSolanaWallet();
+  const legacyEmail = legacySolanaWalletEmail(legacyWallet.publicKey);
+  await admin.createUser({
+    email: legacyEmail,
+    password: 'stale-legacy-password',
+    email_confirm: true,
+    app_metadata: { vitalid_wallet: { chain: 'solana', address: legacyWallet.publicKey } },
+  });
+  ambiguousGenerateLinkEmails.add(legacyEmail.toLowerCase());
+
+  const legacy = await signInWithWallet(legacyWallet.publicKey, CONSENTS);
+  assert.equal(legacy.ok, false);
+  assert.equal(legacy.code, 'unknown');
+  assert.equal(users.size, 2);
+  assert.equal(users.get(walletEmail(legacyWallet.publicKey, 'solana').toLowerCase()), undefined);
 });
 
 test('case-fold-colliding Solana wallets get separate accounts and legacy wallet sign-in still works', async () => {
