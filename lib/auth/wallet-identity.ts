@@ -2,6 +2,9 @@ import { base58Decode } from '@/lib/solpay/base58';
 
 export type WalletChain = 'solana' | 'ethereum';
 
+const WALLET_EMAIL_DOMAIN = '@wallet.vitalid.site';
+const BASE32_ALPHABET = 'abcdefghijklmnopqrstuvwxyz234567';
+
 export interface WalletIdentity {
   chain: WalletChain;
   address: string;
@@ -11,9 +14,37 @@ export function normalizeWalletAddress(address: string, chain: WalletChain): str
   return chain === 'ethereum' ? address.toLowerCase() : address;
 }
 
+function base32Encode(bytes: Uint8Array): string {
+  let encoded = '';
+  let value = 0;
+  let bits = 0;
+  for (const byte of bytes) {
+    value = (value << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      encoded += BASE32_ALPHABET[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) encoded += BASE32_ALPHABET[(value << (5 - bits)) & 31];
+  return encoded;
+}
+
 export function walletEmail(address: string, chain: WalletChain): string {
   const normalized = normalizeWalletAddress(address, chain);
-  return `${chain === 'ethereum' ? 'eth' : 'sol'}.${normalized}@wallet.vitalid.site`;
+  return chain === 'ethereum'
+    ? `eth.${normalized}${WALLET_EMAIL_DOMAIN}`
+    : `sol.${base32Encode(base58Decode(normalized))}${WALLET_EMAIL_DOMAIN}`;
+}
+
+export function legacySolanaWalletEmail(address: string): string {
+  return `sol.${address}${WALLET_EMAIL_DOMAIN}`;
+}
+
+function emailMatchesWallet(email: string, identity: WalletIdentity): boolean {
+  const normalized = email.toLowerCase();
+  if (normalized === walletEmail(identity.address, identity.chain).toLowerCase()) return true;
+  return identity.chain === 'solana' && normalized === legacySolanaWalletEmail(identity.address).toLowerCase();
 }
 
 export function isWalletIdentity(value: unknown): value is WalletIdentity {
@@ -42,9 +73,7 @@ export function trustedWalletFromAppMetadata(
   const metadata = appMetadata as { vitalid_wallet?: unknown };
   const identity = metadata.vitalid_wallet;
   if (!isWalletIdentity(identity)) return null;
-  return email.toLowerCase() === walletEmail(identity.address, identity.chain).toLowerCase()
-    ? identity
-    : null;
+  return emailMatchesWallet(email, identity) ? identity : null;
 }
 
 export function hasWalletBinding(
@@ -63,6 +92,6 @@ export function hasWalletBinding(
   const metadata = user.user_metadata as { solana_wallet?: unknown };
   return (
     metadata.solana_wallet === expected.address &&
-    user.email.toLowerCase() === walletEmail(expected.address, 'solana').toLowerCase()
+    emailMatchesWallet(user.email, expected)
   );
 }

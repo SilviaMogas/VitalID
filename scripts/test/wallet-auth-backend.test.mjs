@@ -91,6 +91,8 @@ globalThis.__vitalIdConsentStore = {
 const { issueMessage, verifyWalletMessage, isSolanaPublicKey } =
   await import('../../lib/solpay/wallet-auth.ts');
 const { base58Encode } = await import('../../lib/solpay/base58.ts');
+const { walletEmail, legacySolanaWalletEmail } =
+  await import('../../lib/auth/wallet-identity.ts');
 const { issueEthereumMessage, verifyEthereumMessage } =
   await import('../../lib/auth/ethereum-wallet-auth.ts');
 const { signInWithWallet, signUpWithPassword } = await import('../../lib/auth/server.ts');
@@ -186,12 +188,19 @@ test('Solana signatures require the exact canonical message and bounded payloads
   assert.equal(await verifyWalletMessage(wallet.publicKey, signature, message, HOST), 'expired');
 });
 
-test('wallet account bindings prevent case-fold collisions and permit verified legacy secret rotation', async () => {
+test('case-fold-colliding Solana wallets get separate accounts and legacy wallet sign-in still works', async () => {
   const wallet = await makeSolanaWallet();
+  const legacyEmail = legacySolanaWalletEmail(wallet.publicKey);
+  await admin.createUser({
+    email: legacyEmail,
+    password: 'legacy-password',
+    email_confirm: true,
+    user_metadata: { solana_wallet: wallet.publicKey },
+  });
   const original = await signInWithWallet(wallet.publicKey, CONSENTS);
   assert.equal(original.ok, true);
   assert.deepEqual(original.user.wallet, { chain: 'solana', address: wallet.publicKey });
-  const stored = users.get(`sol.${wallet.publicKey.toLowerCase()}@wallet.vitalid.site`);
+  const stored = users.get(legacyEmail.toLowerCase());
   assert.deepEqual(stored.user.app_metadata.vitalid_wallet, { chain: 'solana', address: wallet.publicKey });
 
   let alternate = '';
@@ -204,11 +213,19 @@ test('wallet account bindings prevent case-fold collisions and permit verified l
     if (isSolanaPublicKey(value)) alternate = value;
   }
   assert.ok(alternate, 'a case-fold-colliding valid Solana key should exist');
-  const originalPassword = stored.password;
   const collision = await signInWithWallet(alternate, CONSENTS);
-  assert.equal(collision.ok, false);
-  assert.equal(stored.password, originalPassword);
-  assert.equal(users.size, 1);
+  assert.equal(collision.ok, true);
+  assert.notEqual(collision.user.id, original.user.id);
+  assert.equal(users.size, 2);
+  const collisionStored = [...users.values()].find(({ user }) =>
+    user.app_metadata.vitalid_wallet?.address === alternate,
+  );
+  assert.equal(collisionStored.user.email, walletEmail(alternate, 'solana'));
+  assert.notEqual(collisionStored.user.email.toLowerCase(), stored.user.email.toLowerCase());
+
+  const originalAgain = await signInWithWallet(wallet.publicKey, CONSENTS);
+  assert.equal(originalAgain.ok, true);
+  assert.equal(originalAgain.user.id, original.user.id);
 
   stored.user.app_metadata = {};
   stored.user.user_metadata = { solana_wallet: wallet.publicKey };
@@ -216,7 +233,7 @@ test('wallet account bindings prevent case-fold collisions and permit verified l
   const rotated = await signInWithWallet(wallet.publicKey, CONSENTS);
   assert.equal(rotated.ok, true);
   assert.deepEqual(rotated.user.wallet, { chain: 'solana', address: wallet.publicKey });
-  assert.notEqual(stored.password, originalPassword);
+  assert.notEqual(stored.password, 'legacy-password');
   process.env.SOL_WALLET_SECRET = 'wallet-test-secret';
 });
 

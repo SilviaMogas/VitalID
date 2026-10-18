@@ -7,6 +7,7 @@ import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { getRequestAuthUser } from '@/lib/auth/request-user';
 import {
   hasWalletBinding,
+  legacySolanaWalletEmail,
   normalizeWalletAddress,
   trustedWalletFromAppMetadata,
   walletEmail,
@@ -134,7 +135,7 @@ export async function signInWithPassword(input: { email: string; password: strin
 
 /**
  * Session for a verified Solana wallet. The wallet owns a synthetic Supabase
- * user (`sol.<pubkey>@wallet.vitalid.site`) whose password is derived from the
+ * user under an injective synthetic email whose password is derived from the
  * server secret — created on first login, re-derived on every later one.
  */
 export async function signInWithWallet(
@@ -191,6 +192,22 @@ export async function signInWithWallet(
     });
     if (error) return { ok: false, code: 'unknown', message: error.message };
     return signInWithPassword({ email, password });
+  }
+  if (chain === 'solana') {
+    const legacyEmail = legacySolanaWalletEmail(identity.address);
+    const { data: legacyLink } = await admin.auth.admin.generateLink({
+      type: 'recovery',
+      email: legacyEmail,
+    });
+    const legacyUser = legacyLink?.user ?? null;
+    if (legacyUser && hasWalletBinding(legacyUser, identity)) {
+      const { error } = await admin.auth.admin.updateUserById(legacyUser.id, {
+        password,
+        app_metadata: { ...legacyUser.app_metadata, vitalid_wallet: identity },
+      });
+      if (error) return { ok: false, code: 'unknown', message: error.message };
+      return signInWithPassword({ email: legacyUser.email ?? legacyEmail, password });
+    }
   }
   // New wallet account: same legal gate as password signup — no terms or
   // health-data consent, no account.
