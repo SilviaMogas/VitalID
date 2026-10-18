@@ -191,6 +191,9 @@ export async function signInWithWallet(
   if (linkError && !isUserNotFoundError(linkError)) {
     return { ok: false, code: 'unknown', message: linkError.message };
   }
+  if (!link?.user && !linkError) {
+    return { ok: false, code: 'unknown', message: 'wallet account lookup returned no user' };
+  }
   const existingUser = link?.user ?? null;
   if (existingUser) {
     if (!hasWalletBinding(existingUser, identity)) {
@@ -218,6 +221,9 @@ export async function signInWithWallet(
     });
     if (legacyLinkError && !isUserNotFoundError(legacyLinkError)) {
       return { ok: false, code: 'unknown', message: legacyLinkError.message };
+    }
+    if (!legacyLink?.user && !legacyLinkError) {
+      return { ok: false, code: 'unknown', message: 'legacy wallet account lookup returned no user' };
     }
     const legacyUser = legacyLink?.user ?? null;
     if (legacyUser && hasWalletBinding(legacyUser, identity)) {
