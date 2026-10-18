@@ -1,6 +1,7 @@
 import 'server-only';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { CONSENT_POLICY_VERSIONS } from '@/lib/legal';
 
 /**
  * Consent audit store: append-only record of privacy-policy acceptances and
@@ -22,6 +23,10 @@ export interface ConsentRecord {
 }
 
 export type ConsentMap = Partial<Record<ConsentType, ConsentRecord>>;
+
+export function hasCurrentHealthConsent(consents: ConsentMap | null | undefined): boolean {
+  return consents?.health_data?.policyVersion === CONSENT_POLICY_VERSIONS.health_data;
+}
 
 interface ConsentStore {
   /** Append a consent event. Returns the stored record (server timestamp). */

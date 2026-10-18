@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import type { PlanId } from "@/lib/plans";
+import type { VerifiedWallet } from "@/lib/auth/wallet-client";
 
 /**
  * Client-side view of "who is using the app":
@@ -29,6 +30,7 @@ export type NextRoute = "/pricing" | "/onboarding" | "/";
 
 export interface AccountSnapshot {
   userId: string;
+  wallet: VerifiedWallet | null;
   email: string | null;
   plan: PlanId;
   planSelected: boolean;
@@ -68,6 +70,7 @@ async function probe(): Promise<AccountSnapshot | null> {
     if (!data.authenticated || !data.userId) return null;
     return {
       userId: data.userId,
+      wallet: data.wallet ?? null,
       email: data.email ?? null,
       plan: data.plan ?? "free",
       planSelected: Boolean(data.planSelected),

@@ -13,7 +13,7 @@ export async function GET() {
   }
   const state = await getAccountState(user.id);
   return NextResponse.json(
-    { authenticated: true, userId: user.id, email: user.email, ...state },
+    { authenticated: true, userId: user.id, email: user.email, wallet: user.wallet, ...state },
     { headers: { 'Cache-Control': 'no-store' } },
   );
 }
