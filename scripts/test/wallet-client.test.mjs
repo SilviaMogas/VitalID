@@ -1,5 +1,8 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { loadTranspiledModule } from './transpile-component.mjs';
 import { discoverMetaMask, loginWithWallet } from '../../lib/auth/wallet-client.ts';
 
 const originalFetch = globalThis.fetch;
@@ -108,4 +111,72 @@ test('server unavailability is surfaced without signing', async () => {
   globalThis.window = { ethereum: ethereum() };
   globalThis.fetch = async () => Response.json({ error: 'unavailable' }, { status: 503 });
   await assert.rejects(loginWithWallet('metamask', consents), { reason: 'unavailable' });
+});
+
+test('wallet login has one auth-driven redirect even when membership refresh finishes later', async () => {
+  const require = createRequire(import.meta.url);
+  const React = require('react');
+  const { act, create } = require('react-test-renderer');
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const authContext = React.createContext(null);
+  const navigations = [];
+  const router = Object.fromEntries(['push', 'replace', 'refresh'].map((method) => [
+    method, (...args) => navigations.push([method, ...args]),
+  ]));
+  let finishMembership;
+  const membership = new Promise((resolve) => { finishMembership = resolve; });
+  const passThrough = ({ children }) => children;
+  const consent = ({ id, checked, onChange }) => React.createElement('input', { id, checked, onChange });
+  const mocks = new Map([
+    ['next/navigation', { useRouter: () => router }],
+    ['next/link', { default: passThrough }],
+    ['@/components/providers/LocaleProvider', { useLocale: () => ({ t: (key) => key }) }],
+    ['@/components/providers/AuthProvider', { useAuth: () => React.useContext(authContext) }],
+    ['@/components/providers/MembershipProvider', { useMembership: () => ({ refresh: () => membership }) }],
+    ['@/components/auth/AuthFrame', { AuthFrame: passThrough, Field: passThrough, inputClass: '' }],
+    ['@/components/legal/HealthDataConsent', { TermsConsent: consent, HealthDataConsent: consent }],
+    ['@/lib/auth/wallet-client', {
+      discoverMetaMask: () => () => {},
+      loginWithWallet: async () => {},
+      WalletLoginError: class extends Error {},
+    }],
+  ]);
+  const { WalletButtons } = loadTranspiledModule(
+    fileURLToPath(new URL('../../components/signin/WalletButtons.tsx', import.meta.url)), mocks,
+  );
+  mocks.set('@/components/signin/WalletButtons', { WalletButtons });
+  const { SigninForm } = loadTranspiledModule(
+    fileURLToPath(new URL('../../components/signin/SigninForm.tsx', import.meta.url)), mocks,
+  );
+  function Harness() {
+    const [account, setAccount] = React.useState(null);
+    return React.createElement(authContext.Provider, { value: {
+      status: account ? 'member' : 'guest',
+      account,
+      refresh: async () => {
+        const snapshot = { userId: 'wallet-member', next: '/pricing' };
+        setAccount(snapshot);
+        return snapshot;
+      },
+    } }, React.createElement(SigninForm));
+  }
+  let renderer;
+  try {
+    await act(async () => { renderer = create(React.createElement(Harness)); });
+    await act(async () => {
+      renderer.root.findAllByType('input').filter((input) => input.props.id?.startsWith('wal-'))
+        .forEach((input) => input.props.onChange(true));
+    });
+    await act(async () => {
+      renderer.root.findAllByType('button').find((button) => button.props.children === 'auth.wallet.solflare')
+        .props.onClick();
+    });
+    assert.deepEqual(navigations, [['replace', '/pricing']]);
+    await act(async () => { finishMembership(); });
+    assert.deepEqual(navigations, [['replace', '/pricing']]);
+  } finally {
+    finishMembership();
+    if (renderer) await act(async () => { renderer.unmount(); });
+    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+  }
 });

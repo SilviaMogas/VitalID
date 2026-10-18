@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -12,7 +11,6 @@ const WALLETS = ["solflare", "phantom", "metamask"] as const;
 
 export function WalletButtons() {
   const { t } = useLocale();
-  const router = useRouter();
   const { refresh: refreshAuth } = useAuth();
   const { refresh: refreshMembership } = useMembership();
   const [busy, setBusy] = useState<WalletId | null>(null);
@@ -34,8 +32,6 @@ export function WalletButtons() {
       const account = await refreshAuth();
       if (!account) throw new WalletLoginError("failed");
       await refreshMembership();
-      router.push(account.next);
-      router.refresh();
     } catch (cause) {
       setError(cause instanceof WalletLoginError ? cause.reason : "failed");
     } finally {
