@@ -81,10 +81,23 @@ function sameOrigin(request: Request) {
 
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return error(null, -32000, 'Forbidden origin', 403);
-  const length = Number(request.headers.get('content-length') ?? '0');
-  if (length > 16384) return error(null, -32600, 'Request too large', 413);
+  if (request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() !== 'application/json') {
+    return error(null, -32600, 'Content-Type must be application/json', 415);
+  }
+  // Limit actual request bytes, even if Content-Length is omitted or falsified.
+  // This prototype accepts tiny JSON-RPC messages only.
+  const MAX_BYTES = 16_384;
+  if (Number(request.headers.get('content-length') ?? '0') > MAX_BYTES) {
+    return error(null, -32600, 'Request too large', 413);
+  }
   let message: unknown;
-  try { message = await request.json(); } catch { return error(null, -32700, 'Parse error', 400); }
+  try {
+    const bytes = new Uint8Array(await request.arrayBuffer());
+    if (bytes.byteLength > MAX_BYTES) return error(null, -32600, 'Request too large', 413);
+    message = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  } catch {
+    return error(null, -32700, 'Parse error', 400);
+  }
   if (!message || typeof message !== 'object' || Array.isArray(message)) return error(null, -32600, 'Invalid Request', 400);
   const m = message as Record<string, unknown>;
   if (m.jsonrpc !== '2.0' || typeof m.method !== 'string') return error(m.id, -32600, 'Invalid Request', 400);
