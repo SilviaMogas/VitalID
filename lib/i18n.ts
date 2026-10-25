@@ -999,7 +999,10 @@ const en = {
   "common.error": "Something went wrong. Please try again.",
   "common.empty": "Nothing to show yet.",
   "common.notFound": "This page does not exist.",
+  "common.notFoundHint": "The fruit crew looked everywhere, but this page is not in the basket.",
   "common.goHome": "Go to Home",
+  "common.musicOn": "Play music",
+  "common.musicOff": "Stop music",
 
   ...pickLocale(shareStrings, 0),
   ...pickLocale(brandStrings, 0),
@@ -1146,7 +1149,10 @@ const ar: Record<TranslationKey, string> = {
   "common.error": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
   "common.empty": "لا يوجد شيء لعرضه بعد.",
   "common.notFound": "هذه الصفحة غير موجودة.",
+  "common.notFoundHint": "بحث فريق الفواكه في كل مكان، لكن هذه الصفحة ليست في السلة.",
   "common.goHome": "الانتقال إلى الرئيسية",
+  "common.musicOn": "تشغيل الموسيقى",
+  "common.musicOff": "إيقاف الموسيقى",
 
   ...pickLocale(shareStrings, 1),
   ...pickLocale(brandStrings, 1),
