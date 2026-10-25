@@ -9,19 +9,10 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 const BPM = 132;
 const STEP = 60 / BPM / 2; // eighth notes
 
-// MIDI notes, null = rest. Two bars of melody over a simple bass line.
-const MELODY: (number | null)[] = [
-  72, null, 76, 79, 76, null, 72, 74,
-  76, null, 79, 81, 79, null, 76, null,
-  77, null, 81, 84, 81, null, 77, 79,
-  76, 74, 72, null, 67, null, 72, null,
-];
-const BASS: (number | null)[] = [
-  48, null, null, null, 55, null, null, null,
-  45, null, null, null, 52, null, null, null,
-  41, null, null, null, 48, null, null, null,
-  43, null, null, null, 43, null, 48, null,
-];
+// MIDI notes, "-" = rest. Two bars of melody over a simple bass line.
+const parse = (score: string) => score.split(" ").map((n) => (n === "-" ? null : Number(n)));
+const MELODY = parse("72 - 76 79 76 - 72 74 76 - 79 81 79 - 76 - 77 - 81 84 81 - 77 79 76 74 72 - 67 - 72 -");
+const BASS = parse("48 - - - 55 - - - 45 - - - 52 - - - 41 - - - 48 - - - 43 - - - 43 - 48 -");
 
 const freq = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
