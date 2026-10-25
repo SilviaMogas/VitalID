@@ -646,6 +646,12 @@ function pickLocale<T extends Record<string, readonly [string, string]>>(table: 
   return Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v[index]])) as { [K in keyof T]: string };
 }
 
+const notFoundStrings = {
+  "common.notFoundHint": ["The fruit crew looked everywhere, but this page is not in the basket.", "بحث فريق الفواكه في كل مكان، لكن هذه الصفحة ليست في السلة."],
+  "common.musicOn": ["Play music", "تشغيل الموسيقى"],
+  "common.musicOff": ["Stop music", "إيقاف الموسيقى"],
+} as const satisfies Record<string, readonly [string, string]>;
+
 const brandStrings = {
   "onboarding.splashLine": ["A healthier tomorrow, together", "غدٌ أكثر صحة، معًا"],
   "onboarding.splashFoot": ["Your signals. Your baseline. Your control.", "مؤشراتك. خط أساسك. أنت المتحكم."],
@@ -1003,6 +1009,7 @@ const en = {
 
   ...pickLocale(shareStrings, 0),
   ...pickLocale(brandStrings, 0),
+  ...pickLocale(notFoundStrings, 0),
   ...pickLocale(companionStrings, 0),
   ...pickLocale(pricingStrings, 0),
   ...pickLocale(setupStrings, 0),
@@ -1150,6 +1157,7 @@ const ar: Record<TranslationKey, string> = {
 
   ...pickLocale(shareStrings, 1),
   ...pickLocale(brandStrings, 1),
+  ...pickLocale(notFoundStrings, 1),
   ...pickLocale(companionStrings, 1),
   ...pickLocale(pricingStrings, 1),
   ...pickLocale(setupStrings, 1),
