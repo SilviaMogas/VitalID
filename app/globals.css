@@ -372,3 +372,61 @@ select {
   .anim-sheet { animation: sheet-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
   .anim-pulse-dot { animation: companion-breathe 1.4s ease-in-out infinite; }
 }
+
+/* Designer credit (components/legal/DesignerCredit.tsx). Layered so footer
+   utilities (e.g. mt-*) can tune spacing; alignment follows the parent's text-align. */
+@layer components {
+.designer-credit {
+  margin-top: 14px;
+  min-width: 0;
+}
+.designer-credit__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  border-radius: 6px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--color-muted);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition: color 0.15s ease;
+}
+.designer-credit__link:hover,
+.designer-credit__link:focus-visible {
+  color: var(--color-ink-2);
+}
+.designer-credit__link:hover span,
+.designer-credit__link:focus-visible span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+.designer-credit__logo {
+  height: 24px;
+  width: auto;
+  flex: none;
+  transform-origin: 50% 100%;
+}
+}
+@media (prefers-reduced-motion: no-preference) {
+  .designer-credit__logo { animation: pigeon-bob 5s ease-in-out infinite; }
+  .designer-credit__link:hover .designer-credit__logo,
+  .designer-credit__link:focus-visible .designer-credit__logo {
+    animation: pigeon-hop 0.55s cubic-bezier(0.3, 0.7, 0.4, 1) 1;
+  }
+}
+/* Two gentle bobs with a slight tilt in the first ~1.4s, then rest until 5s. */
+@keyframes pigeon-bob {
+  0%, 28%, 100% { transform: translateY(0) rotate(0); }
+  7%  { transform: translateY(-2.5px) rotate(-4deg); }
+  14% { transform: translateY(0) rotate(0); }
+  21% { transform: translateY(-2.5px) rotate(3deg); }
+}
+@keyframes pigeon-hop {
+  0%   { transform: translateY(0) scale(1); }
+  35%  { transform: translateY(-5px) rotate(-6deg) scale(1.02, 0.98); }
+  65%  { transform: translateY(0) scale(1.04, 0.96); }
+  100% { transform: translateY(0) scale(1); }
+}
