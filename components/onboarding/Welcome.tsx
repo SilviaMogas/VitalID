@@ -8,6 +8,7 @@ import { CredentialCard } from "@/components/vital-id/CredentialCard";
 import { DEMO_EMERGENCY, DEMO_IDENTITY } from "@/lib/demo-data";
 import { DemoBadge } from "@/components/layout/DemoBadge";
 import { LegalLinks } from "@/components/legal/LegalLinks";
+import { DesignerCredit } from "@/components/legal/DesignerCredit";
 
 /** Instant demo login is OFF by default — set NEXT_PUBLIC_DEMO_LOGIN=1 to enable it. */
 const DEMO_LOGIN_ENABLED = process.env.NEXT_PUBLIC_DEMO_LOGIN === "1";
@@ -119,6 +120,7 @@ export function Welcome({
           <LegalLinks />
           <span aria-hidden>·</span>
           <span>{t("onboarding.foot.demo")}</span>
+          <DesignerCredit className="mt-2 basis-full" />
         </footer>
       </div>
 

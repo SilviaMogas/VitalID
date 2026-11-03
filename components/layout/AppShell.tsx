@@ -17,6 +17,7 @@ import { DEMO_IDENTITY } from "@/lib/demo-data";
 import { TabIntro } from "@/components/layout/TabIntro";
 import { DemoBadge } from "@/components/layout/DemoBadge";
 import { LegalLinks } from "@/components/legal/LegalLinks";
+import { DesignerCredit } from "@/components/legal/DesignerCredit";
 
 /** Routes rendered without the app navigation (auth + setup journey, public share view, legal and brand pages). */
 const BARE_PREFIXES = ["/shared", "/signup", "/signin", "/checkout", "/pricing", "/brand", "/onboarding", "/privacy", "/terms"];
@@ -232,6 +233,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main className="flex-1 px-5 pb-12 pt-4" key={locale}>{children}</main>
         <footer className="px-5 pb-8 text-center text-xs text-muted">
           <LegalLinks />
+          <DesignerCredit />
         </footer>
       </div>
     );
