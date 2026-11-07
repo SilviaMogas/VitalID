@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 process.env.SUPABASE_URL = "https://supabase.local.test";
 process.env.SUPABASE_SECRET_KEY = "synthetic-service-key";
+process.env.AUTH_THROTTLE_STORE = "memory";
 process.env.NODE_ENV = "test";
 
 const users = {
@@ -59,10 +60,11 @@ function grant(userId, versions = CONSENT_POLICY_VERSIONS) {
   globalThis.__mobileConsents.set(userId, records);
 }
 
-function request(path, { method = "GET", token, body, origin, cookies = false } = {}) {
+function request(path, { method = "GET", token, body, origin, cookies = false, ip } = {}) {
   const headers = { host: "mobile.example.test" };
   if (token) headers.authorization = `Bearer ${token}`;
   if (origin) headers.origin = origin;
+  if (ip) headers["x-real-ip"] = ip;
   if (cookies) globalThis.__mobileCookies = { vitalid_at: "token-a" };
   const init = { method, headers };
   if (body !== undefined) {
@@ -285,6 +287,26 @@ test("auth responses are no-store, never set cookies, and never expose the servi
   });
   assert.equal(invalid.status, 401);
   assert.equal(invalid.headers.get("set-cookie"), null);
+});
+
+test("mobile sign-in throttles after ten failures before credential lookup", async () => {
+  const startCalls = globalThis.__mobileSignInCalls ?? 0;
+  const options = {
+    ip: "198.51.100.77",
+    body: { email: "mobile-throttle@example.test", password: "wrong-password" },
+  };
+  for (let i = 0; i < 10; i += 1) {
+    const response = await call("POST", "auth/signin", options);
+    assert.equal(response.status, 401);
+  }
+  assert.equal(globalThis.__mobileSignInCalls - startCalls, 10);
+
+  const limited = await call("POST", "auth/signin", options);
+  assert.equal(limited.status, 429);
+  assert.deepEqual(await body(limited), { error: "rate_limited" });
+  assert.ok(Number(limited.headers.get("retry-after")) > 0);
+  assert.equal(limited.headers.get("cache-control"), "no-store");
+  assert.equal(globalThis.__mobileSignInCalls - startCalls, 10);
 });
 
 test("malformed and primitive JSON bodies are rejected", async () => {

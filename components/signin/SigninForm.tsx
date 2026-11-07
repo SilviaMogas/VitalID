@@ -45,6 +45,10 @@ export function SigninForm() {
         setError(t("auth.error.notConfigured"));
         return;
       }
+      if (res.status === 429) {
+        setError(t("auth.error.rateLimited"));
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await Promise.all([refreshAuth(), refreshMembership()]);
       router.push(data.next ?? "/");

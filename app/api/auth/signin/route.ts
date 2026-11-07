@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { signInWithPassword } from '@/lib/auth/server';
 import { resolveNextRoute } from '@/lib/auth/next-route';
+import { throttlePasswordLogin } from '@/lib/auth/login-throttle';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -16,7 +17,25 @@ export async function POST(req: Request) {
   const password = typeof body.password === 'string' ? body.password : '';
   if (!email || !password) return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
 
-  const result = await signInWithPassword({ email, password });
+  const throttled = await throttlePasswordLogin(
+    req,
+    email,
+    () => signInWithPassword({ email, password }),
+    (result) => result.ok,
+  );
+  if (throttled.limited) {
+    return NextResponse.json(
+      { error: 'rate_limited' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(throttled.retryAfterSeconds),
+          'Cache-Control': 'no-store',
+        },
+      },
+    );
+  }
+  const result = throttled.result;
   if (!result.ok) {
     const status = result.code === 'not_configured' ? 503 : 401;
     return NextResponse.json({ error: result.code }, { status });
