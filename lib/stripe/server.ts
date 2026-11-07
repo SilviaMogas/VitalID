@@ -21,11 +21,14 @@ export function getStripe(): Stripe {
 
 /** Configuration error carrying a stable, client-safe `code`. */
 export class StripeConfigError extends Error {
+  public readonly code: string;
+
   constructor(
-    public readonly code: string,
+    code: string,
     message: string,
   ) {
     super(message);
+    this.code = code;
     this.name = 'StripeConfigError';
   }
 }
