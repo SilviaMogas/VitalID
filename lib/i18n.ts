@@ -237,6 +237,7 @@ const setupStrings = {
   "auth.error.invalidEmail": ["Please enter a valid email address.", "يرجى إدخال بريد إلكتروني صالح."],
   "auth.error.invalidCredentials": ["Email or password is incorrect.", "البريد الإلكتروني أو كلمة المرور غير صحيحة."],
   "auth.error.notConfigured": ["Accounts are not available in this environment yet.", "الحسابات غير متاحة في هذه البيئة بعد."],
+  "auth.error.rateLimited": ["Too many sign-in attempts. Try again in a few minutes.", "محاولات تسجيل دخول كثيرة جدًا. حاول مرة أخرى بعد بضع دقائق."],
   "auth.signOut": ["Sign out", "تسجيل الخروج"],
   "auth.wallet.or": ["or continue with a wallet", "أو تابع باستخدام محفظة"],
   "auth.wallet.solflare": ["Solflare", "Solflare"],

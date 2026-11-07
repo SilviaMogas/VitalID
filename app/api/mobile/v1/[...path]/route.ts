@@ -6,6 +6,7 @@ import {
   signInMobile,
   signOutMobile,
 } from '@/lib/auth/mobile';
+import { throttlePasswordLogin } from '@/lib/auth/login-throttle';
 import { withRequestAuthUser } from '@/lib/auth/request-user';
 import { getConsentStore } from '@/lib/consent';
 import { CONSENT_POLICY_VERSIONS } from '@/lib/legal';
@@ -367,7 +368,18 @@ async function dispatch(request: Request, context: RouteContext, method: string)
       ) {
         return normalizeResponse(json({ error: 'invalid_request' }, 400), true);
       }
-      const result = await signInMobile(email, password);
+      const throttled = await throttlePasswordLogin(
+        request,
+        email,
+        () => signInMobile(email, password),
+        (result) => result.ok,
+      );
+      if (throttled.limited) {
+        const response = json({ error: 'rate_limited' }, 429, true);
+        response.headers.set('Retry-After', String(throttled.retryAfterSeconds));
+        return normalizeResponse(response, true);
+      }
+      const result = throttled.result;
       return normalizeResponse(result.ok
         ? json(sessionResponse(result), 200, true)
         : json({ error: result.error }, result.status, true), true);

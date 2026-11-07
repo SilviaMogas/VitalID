@@ -26,6 +26,7 @@ const STUBS = {
           return user ? { data: { user }, error: null } : { data: { user: null }, error: { status: 401, code: "invalid_token" } };
         },
         async signInWithPassword({ email, password }) {
+          globalThis.__mobileSignInCalls = (globalThis.__mobileSignInCalls ?? 0) + 1;
           const record = (globalThis.__mobileCredentials ?? {})[email];
           if (!record || record.password !== password) return { data: { session: null, user: null }, error: { status: 400, code: "invalid_credentials", message: "Invalid login credentials" } };
           return { data: { session: record.session, user: record.user }, error: null };
