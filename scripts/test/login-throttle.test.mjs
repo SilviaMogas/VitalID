@@ -16,7 +16,7 @@ globalThis.__walletAuthClient = {
     async signInWithPassword({ email, password }) {
       authCalls += 1;
       if (email.trim().toLowerCase() === 'victim@example.test' && password === 'correct-password') {
-        const user = { id: 'synthetic-user', email: 'victim@example.test', app_metadata: {} };
+        const user = { id: 'synthetic-user', email: 'victim@example.test', email_confirmed_at: '2026-01-01T00:00:00Z', app_metadata: {} };
         return {
           data: {
             user,
