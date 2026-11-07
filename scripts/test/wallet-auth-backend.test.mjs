@@ -17,6 +17,10 @@ const users = new Map();
 let generateLinkErrors = new Map();
 let ambiguousGenerateLinkEmails = new Set();
 let updateCalls = [];
+let createUserInputs = [];
+let resendCalls = [];
+let resendErrors = new Map();
+let allowUnconfirmedSessions = new Set();
 let nextUser = 1;
 const cookieJar = () => (globalThis.__walletCookies ??= {});
 
@@ -24,6 +28,9 @@ function makeUser(input) {
   return {
     id: `wallet-user-${nextUser++}`,
     email: input.email.toLowerCase(),
+    email_confirmed_at: input.email_confirm ? new Date().toISOString() : null,
+    confirmed_at: input.confirmed_at ?? null,
+    phone_confirmed_at: input.phone_confirmed_at ?? null,
     app_metadata: input.app_metadata ?? {},
     user_metadata: input.user_metadata ?? {},
   };
@@ -31,6 +38,7 @@ function makeUser(input) {
 
 const admin = {
   async createUser(input) {
+    createUserInputs.push(input);
     const key = input.email.toLowerCase();
     if (users.has(key)) return { data: { user: null }, error: { code: 'email_exists', message: 'already exists' } };
     const user = makeUser(input);
@@ -68,10 +76,17 @@ const admin = {
 globalThis.__walletSupabase = { auth: { admin } };
 globalThis.__walletAuthClient = {
   auth: {
+    async resend(input) {
+      resendCalls.push(input);
+      return { data: {}, error: resendErrors.get(input.email.toLowerCase()) ?? null };
+    },
     async signInWithPassword({ email, password }) {
       const record = users.get(email.toLowerCase());
       if (!record || record.password !== password) {
         return { data: { session: null, user: null }, error: { code: 'invalid_credentials', message: 'Invalid login credentials' } };
+      }
+      if (!record.user.email_confirmed_at && !allowUnconfirmedSessions.has(email.toLowerCase())) {
+        return { data: { session: null, user: null }, error: { code: 'email_not_confirmed', message: 'Email not confirmed' } };
       }
       const token = `access-${record.user.id}`;
       return {
@@ -108,7 +123,7 @@ const { walletEmail, legacySolanaWalletEmail } =
   await import('../../lib/auth/wallet-identity.ts');
 const { issueEthereumMessage, verifyEthereumMessage } =
   await import('../../lib/auth/ethereum-wallet-auth.ts');
-const { signInWithWallet, signUpWithPassword } = await import('../../lib/auth/server.ts');
+const { isConfirmedUser, signInWithPassword, signInWithWallet, signUpWithPassword } = await import('../../lib/auth/server.ts');
 const ethMessageRoute = await import('../../app/api/auth/eth/message/route.ts');
 const ethVerifyRoute = await import('../../app/api/auth/eth/verify/route.ts');
 
@@ -122,6 +137,10 @@ beforeEach(() => {
   generateLinkErrors = new Map();
   ambiguousGenerateLinkEmails = new Set();
   updateCalls = [];
+  createUserInputs = [];
+  resendCalls = [];
+  resendErrors = new Map();
+  allowUnconfirmedSessions = new Set();
   nextUser = 1;
   consentRows = new Map();
   failConsentRecord = false;
@@ -213,7 +232,6 @@ test('legacy Solana sign-in reuses credentials and lookup failures do not split 
     password: walletPassword(wallet.publicKey),
     email_confirm: true,
     app_metadata: { vitalid_wallet: identity },
-    user_metadata: { solana_wallet: wallet.publicKey },
   });
 
   const ordinary = await signInWithWallet(wallet.publicKey, CONSENTS);
@@ -281,7 +299,7 @@ test('case-fold-colliding Solana wallets get separate accounts and legacy wallet
     email: legacyEmail,
     password: 'legacy-password',
     email_confirm: true,
-    user_metadata: { solana_wallet: wallet.publicKey },
+    app_metadata: { vitalid_wallet: { chain: 'solana', address: wallet.publicKey } },
   });
   const original = await signInWithWallet(wallet.publicKey, CONSENTS);
   assert.equal(original.ok, true);
@@ -313,14 +331,112 @@ test('case-fold-colliding Solana wallets get separate accounts and legacy wallet
   assert.equal(originalAgain.ok, true);
   assert.equal(originalAgain.user.id, original.user.id);
 
+  const storedPassword = stored.password;
+  const updatesBeforeUnboundRotation = updateCalls.length;
+  for (const name of Object.keys(cookieJar())) delete cookieJar()[name];
   stored.user.app_metadata = {};
   stored.user.user_metadata = { solana_wallet: wallet.publicKey };
   process.env.SOL_WALLET_SECRET = 'wallet-test-secret-rotated';
   const rotated = await signInWithWallet(wallet.publicKey, CONSENTS);
-  assert.equal(rotated.ok, true);
-  assert.deepEqual(rotated.user.wallet, { chain: 'solana', address: wallet.publicKey });
-  assert.notEqual(stored.password, 'legacy-password');
+  assert.equal(rotated.ok, false);
+  assert.equal(rotated.code, 'invalid_credentials');
+  assert.equal(updateCalls.length, updatesBeforeUnboundRotation);
+  assert.equal(stored.password, storedPassword);
+  assert.deepEqual(cookieJar(), {});
   process.env.SOL_WALLET_SECRET = 'wallet-test-secret';
+});
+
+test('synthetic Solana account with only user metadata is not adopted or modified', async () => {
+  const wallet = await makeSolanaWallet();
+  const email = walletEmail(wallet.publicKey, 'solana');
+  const password = 'attacker-controlled-password';
+  await admin.createUser({
+    email,
+    password,
+    user_metadata: { solana_wallet: wallet.publicKey },
+  });
+
+  const result = await signInWithWallet(wallet.publicKey, CONSENTS);
+  assert.equal(result.ok, false);
+  assert.equal(result.code, 'invalid_credentials');
+  assert.equal(updateCalls.length, 0);
+  assert.equal(users.get(email.toLowerCase()).password, password);
+  assert.deepEqual(users.get(email.toLowerCase()).user.app_metadata, {});
+});
+
+test('password sign-in refuses unconfirmed users whether GoTrue rejects or returns a session', async () => {
+  const email = 'unconfirmed@example.test';
+  const password = 'safe-test-password';
+  await admin.createUser({
+    email,
+    password,
+    confirmed_at: new Date().toISOString(),
+    phone_confirmed_at: new Date().toISOString(),
+  });
+
+  const rejectedByGoTrue = await signInWithPassword({ email, password });
+  assert.equal(rejectedByGoTrue.ok, false);
+  assert.equal(rejectedByGoTrue.code, 'email_not_confirmed');
+  assert.deepEqual(cookieJar(), {});
+
+  allowUnconfirmedSessions.add(email);
+  const returnedSession = await signInWithPassword({ email, password });
+  assert.equal(returnedSession.ok, false);
+  assert.equal(returnedSession.code, 'email_not_confirmed');
+  assert.deepEqual(cookieJar(), {});
+});
+
+test('email confirmation requires email_confirmed_at and preserves no-email users', () => {
+  const email = 'member@example.test';
+  assert.equal(isConfirmedUser({ email, email_confirmed_at: null }), false);
+  assert.equal(isConfirmedUser({ email }), false);
+  assert.equal(isConfirmedUser({ email, email_confirmed_at: null, confirmed_at: new Date().toISOString() }), false);
+  assert.equal(isConfirmedUser({ email, email_confirmed_at: null, phone_confirmed_at: new Date().toISOString() }), false);
+  assert.equal(isConfirmedUser({ email, email_confirmed_at: new Date().toISOString() }), true);
+  assert.equal(isConfirmedUser({}), true);
+});
+
+test('password signup sends confirmation without creating a session', async () => {
+  const email = 'new-member@example.test';
+  const emailRedirectTo = 'https://vitalid.example/signin?confirmed=1';
+  const result = await signUpWithPassword({
+    email,
+    password: 'safe-test-password',
+    firstName: 'Test',
+    lastName: 'Member',
+    country: 'AE',
+    city: 'Dubai',
+    emailRedirectTo,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.pendingConfirmation, true);
+  assert.equal(result.user.id, 'wallet-user-1');
+  assert.equal(createUserInputs.length, 1);
+  assert.equal(Object.hasOwn(createUserInputs[0], 'email_confirm'), false);
+  assert.deepEqual(resendCalls, [{
+    type: 'signup',
+    email,
+    options: { emailRedirectTo },
+  }]);
+  assert.deepEqual(cookieJar(), {});
+});
+
+test('password signup reports confirmation email delivery failures', async () => {
+  const email = 'resend-failure@example.test';
+  resendErrors.set(email, { message: 'mail service unavailable' });
+  const result = await signUpWithPassword({
+    email,
+    password: 'safe-test-password',
+    firstName: 'Test',
+    lastName: 'Member',
+    country: 'AE',
+    city: 'Dubai',
+    emailRedirectTo: 'https://vitalid.example/signin?confirmed=1',
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.code, 'confirmation_send_failed');
+  assert.deepEqual(cookieJar(), {});
 });
 
 test('password signup cannot claim the reserved wallet email domain', async () => {
