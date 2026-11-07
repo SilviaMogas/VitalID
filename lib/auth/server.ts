@@ -41,7 +41,6 @@ export interface AuthUser {
   id: string;
   email: string | null;
   email_confirmed_at?: string | null;
-  confirmed_at?: string | null;
   wallet: WalletIdentity | null;
 }
 
@@ -87,9 +86,8 @@ export type AuthResult =
 export function isConfirmedUser(user: {
   email?: string | null;
   email_confirmed_at?: string | null;
-  confirmed_at?: string | null;
 }): boolean {
-  return !user.email || Boolean(user.email_confirmed_at || user.confirmed_at);
+  return !user.email || Boolean(user.email_confirmed_at);
 }
 
 function toAuthUser(u: User): AuthUser {
@@ -97,7 +95,6 @@ function toAuthUser(u: User): AuthUser {
     id: u.id,
     email: u.email ?? null,
     email_confirmed_at: u.email_confirmed_at ?? null,
-    confirmed_at: u.confirmed_at ?? null,
     wallet: trustedWalletFromAppMetadata(u.email, u.app_metadata),
   };
 }

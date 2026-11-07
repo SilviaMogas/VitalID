@@ -29,6 +29,8 @@ function makeUser(input) {
     id: `wallet-user-${nextUser++}`,
     email: input.email.toLowerCase(),
     email_confirmed_at: input.email_confirm ? new Date().toISOString() : null,
+    confirmed_at: input.confirmed_at ?? null,
+    phone_confirmed_at: input.phone_confirmed_at ?? null,
     app_metadata: input.app_metadata ?? {},
     user_metadata: input.user_metadata ?? {},
   };
@@ -121,7 +123,7 @@ const { walletEmail, legacySolanaWalletEmail } =
   await import('../../lib/auth/wallet-identity.ts');
 const { issueEthereumMessage, verifyEthereumMessage } =
   await import('../../lib/auth/ethereum-wallet-auth.ts');
-const { signInWithPassword, signInWithWallet, signUpWithPassword } = await import('../../lib/auth/server.ts');
+const { isConfirmedUser, signInWithPassword, signInWithWallet, signUpWithPassword } = await import('../../lib/auth/server.ts');
 const ethMessageRoute = await import('../../app/api/auth/eth/message/route.ts');
 const ethVerifyRoute = await import('../../app/api/auth/eth/verify/route.ts');
 
@@ -365,7 +367,12 @@ test('synthetic Solana account with only user metadata is not adopted or modifie
 test('password sign-in refuses unconfirmed users whether GoTrue rejects or returns a session', async () => {
   const email = 'unconfirmed@example.test';
   const password = 'safe-test-password';
-  await admin.createUser({ email, password });
+  await admin.createUser({
+    email,
+    password,
+    confirmed_at: new Date().toISOString(),
+    phone_confirmed_at: new Date().toISOString(),
+  });
 
   const rejectedByGoTrue = await signInWithPassword({ email, password });
   assert.equal(rejectedByGoTrue.ok, false);
@@ -377,6 +384,16 @@ test('password sign-in refuses unconfirmed users whether GoTrue rejects or retur
   assert.equal(returnedSession.ok, false);
   assert.equal(returnedSession.code, 'email_not_confirmed');
   assert.deepEqual(cookieJar(), {});
+});
+
+test('email confirmation requires email_confirmed_at and preserves no-email users', () => {
+  const email = 'member@example.test';
+  assert.equal(isConfirmedUser({ email, email_confirmed_at: null }), false);
+  assert.equal(isConfirmedUser({ email }), false);
+  assert.equal(isConfirmedUser({ email, email_confirmed_at: null, confirmed_at: new Date().toISOString() }), false);
+  assert.equal(isConfirmedUser({ email, email_confirmed_at: null, phone_confirmed_at: new Date().toISOString() }), false);
+  assert.equal(isConfirmedUser({ email, email_confirmed_at: new Date().toISOString() }), true);
+  assert.equal(isConfirmedUser({}), true);
 });
 
 test('password signup sends confirmation without creating a session', async () => {
