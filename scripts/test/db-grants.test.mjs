@@ -16,8 +16,8 @@ test('server-only tables have explicit SQL grants without changing RLS', () => {
   for (const table of tables) {
     assert.match(migration, new RegExp('public\\.' + table + '(?:[,\\s]|$)'), table + ' is covered by ACL migration');
   }
-  assert.match(migration, /revoke all privileges on table[\\s\\S]*from public, anon, authenticated/i);
-  assert.match(migration, /grant select, insert, update, delete on table[\\s\\S]*to service_role/i);
+  assert.match(migration, /revoke all privileges on table[\s\S]*from public, anon, authenticated/i);
+  assert.match(migration, /grant select, insert, update, delete on table[\s\S]*to service_role/i);
   assert.match(migration, /grant usage on schema public to service_role/i);
   assert.doesNotMatch(migration, /alter table .* (?:enable|disable) row level security/i, 'migration must not alter RLS state');
   assert.doesNotMatch(migration, /create policy/i, 'migration must not create browser policies');
