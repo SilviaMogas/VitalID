@@ -36,6 +36,17 @@ function isConfiguredPriceForPlan(plan: PlanId, price: Stripe.Price | null | und
   return refs.includes(price.id) || (productId !== undefined && refs.includes(productId));
 }
 
+function planForSubscriptionPrice(subscription: Stripe.Subscription): 'plus' | 'pro' | null {
+  const items = subscription.items.data;
+  if (items.length !== 1) return null;
+  const price = items[0]?.price;
+  if (!price || price.type !== 'recurring' || price.currency !== BILLING_CURRENCY) return null;
+  const matchingPlans = (['plus', 'pro'] as const).filter((plan) =>
+    isConfiguredPriceForPlan(plan, price),
+  );
+  return matchingPlans.length === 1 ? matchingPlans[0] : null;
+}
+
 function subscriptionPeriodEnd(subscription: Stripe.Subscription): string | null {
   const end = subscription.items.data[0]?.current_period_end;
   return typeof end === 'number' ? new Date(end * 1000).toISOString() : null;
@@ -125,9 +136,9 @@ export async function verifyAndActivate(
 /**
  * Syncs the membership plan with a subscription's current state — re-retrieved
  * from Stripe (webhook payloads are never trusted). Active/trialing/past_due
- * keeps (or restores) the paid plan from the subscription metadata; every other
- * status (canceled, unpaid, incomplete_expired, paused, incomplete) downgrades
- * to free.
+ * keeps (or restores) the paid plan from the subscription's current configured
+ * recurring USD price; every other status (canceled, unpaid, incomplete_expired,
+ * paused, incomplete) downgrades to free.
  */
 export async function syncSubscriptionFromStripe(
   subscriptionId: string,
@@ -138,8 +149,7 @@ export async function syncSubscriptionFromStripe(
   } catch {
     return null;
   }
-  const metaPlan = subscription.metadata?.plan;
-  const plan = metaPlan === 'plus' || metaPlan === 'pro' ? metaPlan : null;
+  const plan = planForSubscriptionPrice(subscription);
   const isActive = ACTIVE_SUBSCRIPTION_STATUSES.has(subscription.status);
   return getMembershipStore().syncSubscription({
     stripeSubscriptionId: subscription.id,
