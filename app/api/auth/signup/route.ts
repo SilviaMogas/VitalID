@@ -45,13 +45,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'weak_password' }, { status: 400 });
   }
 
-  const result = await signUpWithPassword({ email, password, firstName, lastName, country, city });
+  const result = await signUpWithPassword({
+    email,
+    password,
+    firstName,
+    lastName,
+    country,
+    city,
+    emailRedirectTo: `${new URL(req.url).origin}/signin?confirmed=1`,
+  });
   if (!result.ok) {
-    const status = result.code === 'not_configured' ? 503 : result.code === 'unknown' ? 500 : 400;
+    const status = result.code === 'not_configured' ? 503
+      : result.code === 'unknown' || result.code === 'confirmation_send_failed' ? 500
+        : 400;
     return NextResponse.json({ error: result.code }, { status });
   }
 
-  const [membership] = await Promise.all([
+  await Promise.all([
     getMembershipStore().upsert({ userKey: result.user.id, displayName: `${firstName} ${lastName}`, email }),
     getOnboardingStore().patch(result.user.id, { profile: { firstName, lastName, country, city } }),
   ]);
@@ -72,7 +82,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'consent_audit_failed' }, { status: 503 });
   }
   return NextResponse.json(
-    { userId: result.user.id, plan: membership.plan, next: '/pricing' },
+    { userId: result.user.id, confirmEmail: true },
     { headers: { 'Cache-Control': 'no-store' } },
   );
 }

@@ -38,7 +38,13 @@ export function SigninForm() {
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; next?: string };
       if (res.status === 401) {
-        setError(t("auth.error.invalidCredentials"));
+        setError(data.error === "email_not_confirmed"
+          ? t("auth.error.emailNotConfirmed")
+          : t("auth.error.invalidCredentials"));
+        return;
+      }
+      if (res.status === 403 && data.error === "email_not_confirmed") {
+        setError(t("auth.error.emailNotConfirmed"));
         return;
       }
       if (res.status === 503) {

@@ -33,6 +33,8 @@ function authUser(user: User): AuthUser {
   return {
     id: user.id,
     email: user.email ?? null,
+    email_confirmed_at: user.email_confirmed_at ?? null,
+    confirmed_at: user.confirmed_at ?? null,
     wallet: trustedWalletFromAppMetadata(user.email, user.app_metadata),
   };
 }
