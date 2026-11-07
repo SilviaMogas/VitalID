@@ -19,8 +19,8 @@ import { isSolanaPublicKey, walletPasswordForChain } from '@/lib/solpay/wallet-a
 /**
  * Supabase Auth (email + password) with httpOnly cookie sessions.
  *
- * - Sign-up creates a confirmed user through the admin API (no e-mail round-trip
- *   for the demo) and then signs the user in.
+ * - Sign-up creates an unconfirmed user through the admin API and sends an
+ *   email-confirmation link before the user can sign in.
  * - Access + refresh tokens are stored in httpOnly cookies; `getCurrentUser()`
  *   validates the access token against Supabase on every request (React-cached).
  * - `refreshSessionIfNeeded()` is called from `/api/auth/me`, so a client that is
@@ -40,6 +40,7 @@ function isUserNotFoundError(error: { code?: string; status?: number; message?: 
 export interface AuthUser {
   id: string;
   email: string | null;
+  email_confirmed_at?: string | null;
   wallet: WalletIdentity | null;
 }
 
@@ -79,13 +80,21 @@ export async function clearSessionCookies(): Promise<void> {
 }
 
 export type AuthResult =
-  | { ok: true; user: AuthUser; created?: boolean }
-  | { ok: false; code: 'invalid_credentials' | 'email_taken' | 'weak_password' | 'not_configured' | 'consent_required' | 'reserved_email' | 'unknown'; message: string };
+  | { ok: true; user: AuthUser; created?: boolean; pendingConfirmation?: boolean }
+  | { ok: false; code: 'invalid_credentials' | 'email_not_confirmed' | 'confirmation_send_failed' | 'email_taken' | 'weak_password' | 'not_configured' | 'consent_required' | 'reserved_email' | 'unknown'; message: string };
+
+export function isConfirmedUser(user: {
+  email?: string | null;
+  email_confirmed_at?: string | null;
+}): boolean {
+  return !user.email || Boolean(user.email_confirmed_at);
+}
 
 function toAuthUser(u: User): AuthUser {
   return {
     id: u.id,
     email: u.email ?? null,
+    email_confirmed_at: u.email_confirmed_at ?? null,
     wallet: trustedWalletFromAppMetadata(u.email, u.app_metadata),
   };
 }
@@ -97,16 +106,16 @@ export async function signUpWithPassword(input: {
   lastName: string;
   country: string;
   city: string;
+  emailRedirectTo: string;
 }): Promise<AuthResult> {
   if (!isAuthConfigured()) return { ok: false, code: 'not_configured', message: 'auth not configured' };
   if (input.email.trim().toLowerCase().endsWith('@wallet.vitalid.site')) {
     return { ok: false, code: 'reserved_email', message: 'wallet email addresses are reserved' };
   }
   const admin = getSupabaseServerClient();
-  const { error } = await admin.auth.admin.createUser({
+  const { data, error } = await admin.auth.admin.createUser({
     email: input.email,
     password: input.password,
-    email_confirm: true,
     user_metadata: {
       first_name: input.firstName,
       last_name: input.lastName,
@@ -124,14 +133,29 @@ export async function signUpWithPassword(input: {
     }
     return { ok: false, code: 'unknown', message: error.message };
   }
-  return signInWithPassword({ email: input.email, password: input.password });
+  if (!data.user) return { ok: false, code: 'unknown', message: 'created user was not returned' };
+  const { error: resendError } = await authClient().auth.resend({
+    type: 'signup',
+    email: input.email,
+    options: { emailRedirectTo: input.emailRedirectTo },
+  });
+  if (resendError) {
+    return { ok: false, code: 'confirmation_send_failed', message: resendError.message };
+  }
+  return { ok: true, user: toAuthUser(data.user), pendingConfirmation: true };
 }
 
 export async function signInWithPassword(input: { email: string; password: string }): Promise<AuthResult> {
   if (!isAuthConfigured()) return { ok: false, code: 'not_configured', message: 'auth not configured' };
   const { data, error } = await authClient().auth.signInWithPassword(input);
+  if (error && (error.code === 'email_not_confirmed' || /email not confirmed/i.test(error.message))) {
+    return { ok: false, code: 'email_not_confirmed', message: error.message };
+  }
   if (error || !data.session || !data.user) {
     return { ok: false, code: 'invalid_credentials', message: error?.message ?? 'invalid credentials' };
+  }
+  if (!isConfirmedUser(data.user)) {
+    return { ok: false, code: 'email_not_confirmed', message: 'email not confirmed' };
   }
   await writeSessionCookies(data.session.access_token, data.session.refresh_token);
   return { ok: true, user: toAuthUser(data.user) };
@@ -226,13 +250,19 @@ export async function signInWithWallet(
       return { ok: false, code: 'unknown', message: 'legacy wallet account lookup returned no user' };
     }
     const legacyUser = legacyLink?.user ?? null;
-    if (legacyUser && hasWalletBinding(legacyUser, identity)) {
-      const { error } = await admin.auth.admin.updateUserById(legacyUser.id, {
-        password,
-        app_metadata: { ...legacyUser.app_metadata, vitalid_wallet: identity },
-      });
-      if (error) return { ok: false, code: 'unknown', message: error.message };
-      return signInWithPassword({ email: legacyUser.email ?? legacyEmail, password });
+    if (legacyUser) {
+      const legacyBinding = trustedWalletFromAppMetadata(legacyUser.email, legacyUser.app_metadata);
+      if (!legacyBinding) {
+        return { ok: false, code: 'invalid_credentials', message: 'wallet account binding mismatch' };
+      }
+      if (hasWalletBinding(legacyUser, identity)) {
+        const { error } = await admin.auth.admin.updateUserById(legacyUser.id, {
+          password,
+          app_metadata: { ...legacyUser.app_metadata, vitalid_wallet: identity },
+        });
+        if (error) return { ok: false, code: 'unknown', message: error.message };
+        return signInWithPassword({ email: legacyUser.email ?? legacyEmail, password });
+      }
     }
   }
   // New wallet account: same legal gate as password signup — no terms or
@@ -244,7 +274,6 @@ export async function signInWithWallet(
     email,
     password,
     email_confirm: true,
-    ...(chain === 'solana' ? { user_metadata: { solana_wallet: identity.address } } : {}),
     app_metadata: { vitalid_wallet: identity },
   });
   if (error) return { ok: false, code: 'unknown', message: error.message };
@@ -276,7 +305,7 @@ const getCookieCurrentUser = cache(async (): Promise<AuthUser | null> => {
   const at = store.get(ACCESS_COOKIE)?.value;
   if (!at) return null;
   const { data, error } = await getSupabaseServerClient().auth.getUser(at);
-  if (error || !data.user) return null;
+  if (error || !data.user || !isConfirmedUser(data.user)) return null;
   return toAuthUser(data.user);
 });
 
@@ -312,6 +341,10 @@ export async function refreshSessionIfNeeded(): Promise<AuthUser | null> {
   if (!rt) return null;
   const { data, error } = await authClient().auth.refreshSession({ refresh_token: rt });
   if (error || !data.session || !data.user) {
+    await clearSessionCookies();
+    return null;
+  }
+  if (!isConfirmedUser(data.user)) {
     await clearSessionCookies();
     return null;
   }

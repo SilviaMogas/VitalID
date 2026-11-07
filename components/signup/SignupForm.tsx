@@ -18,6 +18,7 @@ const ERROR_KEYS: Record<string, TranslationKey> = {
   weak_password: "auth.error.weakPassword",
   invalid_email: "auth.error.invalidEmail",
   not_configured: "auth.error.notConfigured",
+  confirmation_send_failed: "auth.error.confirmationSendFailed",
   consent_required: "consent.error",
   consent_audit_failed: "consent.auditFailed",
 };
@@ -37,6 +38,7 @@ export function SignupForm() {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   // Required, never pre-ticked: accepting the legal docs and consenting to
   // health-data processing are two independent acts.
   const [consentTerms, setConsentTerms] = useState(false);
@@ -53,6 +55,7 @@ export function SignupForm() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
     setBusy(true);
     try {
       const res = await fetch("/api/auth/signup", {
@@ -64,13 +67,17 @@ export function SignupForm() {
           consentHealthData: consentHealth,
         }),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string; next?: string };
+      const data = (await res.json().catch(() => ({}))) as { error?: string; confirmEmail?: boolean };
       if (!res.ok) {
         setError(t(ERROR_KEYS[data.error ?? ""] ?? "common.error"));
         return;
       }
+      if (data.confirmEmail) {
+        setSuccess(t("signup.confirmEmail"));
+        return;
+      }
       await Promise.all([refreshAuth(), refreshMembership()]);
-      router.push(data.next ?? "/pricing");
+      router.push("/pricing");
     } catch {
       setError(t("common.error"));
     } finally {
@@ -125,6 +132,7 @@ export function SignupForm() {
         <TermsConsent id="su-terms" checked={consentTerms} onChange={setConsentTerms} />
         <HealthDataConsent id="su-consent" checked={consentHealth} onChange={setConsentHealth} />
         {error && <p className="text-sm text-bad">{error}</p>}
+        {success && <p role="status" className="text-sm text-brand">{success}</p>}
         <button
           type="submit"
           disabled={busy || !consentTerms || !consentHealth}

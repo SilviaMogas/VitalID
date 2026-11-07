@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
   const result = await signInWithPassword({ email, password });
   if (!result.ok) {
-    const status = result.code === 'not_configured' ? 503 : 401;
+    const status = result.code === 'not_configured' ? 503 : result.code === 'email_not_confirmed' ? 403 : 401;
     return NextResponse.json({ error: result.code }, { status });
   }
   const next = await resolveNextRoute(result.user.id);

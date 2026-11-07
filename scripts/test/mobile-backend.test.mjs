@@ -6,9 +6,10 @@ process.env.SUPABASE_SECRET_KEY = "synthetic-service-key";
 process.env.NODE_ENV = "test";
 
 const users = {
-  "token-a": { id: "00000000-0000-4000-8000-00000000000a", email: "a@example.test" },
-  "token-b": { id: "00000000-0000-4000-8000-00000000000b", email: "b@example.test" },
-  "token-c": { id: "00000000-0000-4000-8000-00000000000c", email: "c@example.test" },
+  "token-a": { id: "00000000-0000-4000-8000-00000000000a", email: "a@example.test", email_confirmed_at: "2026-01-01T00:00:00.000Z" },
+  "token-b": { id: "00000000-0000-4000-8000-00000000000b", email: "b@example.test", email_confirmed_at: "2026-01-01T00:00:00.000Z" },
+  "token-c": { id: "00000000-0000-4000-8000-00000000000c", email: "c@example.test", email_confirmed_at: "2026-01-01T00:00:00.000Z" },
+  "unconfirmed-token": { id: "00000000-0000-4000-8000-00000000000d", email: "pending@example.test" },
 };
 globalThis.__mobileAuthUsers = users;
 globalThis.__mobilePlans = {};
@@ -101,6 +102,12 @@ test("missing or invalid bearer never falls back to a valid member cookie", asyn
   const invalid = await call("GET", "account", { token: "not-a-token", cookies: true });
   assert.equal(invalid.status, 401);
   assert.equal((await body(invalid)).error, "unauthenticated");
+});
+
+test("unconfirmed bearer users cannot enter request auth context", async () => {
+  const response = await call("GET", "account", { token: "unconfirmed-token" });
+  assert.equal(response.status, 401);
+  assert.equal((await body(response)).error, "email_not_confirmed");
 });
 
 test("foreign origins are denied without wildcard CORS", async () => {

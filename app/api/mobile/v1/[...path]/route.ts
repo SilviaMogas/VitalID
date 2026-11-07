@@ -7,6 +7,7 @@ import {
   signOutMobile,
 } from '@/lib/auth/mobile';
 import { withRequestAuthUser } from '@/lib/auth/request-user';
+import { isConfirmedUser } from '@/lib/auth/server';
 import { getConsentStore } from '@/lib/consent';
 import { CONSENT_POLICY_VERSIONS } from '@/lib/legal';
 import { hasFeature } from '@/lib/plans';
@@ -391,6 +392,9 @@ async function dispatch(request: Request, context: RouteContext, method: string)
     const auth = await authenticateMobileAccessToken(token);
     if (!auth.ok) {
       return normalizeResponse(json({ error: auth.error }, auth.status), tokenResponse);
+    }
+    if (!isConfirmedUser(auth.user)) {
+      return normalizeResponse(json({ error: 'email_not_confirmed' }, 401), tokenResponse);
     }
     const response = await withRequestAuthUser(auth.user, () =>
       dispatchAuthorized(request, segments, method, auth.user, token),

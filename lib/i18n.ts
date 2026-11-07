@@ -171,6 +171,7 @@ const pricingStrings = {
   "signup.name": ["Name", "الاسم"],
   "signup.email": ["Email", "البريد الإلكتروني"],
   "signup.continue": ["Continue to plans", "المتابعة إلى الخطط"],
+  "signup.confirmEmail": ["Check your inbox to confirm your email, then sign in.", "تحقق من بريدك الإلكتروني لتأكيده، ثم سجّل الدخول."],
   "signup.exploreDemo": ["Explore the demo as Fatima", "استكشف العرض التجريبي بحساب فاطمة"],
 
   "checkout.welcome": ["Welcome to {plan}", "مرحبًا بك في {plan}"],
@@ -233,6 +234,8 @@ const setupStrings = {
   "auth.haveAccount": ["Already have an account?", "لديك حساب بالفعل؟"],
   "auth.noAccount": ["New to Vital ID?", "جديد على Vital ID؟"],
   "auth.error.emailTaken": ["An account with this email already exists.", "يوجد حساب بهذا البريد الإلكتروني بالفعل."],
+  "auth.error.confirmationSendFailed": ["We couldn't send the confirmation email. Please try again later.", "تعذّر إرسال رسالة التأكيد. يرجى المحاولة مرة أخرى لاحقًا."],
+  "auth.error.emailNotConfirmed": ["Please confirm your email before signing in.", "يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول."],
   "auth.error.weakPassword": ["Please choose a stronger password (8–72 characters).", "يرجى اختيار كلمة مرور أقوى (٨–٧٢ حرفًا)."],
   "auth.error.invalidEmail": ["Please enter a valid email address.", "يرجى إدخال بريد إلكتروني صالح."],
   "auth.error.invalidCredentials": ["Email or password is incorrect.", "البريد الإلكتروني أو كلمة المرور غير صحيحة."],

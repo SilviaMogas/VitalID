@@ -80,18 +80,9 @@ export function hasWalletBinding(
   user: {
     email?: string | null;
     app_metadata?: unknown;
-    user_metadata?: unknown;
   },
   expected: WalletIdentity,
 ): boolean {
   const trusted = trustedWalletFromAppMetadata(user.email, user.app_metadata);
-  if (trusted) return trusted.chain === expected.chain && trusted.address === expected.address;
-  if (expected.chain !== 'solana' || !user.email || !user.user_metadata || typeof user.user_metadata !== 'object') {
-    return false;
-  }
-  const metadata = user.user_metadata as { solana_wallet?: unknown };
-  return (
-    metadata.solana_wallet === expected.address &&
-    emailMatchesWallet(user.email, expected)
-  );
+  return Boolean(trusted && trusted.chain === expected.chain && trusted.address === expected.address);
 }
