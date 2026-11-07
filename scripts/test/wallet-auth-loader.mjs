@@ -19,6 +19,7 @@ const STUBS = {
   `,
   '@supabase/supabase-js': 'export function createClient(){ return globalThis.__walletAuthClient; }',
   '@/lib/supabase/server': 'export function getSupabaseServerClient(){ return globalThis.__walletSupabase; }',
+  '@/lib/auth/next-route': 'export async function resolveNextRoute(){ return "/"; }',
   '@/lib/share-api': `
     export function isSameOrigin(request) {
       const origin = request.headers.get("origin");

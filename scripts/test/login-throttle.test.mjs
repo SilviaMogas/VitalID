@@ -3,7 +3,7 @@ import test, { beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-register('./login-throttle-loader.mjs', import.meta.url);
+register('./wallet-auth-loader.mjs', import.meta.url);
 
 process.env.SUPABASE_URL = 'https://supabase.login-throttle.test';
 process.env.SUPABASE_SECRET_KEY = 'synthetic-login-throttle-key';
@@ -11,7 +11,7 @@ process.env.AUTH_THROTTLE_STORE = 'memory';
 process.env.NODE_ENV = 'test';
 
 let authCalls = 0;
-globalThis.__loginAuthClient = {
+globalThis.__walletAuthClient = {
   auth: {
     async signInWithPassword({ email, password }) {
       authCalls += 1;
@@ -32,7 +32,7 @@ globalThis.__loginAuthClient = {
     },
   },
 };
-globalThis.__loginSupabase = {
+globalThis.__walletSupabase = {
   rpc: async () => ({ data: 0, error: null }),
   from: () => ({ delete: () => ({ eq: async () => ({ error: null }) }) }),
 };
@@ -149,7 +149,7 @@ test('memory throttle allows attempts after its fixed window expires', async () 
 test('Supabase store retry responses limit before the attempt', async () => {
   process.env.AUTH_THROTTLE_STORE = 'supabase';
   let rpcCalls = 0;
-  globalThis.__loginSupabase.rpc = async () => {
+  globalThis.__walletSupabase.rpc = async () => {
     rpcCalls += 1;
     return { data: 30, error: null };
   };
@@ -167,7 +167,7 @@ test('Supabase store retry responses limit before the attempt', async () => {
 
 test('Supabase RPC errors fall back to memory and still run the attempt', async () => {
   process.env.AUTH_THROTTLE_STORE = 'supabase';
-  globalThis.__loginSupabase.rpc = async () => ({
+  globalThis.__walletSupabase.rpc = async () => ({
     data: null,
     error: { message: 'synthetic migration missing' },
   });
