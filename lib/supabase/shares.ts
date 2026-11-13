@@ -46,6 +46,22 @@ function fromRow(row: VitalIdShareRow): VitalIdShareRecord {
   };
 }
 
+function fromSummaryRow(row: SummaryRow) {
+  return {
+    id: row.id,
+    token: row.token,
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    revoked: row.revoked,
+    purpose: row.purpose,
+    selectedFields: row.selected_fields ?? [],
+    sentTo: row.sentTo,
+    ownerKey: row.ownerKey ?? undefined,
+    sharedBy: row.sharedBy ?? undefined,
+    recipientUserId: row.recipientUserId ?? undefined,
+  };
+}
+
 function toRow(r: VitalIdShareRecord): VitalIdShareRow {
   return {
     id: r.id,
@@ -152,19 +168,29 @@ export class SupabaseShareStore implements ShareStore {
       rows.push(...(data ?? []));
       if (!data || data.length < LIST_PAGE_SIZE) break;
     }
-    return rows.map((row) => ({
-      id: row.id,
-      token: row.token,
-      createdAt: row.created_at,
-      expiresAt: row.expires_at,
-      revoked: row.revoked,
-      purpose: row.purpose,
-      selectedFields: row.selected_fields ?? [],
-      sentTo: row.sentTo,
-      ownerKey: row.ownerKey ?? undefined,
-      sharedBy: row.sharedBy ?? undefined,
-      recipientUserId: row.recipientUserId ?? undefined,
-    }));
+    return rows.map(fromSummaryRow);
+  }
+
+  async listVitalIdSharesForOwner(ownerKey: string, limit: number) {
+    const { data, error } = await this.client
+      .from(VITAL_ID_SHARES_TABLE)
+      .select(SUMMARY_COLUMNS)
+      .eq('snapshot->>ownerKey', ownerKey)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(limit)
+      .returns<SummaryRow[]>();
+    if (error) throw new Error(`listVitalIdSharesForOwner failed: ${error.message}`);
+    return (data ?? []).map(fromSummaryRow);
+  }
+
+  async deleteExpiredVitalIdSharesForOwner(ownerKey: string, now = new Date()): Promise<void> {
+    const { error } = await this.client
+      .from(VITAL_ID_SHARES_TABLE)
+      .delete()
+      .eq('snapshot->>ownerKey', ownerKey)
+      .lt('expires_at', now.toISOString());
+    if (error) throw new Error(`deleteExpiredVitalIdSharesForOwner failed: ${error.message}`);
   }
 
   async clearVitalIdShares(): Promise<void> {

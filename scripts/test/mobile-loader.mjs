@@ -68,7 +68,8 @@ const STUBS = {
     const shares = () => (globalThis.__mobileShares ??= new Map());
     export async function createShare(payload) { shares().set(payload.id, payload); }
     export async function getShare(id) { return shares().get(id) ?? null; }
-    export async function listShares() { return [...shares().values()]; }
+    export async function listShares(ownerKey, limit = 50) { return [...shares().values()].filter((p) => p.ownerKey === ownerKey).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit); }
+    export async function pruneExpiredShares(ownerKey) { for (const [id, p] of shares()) if (p.ownerKey === ownerKey && new Date(p.expiresAt).getTime() <= Date.now()) shares().delete(id); }
     export async function revokeShare(id) { const value = shares().get(id); if (!value) return false; shares().set(id, { ...value, revoked: true }); return true; }
   `,
   "@/lib/membership/store": `

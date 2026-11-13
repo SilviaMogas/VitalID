@@ -59,6 +59,7 @@ export const SHARE_FIELDS: ShareField[] = [
   "healthProfile",
 ];
 export const SHARE_DURATIONS: ShareDuration[] = [15, 60, 1440];
+export const MAX_STORED_SHARES_PER_OWNER = 50;
 export const SHARE_PURPOSES: SharePurpose[] = [
   "emergency",
   "doctor",
