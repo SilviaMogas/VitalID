@@ -39,3 +39,14 @@ export function isJsonContentType(req: Request): boolean {
   const type = req.headers.get("content-type");
   return type !== null && type.split(";")[0].trim().toLowerCase() === "application/json";
 }
+
+const NO_STORE = { "Cache-Control": "no-store" };
+
+/** Guard for session-establishing routes: null when the request may proceed. */
+export function sessionRequestRejection(req: Request, { requireJson = false } = {}): Response | null {
+  if (!isStrictSameOrigin(req)) return Response.json({ error: "forbidden" }, { status: 403, headers: NO_STORE });
+  if (requireJson && !isJsonContentType(req)) {
+    return Response.json({ error: "unsupported_media_type" }, { status: 415, headers: NO_STORE });
+  }
+  return null;
+}
