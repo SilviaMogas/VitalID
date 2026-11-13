@@ -2,7 +2,11 @@ import 'server-only';
 import { getSupabaseServerClient, isSupabaseConfigured } from '@/lib/supabase/server';
 import type { BillingInterval } from '@/lib/plans';
 import type { SolCluster } from './config';
-import { getMembershipStore, MemoryMembershipStore } from '@/lib/membership/store';
+import {
+  getMembershipStore,
+  MemoryMembershipStore,
+  resolveMembershipStoreBackend,
+} from '@/lib/membership/store';
 import { SOL_SESSION_PREFIX } from '@/lib/membership/sol';
 
 const TABLE = 'vital_id_sol_payments';
@@ -290,6 +294,11 @@ export function getSolPaymentStore(): SolPaymentStore {
       : process.env.SOL_PAYMENT_STORE === 'supabase' || isSupabaseConfigured()
         ? 'supabase'
         : 'memory';
+  // applyPayment extends the membership in the same backend as the payment,
+  // so a mismatch would grant paid time where the app never reads it.
+  if (resolveMembershipStoreBackend() !== backend) {
+    throw new Error('SOL payment store and membership store must use the same backend');
+  }
   if (g.__vitalIdSolPaymentStoreInstance?.backend === backend) {
     return g.__vitalIdSolPaymentStoreInstance.store;
   }

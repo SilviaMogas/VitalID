@@ -466,3 +466,14 @@ test('membership reset route is non-production and same-origin only', async () =
     process.env.NODE_ENV = previous;
   }
 });
+
+test('SOL payments refuse a membership store on a different backend', async () => {
+  const previous = process.env.SOL_PAYMENT_STORE;
+  try {
+    process.env.SOL_PAYMENT_STORE = 'supabase';
+    assert.throws(() => getSolPaymentStore(), /same backend/);
+  } finally {
+    process.env.SOL_PAYMENT_STORE = previous;
+  }
+  assert.ok(getSolPaymentStore());
+});
