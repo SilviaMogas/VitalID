@@ -7,74 +7,84 @@ function matches(row, filters) {
   return filters.every(([op, col, value]) => (op === "eq" ? row[col] === value : row[col] === null));
 }
 
+function readRows(state) {
+  const data = [...rows.values()].filter((row) => matches(row, state.filters)).map((row) => ({ ...row }));
+  const hook = globalThis.__membershipAfterRead;
+  if (typeof hook === "function") {
+    delete globalThis.__membershipAfterRead;
+    hook();
+  }
+  return data;
+}
+
+function upsertRow(state) {
+  if (rows.has(state.payload.user_key) && state.options.ignoreDuplicates) return [];
+  rows.set(state.payload.user_key, { ...state.payload });
+  return [{ ...state.payload }];
+}
+
+function updateRows(state) {
+  const data = [];
+  for (const row of rows.values()) {
+    if (!matches(row, state.filters)) continue;
+    Object.assign(row, state.payload);
+    data.push({ ...row });
+  }
+  return data;
+}
+
+const OPERATIONS = { select: readRows, upsert: upsertRow, update: updateRows };
+
+function run(state) {
+  const data = OPERATIONS[state.op](state);
+  if (state.single) return { data: data[0] ?? null, error: null };
+  return { data: state.returning ? data : null, error: null };
+}
+
+// Each chain resolves on the next microtask, after it has been fully built.
 function builder() {
-  const state = { op: null, filters: [], payload: null, options: {}, returning: false, single: false };
-  const api = {
+  const state = { op: "select", filters: [], payload: null, options: {}, returning: true, single: false };
+  let started = false;
+  const start = (op) => {
+    if (!started) Object.assign(state, { op, returning: op === "select" });
+    started = true;
+  };
+  const query = Promise.resolve().then(() => run(state));
+  return Object.assign(query, {
     select() {
-      if (state.op) state.returning = true;
-      else state.op = "select";
-      return api;
+      if (started) state.returning = true;
+      else start("select");
+      return query;
     },
     upsert(payload, options = {}) {
-      Object.assign(state, { op: "upsert", payload, options });
-      return api;
+      start("upsert");
+      Object.assign(state, { payload, options });
+      return query;
     },
     update(payload) {
-      Object.assign(state, { op: "update", payload });
-      return api;
+      start("update");
+      state.payload = payload;
+      return query;
     },
     eq(col, value) {
       state.filters.push(["eq", col, value]);
-      return api;
+      return query;
     },
     is(col) {
       state.filters.push(["is", col, null]);
-      return api;
+      return query;
     },
     ilike() {
-      return api;
+      return query;
     },
     limit() {
-      return api;
+      return query;
     },
     maybeSingle() {
       state.single = true;
-      return api;
+      return query;
     },
-    then(resolve, reject) {
-      try {
-        resolve(run());
-      } catch (err) {
-        reject(err);
-      }
-    },
-  };
-  function run() {
-    let data = [];
-    if (state.op === "select") {
-      data = [...rows.values()].filter((row) => matches(row, state.filters)).map((row) => ({ ...row }));
-      const hook = globalThis.__membershipAfterRead;
-      if (typeof hook === "function") {
-        delete globalThis.__membershipAfterRead;
-        hook();
-      }
-    } else if (state.op === "upsert") {
-      const exists = rows.has(state.payload.user_key);
-      if (!exists || !state.options.ignoreDuplicates) {
-        rows.set(state.payload.user_key, { ...state.payload });
-        data = [{ ...state.payload }];
-      }
-    } else if (state.op === "update") {
-      for (const row of rows.values()) {
-        if (!matches(row, state.filters)) continue;
-        Object.assign(row, state.payload);
-        data.push({ ...row });
-      }
-    }
-    if (state.single) return { data: data[0] ?? null, error: null };
-    return { data: state.returning || state.op === "select" ? data : null, error: null };
-  }
-  return api;
+  });
 }
 
 export function getSupabaseServerClient() {
