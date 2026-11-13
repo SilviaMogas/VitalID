@@ -167,7 +167,12 @@ export async function listShares(
 export async function pruneExpiredShares(ownerKey: string): Promise<void> {
   if (useSupabase) return supabaseStore.pruneExpiredShares(ownerKey);
   if (useRedis) {
-    await redisOwnerShares(ownerKey);
+    const index = ownerIndexKey(ownerKey);
+    for (const s of await redisOwnerShares(ownerKey)) {
+      if (new Date(s.expiresAt).getTime() > Date.now()) continue;
+      await redis(['DEL', KEY_PREFIX + s.id]);
+      await redis(['SREM', index, s.id]);
+    }
     return;
   }
   let deleted = false;
