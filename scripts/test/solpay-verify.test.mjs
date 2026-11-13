@@ -411,3 +411,51 @@ test('paid members can complete onboarding without the plan picker flag', async 
     delete globalThis.__testUser;
   }
 });
+
+async function paySol(user, signature, payer) {
+  const request = await createSolPayment(user, 'plus', 'monthly');
+  const tx = transferTx({ signatureReference: request.reference, lamports: LAMPORTS, payer });
+  const rpc = fakeRpc({ signatures: [{ signature, err: null }], transactions: { [signature]: tx } });
+  assert.deepEqual(await confirmSolPayment(request.reference, user, rpc), { state: 'paid' });
+  return { reference: request.reference, rpc };
+}
+
+test('alternating re-polls of two paid references never extend the plan', async () => {
+  const store = getMembershipStore();
+  const user = 'user-sol-replay-alt';
+  const a = await paySol(user, 'sig-replay-a', 'payer-i');
+  const b = await paySol(user, 'sig-replay-b', 'payer-i');
+  const paid = await store.get(user);
+  for (const poll of [a, b, a, b, a]) {
+    assert.deepEqual(await confirmSolPayment(poll.reference, user, poll.rpc), { state: 'paid' });
+  }
+  const after = await store.get(user);
+  assert.equal(after.subscriptionPeriodEnd, paid.subscriptionPeriodEnd);
+  assert.equal(after.stripeCheckoutSessionId, paid.stripeCheckoutSessionId);
+});
+
+test('a membership reset cannot replay a paid reference', async () => {
+  const store = getMembershipStore();
+  const user = 'user-sol-replay-reset';
+  const a = await paySol(user, 'sig-replay-reset', 'payer-j');
+  await store.reset(user);
+  assert.deepEqual(await confirmSolPayment(a.reference, user, a.rpc), { state: 'paid' });
+  const after = await store.get(user);
+  assert.equal(after.plan, 'free');
+  assert.equal(after.subscriptionPeriodEnd, null);
+});
+
+test('membership reset is refused for real accounts', async () => {
+  const store = getMembershipStore();
+  const user = 'user-sol-reset-real';
+  await paySol(user, 'sig-reset-real', 'payer-k');
+  globalThis.__testUser = { id: user };
+  try {
+    const { POST } = await import('@/app/api/membership/reset/route');
+    const res = await POST();
+    assert.equal(res.status, 403);
+    assert.equal((await store.get(user)).plan, 'plus');
+  } finally {
+    delete globalThis.__testUser;
+  }
+});

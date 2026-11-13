@@ -132,8 +132,9 @@ export function extractPayment(
 
 async function activate(payment: SolPayment, signature: string, payer: string | null) {
   // Additive: every paid request grants its purchased days on top of any paid
-  // time remaining; the plan keeps the highest rank. Atomic per membership
-  // row, so settle order, re-polls and concurrent confirms cannot regress it.
+  // time remaining; the plan keeps the highest rank. Each payment signature is
+  // recorded as applied, so re-polls, resets and alternating references can
+  // never grant its days twice.
   await getMembershipStore().activateSol({
     userKey: payment.userKey,
     plan: payment.plan,
@@ -158,8 +159,8 @@ export async function confirmSolPayment(
   if (payment.userKey !== userKey) return { state: 'forbidden' };
   if (payment.status === 'paid') {
     // The signature was claimed already, but a previous poll may have failed
-    // before activatePlan ran — retry it. activatePlan is idempotent on the
-    // checkout-session id, so this is a no-op once activation has landed.
+    // before activation ran — retry it. Activation is idempotent per payment,
+    // so this is a no-op once its days have been applied.
     if (payment.signature) await activate(payment, payment.signature, payment.payer);
     return { state: 'paid' };
   }

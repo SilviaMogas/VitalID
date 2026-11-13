@@ -5,6 +5,7 @@ import { applySolReadExpiry, hasLiveStripeSubscription, SOL_SESSION_PREFIX } fro
 
 interface MemoryGlobal {
   __vitalIdMembershipStore?: Map<string, MembershipRecord>;
+  __vitalIdSolAppliedSessions?: Set<string>;
 }
 
 /**
@@ -14,14 +15,18 @@ interface MemoryGlobal {
  */
 export class MemoryMembershipStore implements MembershipStore {
   private readonly map: Map<string, MembershipRecord>;
+  private readonly appliedSolSessions: Set<string>;
 
   constructor(map?: Map<string, MembershipRecord>) {
     const g = globalThis as MemoryGlobal;
     if (map) {
       this.map = map;
+      this.appliedSolSessions = new Set();
     } else {
       g.__vitalIdMembershipStore ??= new Map();
+      g.__vitalIdSolAppliedSessions ??= new Set();
       this.map = g.__vitalIdMembershipStore;
+      this.appliedSolSessions = g.__vitalIdSolAppliedSessions;
     }
   }
 
@@ -114,7 +119,8 @@ export class MemoryMembershipStore implements MembershipStore {
   }
 
   // Same semantics as vital_id_sol_activate in Postgres — additive days and
-  // highest-plan-rank, deduped by sessionId. Serial in memory by nature.
+  // highest-plan-rank, each sessionId applied at most once (survives reset()).
+  // Serial in memory by nature.
   async activateSol(input: {
     userKey: string;
     plan: Exclude<PlanId, "free">;
@@ -125,10 +131,11 @@ export class MemoryMembershipStore implements MembershipStore {
     const now = new Date();
     const stored = this.map.get(input.userKey);
     const existing = stored ? applySolReadExpiry(stored) : undefined;
-    if (existing?.stripeCheckoutSessionId === input.sessionId) {
-      return structuredClone(existing);
-    }
     const nowIso = now.toISOString();
+    if (this.appliedSolSessions.has(input.sessionId)) {
+      return structuredClone(existing ?? this.blank(input.userKey, nowIso));
+    }
+    this.appliedSolSessions.add(input.sessionId);
     const base = existing ?? this.blank(input.userKey, nowIso);
     const stripeManaged = hasLiveStripeSubscription(base);
     const remaining = base.subscriptionPeriodEnd ? Date.parse(base.subscriptionPeriodEnd) : 0;
