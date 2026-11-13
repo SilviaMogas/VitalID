@@ -10,6 +10,8 @@ const { mapStravaToDaily } = await import('@/lib/connectors/wearables/providers/
 const { parseIngestPayload } = await import('@/lib/connectors/wearables/ingest');
 const consent = await import('@/app/api/consent/route');
 const ingest = await import('@/app/api/connectors/wearables/ingest/route');
+const syncRoute = await import('@/app/api/connectors/wearables/[provider]/sync/route');
+const { getWearableStore, syncCooldownRemaining, SYNC_HOURLY_LIMIT } = await import('@/lib/connectors/wearables');
 
 const U = { id: '00000000-0000-4000-8000-0000000000c1', email: 'c@example.test' };
 const post = (url, body, headers = {}) =>
@@ -92,4 +94,65 @@ test('ingest route: token issuance needs consent; push is bearer-only and per-us
   assert.notEqual(rotated.token, token);
   assert.equal((await ingest.POST(post(url, body, { authorization: `Bearer ${token}` }))).status, 401);
   globalThis.__testUser = null;
+});
+
+async function withStravaSync(userId, respond, run) {
+  process.env.STRAVA_CLIENT_ID = 'synthetic-strava-id';
+  process.env.STRAVA_CLIENT_SECRET = 'synthetic-strava-secret';
+  await getWearableStore().upsert({
+    userKey: userId, provider: 'strava', externalUserId: null, accessToken: 'synthetic-access',
+    refreshToken: 'synthetic-refresh', expiresAt: '2999-01-01T00:00:00Z', scope: null,
+    connectedAt: new Date().toISOString(), lastSyncedAt: null, lastSyncError: null,
+  });
+  const realFetch = globalThis.fetch;
+  const calls = { n: 0 };
+  globalThis.fetch = async () => { calls.n += 1; return respond(); };
+  globalThis.__testUser = { id: userId, email: `${userId}@example.test` };
+  const sync = () => syncRoute.POST(
+    new Request('http://localhost:3000/api/connectors/wearables/strava/sync', { method: 'POST', headers: { origin: 'http://localhost:3000' } }),
+    { params: Promise.resolve({ provider: 'strava' }) },
+  );
+  try {
+    await run(sync, calls);
+  } finally {
+    globalThis.fetch = realFetch;
+    globalThis.__testUser = null;
+    delete process.env.STRAVA_CLIENT_ID;
+    delete process.env.STRAVA_CLIENT_SECRET;
+  }
+}
+
+test('sync route: a second sync right after a successful one is rejected without calling the provider', async () => {
+  await withStravaSync('00000000-0000-4000-8000-0000000000d1', () => Response.json([]), async (sync, calls) => {
+    const first = await sync();
+    assert.equal(first.status, 200);
+    const afterFirst = calls.n;
+    assert.ok(afterFirst >= 1);
+    const second = await sync();
+    assert.equal(second.status, 429);
+    assert.equal((await second.json()).error, 'rate_limited');
+    assert.ok(Number(second.headers.get('retry-after')) > 0);
+    assert.equal(calls.n, afterFirst);
+  });
+});
+
+test('sync route: failed syncs count towards the hourly limit', async () => {
+  const fail = () => new Response('{}', { status: 400 });
+  await withStravaSync('00000000-0000-4000-8000-0000000000d2', fail, async (sync, calls) => {
+    for (let i = 0; i < SYNC_HOURLY_LIMIT; i++) assert.equal((await sync()).status, 500);
+    const reached = calls.n;
+    assert.equal(reached, SYNC_HOURLY_LIMIT);
+    const limited = await sync();
+    assert.equal(limited.status, 429);
+    assert.ok(Number(limited.headers.get('retry-after')) > 0);
+    assert.equal(calls.n, reached);
+  });
+});
+
+test('sync cooldown only applies within 5 minutes of the last successful sync', () => {
+  const now = Date.parse('2026-11-14T12:00:00Z');
+  assert.equal(syncCooldownRemaining(null, now), 0);
+  assert.equal(syncCooldownRemaining('garbage', now), 0);
+  assert.equal(syncCooldownRemaining('2026-11-14T11:59:00Z', now), 240);
+  assert.equal(syncCooldownRemaining('2026-11-14T11:54:00Z', now), 0);
 });

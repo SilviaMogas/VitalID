@@ -99,6 +99,11 @@ async function withStoreFallback<T>(operation: (store: LoginThrottleStore) => Pr
   }
 }
 
+/** Counts one attempt for key; returns 0 if within limit, else seconds until the window resets. */
+export async function hitAttemptLimit(key: string, limit: number, windowSeconds: number): Promise<number> {
+  return withStoreFallback((store) => store.hit(key, limit, windowSeconds));
+}
+
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
