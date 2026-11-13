@@ -2,6 +2,8 @@ import 'server-only';
 import { getSupabaseServerClient, isSupabaseConfigured } from '@/lib/supabase/server';
 import type { BillingInterval } from '@/lib/plans';
 import type { SolCluster } from './config';
+import { getMembershipStore, MemoryMembershipStore } from '@/lib/membership/store';
+import { SOL_SESSION_PREFIX } from '@/lib/membership/sol';
 
 const TABLE = 'vital_id_sol_payments';
 
@@ -19,9 +21,11 @@ export interface SolPayment {
   expiresAt: string;
   createdAt: string;
   confirmedAt: string | null;
+  appliedAt: string | null;
 }
 
 export type ClaimResult = 'claimed' | 'already-paid' | 'signature-used' | 'missing';
+export type ApplyResult = 'applied' | 'already-applied';
 
 export interface SolPaymentStore {
   create(payment: SolPayment): Promise<void>;
@@ -39,6 +43,12 @@ export interface SolPaymentStore {
    * order, re-polls, or concurrent confirmations.
    */
   hasNewerClaimed(payment: SolPayment): Promise<boolean>;
+  /**
+   * Atomically records that this settled payment was applied and extends the
+   * membership. The guard lives on the payment row (`applied_at`), so repeats
+   * are no-ops regardless of the membership row's state.
+   */
+  applyPayment(reference: string): Promise<ApplyResult>;
 }
 
 interface Row {
@@ -55,6 +65,7 @@ interface Row {
   expires_at: string;
   created_at: string;
   confirmed_at: string | null;
+  applied_at: string | null;
 }
 
 function toRecord(row: Row): SolPayment {
@@ -74,6 +85,7 @@ function toRecord(row: Row): SolPayment {
     expiresAt: row.expires_at,
     createdAt: row.created_at,
     confirmedAt: row.confirmed_at,
+    appliedAt: row.applied_at ?? null,
   };
 }
 
@@ -108,6 +120,7 @@ class SupabaseSolPaymentStore implements SolPaymentStore {
         expires_at: payment.expiresAt,
         created_at: createdAt,
         confirmed_at: payment.confirmedAt,
+        applied_at: payment.appliedAt,
       });
     if (error) throw new Error(`sol payment create failed: ${error.message}`);
   }
@@ -157,6 +170,14 @@ class SupabaseSolPaymentStore implements SolPaymentStore {
       .limit(1);
     if (error) throw new Error(`sol payment ordering failed: ${error.message}`);
     return Array.isArray(data) && data.length > 0;
+  }
+
+  async applyPayment(reference: string): Promise<ApplyResult> {
+    const { data, error } = await getSupabaseServerClient().rpc('vital_id_sol_apply_payment', {
+      p_reference: reference,
+    });
+    if (error) throw new Error(`sol payment apply failed: ${error.message}`);
+    return data === true ? 'applied' : 'already-applied';
   }
 }
 
@@ -228,6 +249,32 @@ class MemorySolPaymentStore implements SolPaymentStore {
       }
     }
     return false;
+  }
+
+  async applyPayment(reference: string): Promise<ApplyResult> {
+    const membership = getMembershipStore();
+    if (!(membership instanceof MemoryMembershipStore)) {
+      throw new Error('memory SOL payment store requires the memory membership store');
+    }
+    const record = this.payments().get(reference);
+    if (!record) throw new Error('sol payment missing');
+    if (record.status !== 'paid' || !record.signature) throw new Error('sol payment not settled');
+    if (record.appliedAt) return 'already-applied';
+    // Mark before awaiting so concurrent confirmations cannot both apply.
+    record.appliedAt = new Date().toISOString();
+    try {
+      await membership.activateSol({
+        userKey: record.userKey,
+        plan: record.plan,
+        extendDays: record.interval === 'annual' ? 365 : 30,
+        sessionId: `${SOL_SESSION_PREFIX}${record.signature}`,
+        payer: record.payer,
+      });
+    } catch (error) {
+      record.appliedAt = null;
+      throw error;
+    }
+    return 'applied';
   }
 }
 

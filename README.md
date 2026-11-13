@@ -190,7 +190,7 @@ Every number on screen is labelled with where it came from.
 | Auth | `POST /api/auth/signup` · `POST /api/auth/signin` · `POST /api/auth/signout` · `GET /api/auth/me` |
 | Onboarding | `GET / PUT /api/onboarding` |
 | Sharing | `POST / GET /api/share` · `GET /api/share/:id` · `POST /api/share/:id/revoke` · `POST /api/share/:id/send` · `POST /api/share/reset` · `GET /api/share/health` |
-| Membership | `GET /api/membership` · `POST /api/membership/choose-free` · `POST /api/membership/reset` |
+| Membership | `GET /api/membership` · `POST /api/membership/choose-free` · `POST /api/membership/reset` (non-production) |
 | Community | `GET /api/community` · `POST /api/community` |
 | Wellness | `GET /api/wellness?kind=workout\|supplement` · `POST /api/wellness` |
 | Payments | `POST /api/stripe/checkout` · `POST /api/stripe/webhook` · `POST /api/stripe/portal` |

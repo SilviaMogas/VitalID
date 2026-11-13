@@ -411,3 +411,58 @@ test('paid members can complete onboarding without the plan picker flag', async 
     delete globalThis.__testUser;
   }
 });
+
+async function payReference(user, plan, interval, lamports, signature, payer) {
+  const request = await createSolPayment(user, plan, interval);
+  const tx = transferTx({ signatureReference: request.reference, lamports, payer });
+  const rpc = fakeRpc({ signatures: [{ signature, err: null }], transactions: { [signature]: tx } });
+  assert.deepEqual(await confirmSolPayment(request.reference, user, rpc), { state: 'paid' });
+  return { reference: request.reference, rpc };
+}
+
+test('membership reset does not let a paid SOL reference re-apply', async () => {
+  const user = 'user-sol-reset-replay';
+  const paid = await payReference(user, 'plus', 'monthly', LAMPORTS, 'sig-reset-replay', 'payer-r');
+  assert.equal((await getMembershipStore().get(user)).plan, 'plus');
+  assert.ok((await getSolPaymentStore().get(paid.reference)).appliedAt);
+  await getMembershipStore().reset(user);
+  assert.deepEqual(await confirmSolPayment(paid.reference, user, paid.rpc), { state: 'paid' });
+  const after = await getMembershipStore().get(user);
+  assert.equal(after.plan, 'free');
+  assert.equal(after.subscriptionPeriodEnd, null);
+});
+
+test('alternating polls of two paid references never re-apply', async () => {
+  const store = getMembershipStore();
+  const user = 'user-sol-alternate';
+  const a = await payReference(user, 'plus', 'monthly', LAMPORTS, 'sig-alt-a', 'payer-s');
+  const b = await payReference(user, 'pro', 'annual', 500_000_000n, 'sig-alt-b', 'payer-s');
+  const settled = await store.get(user);
+  assert.equal(settled.plan, 'pro');
+  for (const paid of [a, b, a, b]) {
+    assert.deepEqual(await confirmSolPayment(paid.reference, user, paid.rpc), { state: 'paid' });
+  }
+  const after = await store.get(user);
+  assert.equal(after.plan, 'pro');
+  assert.equal(after.subscriptionPeriodEnd, settled.subscriptionPeriodEnd);
+});
+
+test('membership reset route is non-production and same-origin only', async () => {
+  const { POST } = await import('@/app/api/membership/reset/route');
+  const previous = process.env.NODE_ENV;
+  try {
+    process.env.NODE_ENV = 'production';
+    const prod = await POST(new Request('http://localhost/api/membership/reset', { method: 'POST' }));
+    assert.equal(prod.status, 404);
+    process.env.NODE_ENV = 'test';
+    const crossOrigin = await POST(
+      new Request('http://localhost/api/membership/reset', {
+        method: 'POST',
+        headers: { origin: 'https://evil.example', host: 'localhost' },
+      }),
+    );
+    assert.equal(crossOrigin.status, 403);
+  } finally {
+    process.env.NODE_ENV = previous;
+  }
+});

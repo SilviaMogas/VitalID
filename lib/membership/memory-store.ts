@@ -113,8 +113,9 @@ export class MemoryMembershipStore implements MembershipStore {
     return structuredClone(record);
   }
 
-  // Same semantics as vital_id_sol_activate in Postgres — additive days and
-  // highest-plan-rank, deduped by sessionId. Serial in memory by nature.
+  // Same semantics as vital_id_sol_apply_payment in Postgres — additive days
+  // and highest-plan-rank. Replays are blocked by the SOL payment store's
+  // appliedAt guard, which is the only caller.
   async activateSol(input: {
     userKey: string;
     plan: Exclude<PlanId, "free">;
@@ -125,9 +126,6 @@ export class MemoryMembershipStore implements MembershipStore {
     const now = new Date();
     const stored = this.map.get(input.userKey);
     const existing = stored ? applySolReadExpiry(stored) : undefined;
-    if (existing?.stripeCheckoutSessionId === input.sessionId) {
-      return structuredClone(existing);
-    }
     const nowIso = now.toISOString();
     const base = existing ?? this.blank(input.userKey, nowIso);
     const stripeManaged = hasLiveStripeSubscription(base);
