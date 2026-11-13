@@ -31,14 +31,22 @@ export function createRpc(url: string, fetchImpl?: FetchLike): SolanaRpc {
   };
 }
 
+export interface SignatureInfo {
+  signature: string;
+  err: unknown;
+  blockTime?: number | null;
+}
+
+/** One page of signatures for `address`, newest first; `before` pages back. */
 export async function getSignaturesForAddress(
   rpc: SolanaRpc,
   address: string,
   limit = 10,
-): Promise<{ signature: string; err: unknown }[]> {
-  const result = await rpc.call<{ signature: string; err: unknown }[]>('getSignaturesForAddress', [
+  before?: string,
+): Promise<SignatureInfo[]> {
+  const result = await rpc.call<SignatureInfo[]>('getSignaturesForAddress', [
     address,
-    { limit },
+    before ? { limit, before } : { limit },
   ]);
   return Array.isArray(result) ? result : [];
 }

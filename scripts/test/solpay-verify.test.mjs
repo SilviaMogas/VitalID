@@ -22,7 +22,14 @@ const { getSolPaymentStore } = await import('@/lib/solpay/store');
 const { getMembershipStore } = await import('@/lib/membership/store');
 const { applySolReadExpiry } = await import('@/lib/membership/sol');
 
-function transferTx({ signatureReference, lamports, payer, err = null, inner = false }) {
+function transferTx({
+  signatureReference,
+  lamports,
+  payer,
+  err = null,
+  inner = false,
+  blockTime = Math.floor(Date.now() / 1000),
+}) {
   const ix = {
     program: 'system',
     parsed: {
@@ -31,7 +38,7 @@ function transferTx({ signatureReference, lamports, payer, err = null, inner = f
     },
   };
   return {
-    blockTime: 1_700_000_000,
+    blockTime,
     meta: { err, innerInstructions: inner ? [{ index: 0, instructions: [ix] }] : [] },
     transaction: {
       message: {
@@ -46,14 +53,19 @@ function transferTx({ signatureReference, lamports, payer, err = null, inner = f
   };
 }
 
-function fakeRpc({ signatures = [], transactions = {} }) {
+function fakeRpc({ signatures = [], transactions = {}, signaturePages = null }) {
   const calls = [];
+  const signatureCalls = [];
   return {
     url: 'stub://devnet',
     calls,
+    signatureCalls,
     async call(method, params) {
       calls.push(method);
-      if (method === 'getSignaturesForAddress') return signatures;
+      if (method === 'getSignaturesForAddress') {
+        signatureCalls.push(params[1]);
+        return signaturePages ? (signaturePages[params[1].before ?? ''] ?? []) : signatures;
+      }
       if (method === 'getTransaction') return transactions[params[0]] ?? null;
       throw new Error(`unexpected rpc method ${method}`);
     },
@@ -164,6 +176,114 @@ test('one signature cannot settle two payment requests', async () => {
   });
   const second = await confirmSolPayment(request2.reference, 'user-sol-3', rpc2);
   assert.notEqual(second.state, 'paid');
+});
+
+function junkTx(reference) {
+  // Succeeds and lists the reference, but transfers nothing to the treasury.
+  const tx = transferTx({ signatureReference: reference, lamports: 1n, payer: 'mallory' });
+  tx.transaction.message.instructions[0].parsed.info.destination = 'mallory';
+  return tx;
+}
+
+test('newer junk transactions cannot push the payment out of the first page', async () => {
+  const user = 'user-sol-junk-page';
+  const request = await createSolPayment(user, 'plus', 'monthly');
+  const transactions = {
+    'sig-real': transferTx({ signatureReference: request.reference, lamports: LAMPORTS, payer: 'payer-j' }),
+  };
+  const firstPage = [];
+  for (let i = 0; i < 1000; i += 1) {
+    const signature = `sig-junk-${i}`;
+    // Mix of failed and successful junk referencing the payment.
+    const err = i % 2 ? { InstructionError: [0, 'x'] } : null;
+    if (!err) transactions[signature] = junkTx(request.reference);
+    firstPage.push({ signature, err, blockTime: Math.floor(Date.now() / 1000) });
+  }
+  const rpc = fakeRpc({
+    signaturePages: { '': firstPage, 'sig-junk-999': [{ signature: 'sig-real', err: null }] },
+    transactions,
+  });
+  assert.deepEqual(await confirmSolPayment(request.reference, user, rpc), { state: 'paid' });
+  assert.equal(rpc.signatureCalls.length, 2);
+  assert.equal(rpc.signatureCalls[1].before, 'sig-junk-999');
+  assert.equal((await getMembershipStore().get(user)).stripeCheckoutSessionId, 'sol:sig-real');
+});
+
+test('ten newer junk transactions do not hide the payment', async () => {
+  const user = 'user-sol-junk-ten';
+  const request = await createSolPayment(user, 'plus', 'monthly');
+  const transactions = {
+    'sig-real-ten': transferTx({ signatureReference: request.reference, lamports: LAMPORTS, payer: 'payer-k' }),
+  };
+  const signatures = [];
+  for (let i = 0; i < 10; i += 1) {
+    transactions[`sig-spam-${i}`] = junkTx(request.reference);
+    signatures.push({ signature: `sig-spam-${i}`, err: null });
+  }
+  signatures.push({ signature: 'sig-real-ten', err: null });
+  const rpc = fakeRpc({ signatures, transactions });
+  assert.deepEqual(await confirmSolPayment(request.reference, user, rpc), { state: 'paid' });
+  // Oldest candidates are checked first, so the junk is never fetched.
+  assert.equal(rpc.calls.filter((m) => m === 'getTransaction').length, 1);
+});
+
+test('signatures older than the request stop paging and are ignored', async () => {
+  const user = 'user-sol-old';
+  const request = await createSolPayment(user, 'plus', 'monthly');
+  const old = Math.floor(Date.now() / 1000) - 86_400;
+  const page = Array.from({ length: 1000 }, (_, i) => ({ signature: `sig-old-${i}`, err: null, blockTime: old }));
+  const transactions = {
+    'sig-old-0': transferTx({ signatureReference: request.reference, lamports: LAMPORTS, payer: 'payer-l', blockTime: old }),
+  };
+  const rpc = fakeRpc({ signaturePages: { '': page }, transactions });
+  assert.deepEqual(await confirmSolPayment(request.reference, user, rpc), { state: 'pending' });
+  assert.equal(rpc.signatureCalls.length, 1);
+  assert.equal(rpc.calls.filter((m) => m === 'getTransaction').length, 0);
+});
+
+test('a payment made before expiry still confirms after the request expires', async () => {
+  const store = getSolPaymentStore();
+  const createdAt = new Date(Date.now() - 2 * 3_600_000);
+  const expiresAt = new Date(Date.now() - 3_600_000);
+  const base = {
+    userKey: 'user-sol-late',
+    plan: 'plus',
+    interval: 'monthly',
+    lamports: '20000000',
+    treasury: TREASURY,
+    cluster: 'devnet',
+    status: 'pending',
+    signature: null,
+    payer: null,
+    expiresAt: expiresAt.toISOString(),
+    createdAt: createdAt.toISOString(),
+    confirmedAt: null,
+  };
+  const inTime = 'lateRef1111111111111111111111111111';
+  const tooLate = 'lateRef2222222222222222222222222222';
+  await store.create({ ...base, reference: inTime });
+  await store.create({ ...base, reference: tooLate });
+  const paidAt = Math.floor(createdAt.getTime() / 1000) + 60;
+  const rpc = fakeRpc({
+    signatures: [{ signature: 'sig-in-time', err: null, blockTime: paidAt }],
+    transactions: {
+      'sig-in-time': transferTx({ signatureReference: inTime, lamports: LAMPORTS, payer: 'payer-m', blockTime: paidAt }),
+    },
+  });
+  assert.deepEqual(await confirmSolPayment(inTime, 'user-sol-late', rpc), { state: 'paid' });
+  const afterExpiry = Math.floor(Date.now() / 1000);
+  const lateRpc = fakeRpc({
+    signatures: [{ signature: 'sig-too-late', err: null, blockTime: afterExpiry }],
+    transactions: {
+      'sig-too-late': transferTx({
+        signatureReference: tooLate,
+        lamports: LAMPORTS,
+        payer: 'payer-m',
+        blockTime: afterExpiry,
+      }),
+    },
+  });
+  assert.deepEqual(await confirmSolPayment(tooLate, 'user-sol-late', lateRpc), { state: 'expired' });
 });
 
 test('expired and foreign requests are refused', async () => {
