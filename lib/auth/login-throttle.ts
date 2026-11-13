@@ -6,6 +6,9 @@ import { isSupabaseConfigured } from '@/lib/supabase/env';
 export const EMAIL_LIMIT = 10;
 export const IP_LIMIT = 50;
 export const WINDOW_SECONDS = 15 * 60;
+export const SIGNUP_EMAIL_LIMIT = 3;
+export const SIGNUP_IP_LIMIT = 10;
+export const SIGNUP_WINDOW_SECONDS = 60 * 60;
 
 export interface LoginThrottleStore {
   hit(key: string, limit: number, windowSeconds: number): Promise<number>;
@@ -127,4 +130,15 @@ export async function throttlePasswordLogin<T>(
   const result = await attempt();
   if (succeeded(result)) await withStoreFallback((store) => store.clear(emailKey));
   return { limited: false, result };
+}
+
+/** Counts every sign-up attempt per email and per client IP; returns seconds to wait (0 = allowed). */
+export async function throttleSignup(request: Request, email: string): Promise<number> {
+  const emailKey = `signup-email:${sha256(email.trim().toLowerCase())}`;
+  const ipKey = `signup-ip:${sha256(clientIp(request))}`;
+  const [emailRetryAfter, ipRetryAfter] = await Promise.all([
+    withStoreFallback((store) => store.hit(emailKey, SIGNUP_EMAIL_LIMIT, SIGNUP_WINDOW_SECONDS)),
+    withStoreFallback((store) => store.hit(ipKey, SIGNUP_IP_LIMIT, SIGNUP_WINDOW_SECONDS)),
+  ]);
+  return Math.max(emailRetryAfter, ipRetryAfter);
 }

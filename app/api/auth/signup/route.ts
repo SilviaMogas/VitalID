@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { signUpWithPassword } from '@/lib/auth/server';
+import { throttleSignup } from '@/lib/auth/login-throttle';
 import { getMembershipStore } from '@/lib/membership/store';
 import { getOnboardingStore } from '@/lib/onboarding/store';
 import { getConsentStore } from '@/lib/consent';
@@ -10,6 +11,10 @@ export const runtime = 'nodejs';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const field = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+// Same body for new and already-registered emails, so the response does not
+// reveal whether an address has an account.
+const pendingConfirmation = () =>
+  NextResponse.json({ confirmEmail: true }, { headers: { 'Cache-Control': 'no-store' } });
 
 export async function POST(req: Request) {
   let body: Record<string, unknown>;
@@ -45,6 +50,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'weak_password' }, { status: 400 });
   }
 
+  const retryAfter = await throttleSignup(req, email);
+  if (retryAfter > 0) {
+    return NextResponse.json(
+      { error: 'rate_limited' },
+      { status: 429, headers: { 'Retry-After': String(retryAfter), 'Cache-Control': 'no-store' } },
+    );
+  }
+
   const result = await signUpWithPassword({
     email,
     password,
@@ -54,6 +67,7 @@ export async function POST(req: Request) {
     city,
     emailRedirectTo: `${new URL(req.url).origin}/signin?confirmed=1`,
   });
+  if (!result.ok && result.code === 'email_taken') return pendingConfirmation();
   if (!result.ok) {
     const status = result.code === 'not_configured' ? 503
       : result.code === 'unknown' || result.code === 'confirmation_send_failed' ? 500
@@ -81,8 +95,5 @@ export async function POST(req: Request) {
     console.error('[signup] consent audit write failed — run supabase/migrations/20261008_vital_id_consents.sql', err);
     return NextResponse.json({ error: 'consent_audit_failed' }, { status: 503 });
   }
-  return NextResponse.json(
-    { userId: result.user.id, confirmEmail: true },
-    { headers: { 'Cache-Control': 'no-store' } },
-  );
+  return pendingConfirmation();
 }

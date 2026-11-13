@@ -21,6 +21,7 @@ const ERROR_KEYS: Record<string, TranslationKey> = {
   confirmation_send_failed: "auth.error.confirmationSendFailed",
   consent_required: "consent.error",
   consent_audit_failed: "consent.auditFailed",
+  rate_limited: "auth.error.signupRateLimited",
 };
 
 export function SignupForm() {
