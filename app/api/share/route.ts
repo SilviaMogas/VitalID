@@ -15,7 +15,7 @@ import { resolveUserData } from '@/lib/user-data';
 import { createShare, listShares } from '@/lib/share-store';
 import { getShareApiUser, isSameOrigin, shareJson } from '@/lib/share-api';
 import { recipientAccountExists } from '@/lib/auth/server';
-import { getAccountState } from '@/lib/auth/next-route';
+import { getMembershipStore } from '@/lib/membership/store';
 import { hasFeature } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
     const { snapshot: full, owner } = await resolveUserData();
     if (owner !== 'member') return shareJson({ error: 'unavailable' }, 403);
     if (!user) return shareJson({ error: 'unavailable' }, 401);
-    const { plan } = await getAccountState(user.id);
+    const plan = (await getMembershipStore().get(user.id))?.plan ?? 'free';
     if (durationMinutes !== 60 && !hasFeature(plan, 'configurableExpiry')) {
       return shareJson({ error: 'duration_not_available' }, 403);
     }
