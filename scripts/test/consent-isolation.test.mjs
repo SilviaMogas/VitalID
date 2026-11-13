@@ -69,6 +69,33 @@ test('signup is refused server-side without both separate consents', async () =>
   assert.deepEqual(Object.keys(c).sort(), ['health_data', 'privacy_policy', 'terms_of_service']);
 });
 
+test('signup rejects cross-site and non-JSON posts before creating an account', async () => {
+  const body = JSON.stringify({
+    firstName: 'C', lastName: 'S', email: 'csrf@example.test', password: 'synthetic-pass-1',
+    country: 'AE', city: 'X', consentTerms: true, consentHealthData: true,
+  });
+  const post = (headers) => signup.POST(new Request('https://vitalid.example/api/auth/signup', { method: 'POST', headers, body }));
+  globalThis.__signupId = '00000000-0000-4000-8000-0000000000e1';
+  const cases = [
+    [{ 'Content-Type': 'application/json', Origin: 'https://evil.example' }, 403, 'forbidden'],
+    [{ 'Content-Type': 'text/plain', Origin: 'https://evil.example' }, 403, 'forbidden'],
+    [{ 'Content-Type': 'application/json', 'Sec-Fetch-Site': 'cross-site' }, 403, 'forbidden'],
+    [{ 'Content-Type': 'text/plain' }, 415, 'unsupported_media_type'],
+    [{ 'Content-Type': 'application/x-www-form-urlencoded', Origin: 'https://vitalid.example' }, 415, 'unsupported_media_type'],
+  ];
+  for (const [headers, status, error] of cases) {
+    const r = await post(headers);
+    assert.equal(r.status, status, JSON.stringify(headers));
+    assert.equal((await r.json()).error, error);
+    assert.equal(r.headers.get('set-cookie'), null);
+  }
+  as({ id: globalThis.__signupId, email: 'csrf@example.test' });
+  assert.deepEqual((await (await consent.GET()).json()).consents, {});
+
+  const ok = await post({ 'Content-Type': 'application/json; charset=utf-8', Origin: 'https://vitalid.example', 'Sec-Fetch-Site': 'same-origin' });
+  assert.equal(ok.status, 200);
+});
+
 test('signup fails explicitly when the consent audit write fails', async () => {
   const real = globalThis.__vitalIdConsentStore;
   globalThis.__vitalIdConsentStore = {

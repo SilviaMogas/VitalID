@@ -81,6 +81,29 @@ test('web sign-in allows ten failures and rejects the eleventh before Supabase',
   assert.equal(authCalls, 10);
 });
 
+test('web sign-in rejects cross-site and non-JSON posts before Supabase', async () => {
+  const body = JSON.stringify({ email: 'victim@example.test', password: 'correct-password' });
+  const post = (headers) => route.POST(new Request('https://vitalid.example/api/auth/signin', { method: 'POST', headers, body }));
+  const cases = [
+    [{ 'content-type': 'application/json', origin: 'https://evil.example' }, 403, 'forbidden'],
+    [{ 'content-type': 'text/plain', origin: 'https://evil.example' }, 403, 'forbidden'],
+    [{ 'content-type': 'application/json', 'sec-fetch-site': 'cross-site' }, 403, 'forbidden'],
+    [{ 'content-type': 'text/plain' }, 415, 'unsupported_media_type'],
+    [{ 'content-type': 'multipart/form-data; boundary=x', origin: 'https://vitalid.example' }, 415, 'unsupported_media_type'],
+  ];
+  for (const [headers, status, error] of cases) {
+    const response = await post(headers);
+    assert.equal(response.status, status, JSON.stringify(headers));
+    assert.deepEqual(await responseBody(response), { error });
+    assert.equal(response.headers.get('set-cookie'), null);
+  }
+  assert.equal(authCalls, 0);
+
+  const ok = await post({ 'content-type': 'application/json', origin: 'https://vitalid.example', 'sec-fetch-site': 'same-origin' });
+  assert.equal(ok.status, 200);
+  assert.equal(authCalls, 1);
+});
+
 test('email variants share one normalized throttle bucket', async () => {
   for (let i = 0; i < 10; i += 1) {
     const email = i % 2 === 0 ? 'victim@example.test' : ' Victim@Example.TEST ';

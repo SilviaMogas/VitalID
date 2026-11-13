@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { rejectCrossSiteJsonPost } from '@/lib/auth/csrf';
 import { signUpWithPassword } from '@/lib/auth/server';
 import { getMembershipStore } from '@/lib/membership/store';
 import { getOnboardingStore } from '@/lib/onboarding/store';
@@ -12,6 +13,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const field = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
 export async function POST(req: Request) {
+  const rejected = rejectCrossSiteJsonPost(req);
+  if (rejected) return rejected;
   let body: Record<string, unknown>;
   try {
     body = (await req.json()) as Record<string, unknown>;
