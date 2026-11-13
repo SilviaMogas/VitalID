@@ -265,30 +265,7 @@ test('create requires a valid recipient account id and returns the same safe sna
   assert.equal('sentTo' in result, false);
 });
 
-async function createIdentityShareFor(recipientUserId) {
-  globalThis.__testShares = new Map();
-  globalThis.__createdShare = null;
-  globalThis.__testUser = owner;
-  const previewResponse = await previewShare(new Request('https://example.test/api/share/preview', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({selectedFields: ['identity']}),
-  }));
-  const {snapshot} = await previewResponse.json();
-  return createShare(new Request('https://example.test/api/share', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      purpose: 'doctor',
-      selectedFields: ['identity'],
-      durationMinutes: 60,
-      recipientUserId,
-      expectedSnapshot: snapshot,
-    }),
-  }));
-}
-
-async function createIdentityShareWithDuration(durationMinutes) {
+async function createIdentityShareFor(recipientUserId, durationMinutes = 60) {
   globalThis.__testShares = new Map();
   globalThis.__createdShare = null;
   globalThis.__testUser = owner;
@@ -305,7 +282,7 @@ async function createIdentityShareWithDuration(durationMinutes) {
       purpose: 'doctor',
       selectedFields: ['identity'],
       durationMinutes,
-      recipientUserId: recipient.id,
+      recipientUserId,
       expectedSnapshot: snapshot,
     }),
   }));
@@ -317,12 +294,12 @@ test('create rejects paid share durations for free-plan users and allows them on
   await store.reset(owner.id);
   try {
     for (const durationMinutes of [1440, 15]) {
-      const denied = await createIdentityShareWithDuration(durationMinutes);
+      const denied = await createIdentityShareFor(recipient.id, durationMinutes);
       assert.equal(denied.status, 403);
       assert.equal((await denied.json()).error, 'duration_not_available');
       assert.equal(globalThis.__createdShare, null);
     }
-    assert.equal((await createIdentityShareWithDuration(60)).status, 201);
+    assert.equal((await createIdentityShareFor(recipient.id, 60)).status, 201);
 
     await store.activatePlan({
       userKey: owner.id,
@@ -330,7 +307,7 @@ test('create rejects paid share durations for free-plan users and allows them on
       stripeCheckoutSessionId: 'cs_test_share_duration_plus',
       subscriptionStatus: 'active',
     });
-    const allowed = await createIdentityShareWithDuration(1440);
+    const allowed = await createIdentityShareFor(recipient.id, 1440);
     assert.equal(allowed.status, 201);
     const created = globalThis.__createdShare;
     assert.equal(Date.parse(created.expiresAt) - Date.parse(created.createdAt), 1440 * 60_000);
