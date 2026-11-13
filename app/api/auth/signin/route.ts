@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isJsonContentType, isStrictSameOrigin } from '@/lib/same-origin';
 import { signInWithPassword } from '@/lib/auth/server';
 import { resolveNextRoute } from '@/lib/auth/next-route';
 import { throttlePasswordLogin } from '@/lib/auth/login-throttle';
@@ -7,6 +8,12 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
+  if (!isStrictSameOrigin(req)) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403, headers: { 'Cache-Control': 'no-store' } });
+  }
+  if (!isJsonContentType(req)) {
+    return NextResponse.json({ error: 'unsupported_media_type' }, { status: 415, headers: { 'Cache-Control': 'no-store' } });
+  }
   let body: Record<string, unknown>;
   try {
     body = (await req.json()) as Record<string, unknown>;
