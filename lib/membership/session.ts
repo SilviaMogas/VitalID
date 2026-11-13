@@ -15,6 +15,12 @@ export async function getCurrentUserKey(): Promise<string> {
   return user?.id ?? DEMO_USER_KEY;
 }
 
+/** Signed-in member key for write routes; null for anonymous visitors (the shared demo account). */
+export async function requireMemberKey(): Promise<string | null> {
+  const user = await getCurrentUser();
+  return user?.id ?? null;
+}
+
 /**
  * Membership row for the current user — creates a free row on first visit so
  * Fatima and real users always have a record.
