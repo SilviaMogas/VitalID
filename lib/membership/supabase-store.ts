@@ -104,28 +104,43 @@ export class SupabaseMembershipStore implements MembershipStore {
     return record;
   }
 
+  /** Inserts `record` unless a row exists; returns it only when inserted. */
+  private async insertIfMissing(record: MembershipRecord): Promise<MembershipRecord | null> {
+    const { data, error } = await getSupabaseServerClient()
+      .from(TABLE)
+      .upsert(toRow(record), { onConflict: 'user_key', ignoreDuplicates: true })
+      .select('user_key');
+    if (error) throw new Error(`membership write failed: ${error.message}`);
+    return Array.isArray(data) && data.length > 0 ? record : null;
+  }
+
+  // Profile/journey writes patch only their own columns: a whole-row write
+  // from a stale read would erase a concurrent paid activation.
   async upsert(input: { userKey: string; displayName?: string; email?: string }) {
-    const existing = await this.get(input.userKey);
     const now = new Date().toISOString();
-    if (!existing) {
-      const record: MembershipRecord = {
-        ...blank(input.userKey, now),
-        displayName: input.displayName ?? null,
-        email: input.email ?? null,
-        // DEMO_DEFAULT_PLAN applies only to the Fatima demo user.
-        plan:
-          input.userKey === DEMO_USER_KEY && isPlanId(process.env.DEMO_DEFAULT_PLAN)
-            ? process.env.DEMO_DEFAULT_PLAN
-            : 'free',
-      };
-      return this.write(record);
-    }
-    return this.write({
-      ...existing,
-      displayName: input.displayName ?? existing.displayName,
-      email: input.email ?? existing.email,
-      updatedAt: now,
+    const inserted = await this.insertIfMissing({
+      ...blank(input.userKey, now),
+      displayName: input.displayName ?? null,
+      email: input.email ?? null,
+      // DEMO_DEFAULT_PLAN applies only to the Fatima demo user.
+      plan:
+        input.userKey === DEMO_USER_KEY && isPlanId(process.env.DEMO_DEFAULT_PLAN)
+          ? process.env.DEMO_DEFAULT_PLAN
+          : 'free',
     });
+    if (inserted) return inserted;
+    const patch: Partial<Row> = { updated_at: now };
+    if (input.displayName != null) patch.display_name = input.displayName;
+    if (input.email != null) patch.email = input.email;
+    const { data, error } = await getSupabaseServerClient()
+      .from(TABLE)
+      .update(patch)
+      .eq('user_key', input.userKey)
+      .select('*')
+      .maybeSingle();
+    if (error) throw new Error(`membership write failed: ${error.message}`);
+    if (!data) throw new Error('membership write failed: row missing');
+    return toRecord(data as Row);
   }
 
   async activatePlan(input: {
@@ -246,8 +261,18 @@ export class SupabaseMembershipStore implements MembershipStore {
 
   private async stamp(userKey: string, field: 'planChosenAt' | 'onboardingCompletedAt') {
     const now = new Date().toISOString();
-    const base = (await this.get(userKey)) ?? blank(userKey, now);
-    return this.write({ ...base, [field]: base[field] ?? now, updatedAt: now });
+    const inserted = await this.insertIfMissing({ ...blank(userKey, now), [field]: now });
+    if (inserted) return inserted;
+    const column = field === 'planChosenAt' ? 'plan_chosen_at' : 'onboarding_completed_at';
+    const { error } = await getSupabaseServerClient()
+      .from(TABLE)
+      .update({ [column]: now, updated_at: now })
+      .eq('user_key', userKey)
+      .is(column, null);
+    if (error) throw new Error(`membership write failed: ${error.message}`);
+    const record = await this.get(userKey);
+    if (!record) throw new Error('membership write failed: row missing');
+    return record;
   }
 
   async findByEmail(email: string) {
