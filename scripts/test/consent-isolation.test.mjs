@@ -15,7 +15,7 @@ const connect = await import('@/app/api/connectors/whoop/connect/route');
 const callback = await import('@/app/api/connectors/whoop/callback/route');
 const signup = await import('@/app/api/auth/signup/route');
 
-const json = (url, body) => new Request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+const json = (url, body) => new Request(url, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: new URL(url).origin }, body: JSON.stringify(body) });
 const as = (u) => { globalThis.__testUser = u; };
 const req = (path) => Object.assign(new Request(`http://localhost:3000${path}`), { nextUrl: new URL(`http://localhost:3000${path}`) });
 const connectReq = () => req('/api/connectors/whoop/connect');

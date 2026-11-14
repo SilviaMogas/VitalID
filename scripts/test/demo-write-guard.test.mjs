@@ -87,13 +87,13 @@ function whoopConn(userKey) {
 test('membership reset rejects anonymous visitors and keeps the demo plan', async () => {
   await activate(DEMO, 'pro', 'demo-reset');
   globalThis.__testUser = null;
-  const res = await reset.POST();
+  const res = await reset.POST(post('/api/membership/reset'));
   assert.equal(res.status, 401);
   assert.equal((await getMembershipStore().get(DEMO))?.plan, 'pro');
 
   await activate(MEMBER.id, 'pro', 'member-reset');
   globalThis.__testUser = MEMBER;
-  const ok = await reset.POST();
+  const ok = await reset.POST(post('/api/membership/reset'));
   assert.equal(ok.status, 200);
   assert.equal((await ok.json()).userKey, MEMBER.id);
   assert.equal((await getMembershipStore().get(MEMBER.id))?.plan, 'free');

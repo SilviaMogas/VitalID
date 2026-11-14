@@ -1,8 +1,6 @@
 import 'server-only';
 import { generateKeyPairSync } from 'node:crypto';
 import type { BillingInterval } from '@/lib/plans';
-import { getMembershipStore } from '@/lib/membership/store';
-import { SOL_SESSION_PREFIX } from '@/lib/membership/sol';
 import { base58Encode } from './base58';
 import { readSolPayConfig, solPayLamports, type SolPayConfig } from './config';
 import { createRpc, getParsedTransaction, getSignaturesForAddress, type ParsedTransaction, type SolanaRpc } from './rpc';
@@ -73,6 +71,7 @@ export async function createSolPayment(
     expiresAt: expiresAt.toISOString(),
     createdAt: now.toISOString(),
     confirmedAt: null,
+    appliedAt: null,
   };
   await getSolPaymentStore().create(payment);
   return {
@@ -130,19 +129,6 @@ export function extractPayment(
   return { lamports, payer };
 }
 
-async function activate(payment: SolPayment, signature: string, payer: string | null) {
-  // Additive: every paid request grants its purchased days on top of any paid
-  // time remaining; the plan keeps the highest rank. Atomic per membership
-  // row, so settle order, re-polls and concurrent confirms cannot regress it.
-  await getMembershipStore().activateSol({
-    userKey: payment.userKey,
-    plan: payment.plan,
-    extendDays: payment.interval === 'annual' ? 365 : 30,
-    sessionId: `${SOL_SESSION_PREFIX}${signature}`,
-    payer,
-  });
-}
-
 /**
  * Checks the chain for a settlement of `reference` owned by `userKey` and,
  * on a valid transfer, claims it and activates the plan. Safe to poll.
@@ -157,10 +143,12 @@ export async function confirmSolPayment(
   if (!payment) return { state: 'missing' };
   if (payment.userKey !== userKey) return { state: 'forbidden' };
   if (payment.status === 'paid') {
-    // The signature was claimed already, but a previous poll may have failed
-    // before activatePlan ran — retry it. activatePlan is idempotent on the
-    // checkout-session id, so this is a no-op once activation has landed.
-    if (payment.signature) await activate(payment, payment.signature, payment.payer);
+    // Applied payments are final: never extend the membership again, however
+    // the membership row has changed since (reset, other references polled).
+    if (payment.appliedAt) return { state: 'paid' };
+    // Claimed but a previous poll failed before applying — retry. The store
+    // dedupes on the payment row's applied_at, atomically with the extension.
+    if (payment.signature) await store.applyPayment(reference);
     return { state: 'paid' };
   }
   if (Date.parse(payment.expiresAt) <= Date.now()) return { state: 'expired' };
@@ -183,14 +171,10 @@ export async function confirmSolPayment(
       continue;
     }
     const claim = await store.claimSignature(reference, signature, extracted.payer);
-    if (claim === 'claimed') {
-      await activate(payment, signature, extracted.payer);
-      return { state: 'paid' };
-    }
-    if (claim === 'already-paid') {
-      // Claimed by an earlier poll — retry activation in case it never ran.
-      const claimed = await store.get(reference);
-      if (claimed?.signature) await activate(claimed, claimed.signature, claimed.payer);
+    if (claim === 'claimed' || claim === 'already-paid') {
+      // 'already-paid': claimed by an earlier poll — applyPayment is a no-op
+      // if that poll already applied it.
+      await store.applyPayment(reference);
       return { state: 'paid' };
     }
     // 'signature-used': this signature settled a different request — keep scanning.
