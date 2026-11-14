@@ -43,7 +43,7 @@ const { throttlePasswordLogin } = await import('../../lib/auth/login-throttle.ts
 function request(email, password, ip = '203.0.113.10') {
   return new Request('https://vitalid.example/api/auth/signin', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-real-ip': ip },
+    headers: { 'content-type': 'application/json', origin: 'https://vitalid.example', 'x-real-ip': ip },
     body: JSON.stringify({ email, password }),
   });
 }
