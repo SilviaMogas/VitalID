@@ -433,6 +433,71 @@ test('anonymous SOL checkout is refused when auth is configured', async () => {
   }
 });
 
+const CLUSTER_ENV_KEYS = ['NODE_ENV', 'VERCEL_ENV', 'SOL_PAY_CLUSTER', 'SOL_PAY_ALLOW_TEST_CLUSTER'];
+
+async function withClusterEnv(env, fn) {
+  const saved = Object.fromEntries(CLUSTER_ENV_KEYS.map((key) => [key, process.env[key]]));
+  for (const key of CLUSTER_ENV_KEYS) {
+    if (env[key] === undefined) delete process.env[key];
+    else process.env[key] = env[key];
+  }
+  try {
+    await fn();
+  } finally {
+    for (const key of CLUSTER_ENV_KEYS) {
+      if (saved[key] === undefined) delete process.env[key];
+      else process.env[key] = saved[key];
+    }
+  }
+}
+
+test('production without SOL_PAY_CLUSTER disables SOL checkout', async () => {
+  await withClusterEnv({ NODE_ENV: 'production' }, async () => {
+    assert.equal(readSolPayConfig(), null);
+    const { POST } = await import('@/app/api/sol/checkout/route');
+    const res = await POST(
+      new Request('https://test/api/sol/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ plan: 'plus' }),
+      }),
+    );
+    assert.equal(res.status, 503);
+    assert.equal((await res.json()).error, 'solpay_not_configured');
+  });
+});
+
+test('production rejects test clusters unless explicitly allowed', async () => {
+  for (const cluster of ['devnet', 'testnet']) {
+    await withClusterEnv({ VERCEL_ENV: 'production', SOL_PAY_CLUSTER: cluster }, async () => {
+      assert.equal(readSolPayConfig(), null);
+    });
+  }
+  await withClusterEnv(
+    { NODE_ENV: 'production', SOL_PAY_CLUSTER: 'devnet', SOL_PAY_ALLOW_TEST_CLUSTER: '1' },
+    async () => {
+      assert.equal(readSolPayConfig()?.cluster, 'devnet');
+    },
+  );
+});
+
+test('production accepts an explicit mainnet-beta cluster', async () => {
+  await withClusterEnv({ NODE_ENV: 'production', SOL_PAY_CLUSTER: 'mainnet-beta' }, async () => {
+    const config = readSolPayConfig();
+    assert.equal(config?.cluster, 'mainnet-beta');
+    if (!process.env.SOL_PAY_RPC) {
+      assert.equal(config?.rpcUrl, 'https://api.mainnet-beta.solana.com');
+    }
+  });
+});
+
+test('outside production an unset cluster defaults to devnet', async () => {
+  for (const cluster of [undefined, '']) {
+    await withClusterEnv({ SOL_PAY_CLUSTER: cluster }, async () => {
+      assert.equal(readSolPayConfig()?.cluster, 'devnet');
+    });
+  }
+});
+
 test('paid SOL requests stack additively and never regress plan or period', async () => {
   const store = getMembershipStore();
   const user = 'user-sol-order';

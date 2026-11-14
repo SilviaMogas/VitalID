@@ -145,8 +145,11 @@ transfer** via the Solana Pay protocol — no payment provider account needed.
 - Migration: `supabase/migrations/20261013_vital_id_sol_payments.sql` (RLS on,
   no policies — server secret only, same as `vital_id_memberships`).
 
-Defaults target **devnet** for demos; for real SOL set `SOL_PAY_CLUSTER=
-mainnet-beta` and the `SOL_PAY_LAMPORTS_*` prices — there is no USD conversion.
+Outside production the cluster defaults to **devnet** for demos. In production
+(`NODE_ENV` or `VERCEL_ENV` = `production`) Solana Pay stays disabled unless
+`SOL_PAY_CLUSTER=mainnet-beta` is set explicitly (testnet/devnet only with
+`SOL_PAY_ALLOW_TEST_CLUSTER=1`). Also set the `SOL_PAY_LAMPORTS_*` prices —
+there is no USD conversion.
 
 ## Fatima / demo semantics
 
