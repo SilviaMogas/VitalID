@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { isBillingInterval, PAID_PLANS } from '@/lib/plans';
 import { getStripe, isStripeConfigured, resolvePriceId, StripeConfigError } from '@/lib/stripe/server';
 import { assertSubscriptionPrice } from '@/lib/stripe/verify';
-import { getCurrentUserKey } from '@/lib/membership/session';
+import { requireMemberKey } from '@/lib/membership/session';
 import { getMembershipStore } from '@/lib/membership/store';
 
 export const dynamic = 'force-dynamic';
@@ -50,7 +50,13 @@ export async function POST(req: Request) {
 
   let stage: Stage = 'auth';
   try {
-    const userKey = await getCurrentUserKey();
+    const userKey = await requireMemberKey();
+    if (!userKey) {
+      return NextResponse.json(
+        { error: 'unauthenticated' },
+        { status: 401, headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
     stage = 'membership_store';
     const membership = await getMembershipStore().upsert({ userKey });
     stage = 'price_config';

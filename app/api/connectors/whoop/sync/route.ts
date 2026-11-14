@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
-import { getCurrentUserKey } from '@/lib/membership/session';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireMemberKey } from '@/lib/membership/session';
+import { isSameOrigin } from '@/lib/share-api';
 import { getWhoopStore, syncWhoop, WhoopError } from '@/lib/connectors/whoop';
 
 export const dynamic = 'force-dynamic';
@@ -7,8 +8,10 @@ export const runtime = 'nodejs';
 
 const NO_STORE = { headers: { 'Cache-Control': 'no-store' } };
 
-export async function POST() {
-  const userKey = await getCurrentUserKey();
+export async function POST(req: NextRequest) {
+  if (!isSameOrigin(req)) return NextResponse.json({ error: 'forbidden' }, { status: 403, ...NO_STORE });
+  const userKey = await requireMemberKey();
+  if (!userKey) return NextResponse.json({ error: 'unauthenticated' }, { status: 401, ...NO_STORE });
   const conn = await getWhoopStore().get(userKey);
   if (!conn) return NextResponse.json({ error: 'not_connected' }, { status: 404, ...NO_STORE });
 

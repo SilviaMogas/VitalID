@@ -1,6 +1,7 @@
 import 'server-only';
 import type Stripe from 'stripe';
 import { BILLING_CURRENCY, type BillingInterval, type PlanId } from '@/lib/plans';
+import { DEMO_USER_KEY } from '@/lib/membership/constants';
 import { getMembershipStore } from '@/lib/membership/store';
 import type { MembershipRecord } from '@/lib/membership/types';
 import { getConfiguredPriceRefs, getStripe, StripeConfigError } from './server';
@@ -91,7 +92,7 @@ export async function verifyCheckoutSession(
   }
 
   const userKey = session.metadata?.userKey;
-  if (!userKey) return { ok: false, reason: 'bad_plan' };
+  if (!userKey || userKey === DEMO_USER_KEY) return { ok: false, reason: 'bad_plan' };
   if (opts?.expectedUserKey && opts.expectedUserKey !== userKey) {
     return { ok: false, reason: 'user_mismatch' };
   }
@@ -151,10 +152,12 @@ export async function syncSubscriptionFromStripe(
   }
   const plan = planForSubscriptionPrice(subscription);
   const isActive = ACTIVE_SUBSCRIPTION_STATUSES.has(subscription.status);
+  const metadataUserKey = subscription.metadata?.userKey ?? null;
   return getMembershipStore().syncSubscription({
     stripeSubscriptionId: subscription.id,
     stripeCustomerId: typeof subscription.customer === 'string' ? subscription.customer : null,
-    userKey: subscription.metadata?.userKey ?? null,
+    // Never fall back to the shared demo row by metadata.
+    userKey: metadataUserKey === DEMO_USER_KEY ? null : metadataUserKey,
     plan: isActive ? plan : null,
     status: subscription.status,
     periodEnd: subscriptionPeriodEnd(subscription),
