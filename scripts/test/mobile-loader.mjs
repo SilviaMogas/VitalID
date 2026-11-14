@@ -74,7 +74,10 @@ const STUBS = {
   `,
   "@/lib/membership/store": `
     export function getMembershipStore() {
-      return { async upsert({ userKey }) { return { plan: (globalThis.__mobilePlans ?? {})[userKey] ?? "free", userKey }; } };
+      return {
+        async get(userKey) { return { plan: (globalThis.__mobilePlans ?? {})[userKey] ?? "free", userKey }; },
+        async upsert({ userKey }) { return { plan: (globalThis.__mobilePlans ?? {})[userKey] ?? "free", userKey }; },
+      };
     }
   `,
   "@/lib/onboarding/store": `

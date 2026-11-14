@@ -65,6 +65,10 @@ export function PricingView() {
         stage?: string;
         detail?: string;
       };
+      if (res.status === 401) {
+        router.push("/signin");
+        return;
+      }
       if (res.status === 503 || data.error === "stripe_not_configured") {
         setError(t("pricing.stripeNotConfigured"));
         return;

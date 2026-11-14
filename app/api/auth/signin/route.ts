@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { sessionRequestRejection } from '@/lib/same-origin';
 import { signInWithPassword } from '@/lib/auth/server';
 import { resolveNextRoute } from '@/lib/auth/next-route';
 import { throttlePasswordLogin } from '@/lib/auth/login-throttle';
@@ -7,6 +8,8 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
+  const rejected = sessionRequestRejection(req, { requireJson: true });
+  if (rejected) return rejected;
   let body: Record<string, unknown>;
   try {
     body = (await req.json()) as Record<string, unknown>;
