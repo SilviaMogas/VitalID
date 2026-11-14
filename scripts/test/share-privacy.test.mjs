@@ -265,7 +265,7 @@ test('create requires a valid recipient account id and returns the same safe sna
   assert.equal('sentTo' in result, false);
 });
 
-async function createIdentityShareFor(recipientUserId) {
+async function createIdentityShareFor(recipientUserId, durationMinutes = 60) {
   globalThis.__testShares = new Map();
   globalThis.__createdShare = null;
   globalThis.__testUser = owner;
@@ -281,12 +281,40 @@ async function createIdentityShareFor(recipientUserId) {
     body: JSON.stringify({
       purpose: 'doctor',
       selectedFields: ['identity'],
-      durationMinutes: 60,
+      durationMinutes,
       recipientUserId,
       expectedSnapshot: snapshot,
     }),
   }));
 }
+
+test('create rejects paid share durations for free-plan users and allows them on Plus', async () => {
+  const { getMembershipStore } = await import('@/lib/membership/store');
+  const store = getMembershipStore();
+  await store.reset(owner.id);
+  try {
+    for (const durationMinutes of [1440, 15]) {
+      const denied = await createIdentityShareFor(recipient.id, durationMinutes);
+      assert.equal(denied.status, 403);
+      assert.equal((await denied.json()).error, 'duration_not_available');
+      assert.equal(globalThis.__createdShare, null);
+    }
+    assert.equal((await createIdentityShareFor(recipient.id, 60)).status, 201);
+
+    await store.activatePlan({
+      userKey: owner.id,
+      plan: 'plus',
+      stripeCheckoutSessionId: 'cs_test_share_duration_plus',
+      subscriptionStatus: 'active',
+    });
+    const allowed = await createIdentityShareFor(recipient.id, 1440);
+    assert.equal(allowed.status, 201);
+    const created = globalThis.__createdShare;
+    assert.equal(Date.parse(created.expiresAt) - Date.parse(created.createdAt), 1440 * 60_000);
+  } finally {
+    await store.reset(owner.id);
+  }
+});
 
 test('create rejects a valid-looking recipient id when the account does not exist', async () => {
   const response = await createIdentityShareFor('00000000-0000-4000-8000-00000000000c');
