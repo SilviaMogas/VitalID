@@ -153,7 +153,9 @@ mainnet-beta` and the `SOL_PAY_LAMPORTS_*` prices — there is no USD conversion
 - No `vitalid_uid` cookie → `user_key = "fatima"` (demo user). `DEMO_DEFAULT_PLAN`
   controls Fatima's plan on first row creation.
 - `POST /api/membership/reset` → back to free, clears Stripe fields (mirrors
-  `/api/share/reset`).
+  `/api/share/reset`). Non-production only (404 when `NODE_ENV=production`),
+  same-origin only. SOL replay protection lives on
+  `vital_id_sol_payments.applied_at`, so a reset never re-enables a payment.
 - Free plan never calls Stripe.
 
 ## Security

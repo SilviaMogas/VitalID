@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isStrictSameOrigin } from "@/lib/same-origin";
 
 // Rolls an expired member access token over before any server component or
 // route handler reads it, so an idle member is never resolved as the
@@ -8,6 +9,26 @@ const ACCESS_COOKIE = "vitalid_at";
 const REFRESH_COOKIE = "vitalid_rt";
 const YEAR = 60 * 60 * 24 * 365;
 const REFRESH_SKEW_SECONDS = 60;
+
+// Non-browser callers that authenticate without cookies (signatures or bearer tokens).
+const CSRF_EXEMPT_PREFIXES = [
+  "/api/stripe/webhook",
+  "/api/connectors/wearables/ingest",
+  "/api/mobile/v1/",
+  "/api/mcp/",
+];
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+export function csrfRejection(request: NextRequest): NextResponse | null {
+  const { pathname } = new URL(request.url);
+  if (!pathname.startsWith("/api/") || SAFE_METHODS.has(request.method)) return null;
+  if (CSRF_EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return null;
+  if (isStrictSameOrigin(request)) return null;
+  return NextResponse.json(
+    { error: "forbidden" },
+    { status: 403, headers: { "Cache-Control": "no-store" } },
+  );
+}
 
 function accessTokenExpiry(token: string): number | null {
   const payload = token.split(".")[1];
@@ -60,6 +81,9 @@ function cookieOpts(maxAge: number) {
 }
 
 export async function middleware(request: NextRequest) {
+  const rejected = csrfRejection(request);
+  if (rejected) return rejected;
+
   const at = request.cookies.get(ACCESS_COOKIE)?.value;
   const rt = request.cookies.get(REFRESH_COOKIE)?.value;
   if (!rt || !needsRefresh(at)) return NextResponse.next();
