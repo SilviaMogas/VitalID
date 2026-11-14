@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { SharePayload, ShareRecipient } from './sharing';
-import { isShareActive } from './sharing';
+import { MAX_STORED_SHARES_PER_OWNER, isShareActive } from './sharing';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { DEMO_USER_KEY } from '@/lib/membership/constants';
 import * as supabaseStore from './share-store-supabase';
@@ -13,7 +13,8 @@ import * as supabaseStore from './share-store-supabase';
  *   shares are persisted in the `vital_id_shares` table (see share-store-supabase.ts).
  * - If UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are set, shares are
  *   persisted via Upstash Redis REST (SET with EX = seconds until expiry + 60,
- *   GET, DEL), with an index set `vitalid:shares`.
+ *   GET, DEL), with a per-owner index set `vitalid:shares:owner:<ownerKey>`
+ *   (legacy shares without an owner use the global index set `vitalid:shares`).
  * - Otherwise an in-memory Map on globalThis is used, PLUS a best-effort JSON
  *   file mirror at SHARE_STORE_FILE (default: <tmpdir>/vitalid-shares.json) so
  *   shares survive a dev-server restart. All file I/O is wrapped in try/catch.
@@ -21,6 +22,7 @@ import * as supabaseStore from './share-store-supabase';
 
 const INDEX_KEY = 'vitalid:shares';
 const KEY_PREFIX = 'vitalid:share:';
+const ownerIndexKey = (ownerKey: string) => `vitalid:shares:owner:${ownerKey}`;
 const STORE_FILE = process.env.SHARE_STORE_FILE ?? path.join(os.tmpdir(), 'vitalid-shares.json');
 
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
@@ -79,7 +81,7 @@ export async function createShare(p: SharePayload): Promise<void> {
   if (useRedis) {
     const ex = Math.max(1, Math.floor((new Date(p.expiresAt).getTime() - Date.now()) / 1000) + 60);
     await redis(['SET', KEY_PREFIX + p.id, JSON.stringify(p), 'EX', ex]);
-    await redis(['SADD', INDEX_KEY, p.id]);
+    await redis(['SADD', p.ownerKey ? ownerIndexKey(p.ownerKey) : INDEX_KEY, p.id]);
     return;
   }
   memoryMap().set(p.id, p);
@@ -131,24 +133,66 @@ export async function setShareRecipients(
   return updated;
 }
 
-export async function listShares(): Promise<SharePayload[]> {
-  if (useSupabase) return supabaseStore.listShares();
-  if (useRedis) {
-    const ids = (await redis(['SMEMBERS', INDEX_KEY])) as string[];
-    const out: SharePayload[] = [];
-    for (const id of ids ?? []) {
-      const s = await getShare(id);
-      if (s) out.push(s);
-    }
-    return out;
+/** Loads the owner's indexed shares and drops index entries whose keys have expired. */
+async function redisOwnerShares(ownerKey: string): Promise<SharePayload[]> {
+  const index = ownerIndexKey(ownerKey);
+  const ids = (await redis(['SMEMBERS', index])) as string[];
+  const out: SharePayload[] = [];
+  for (const id of ids ?? []) {
+    const s = await getShare(id);
+    if (s) out.push(s);
+    else await redis(['SREM', index, id]);
   }
-  return Array.from(memoryMap().values());
+  return out;
+}
+
+function newestFirst(shares: SharePayload[], limit: number): SharePayload[] {
+  return shares.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
+}
+
+/** Returns only `ownerKey`'s shares, newest first, at most `limit`. */
+export async function listShares(
+  ownerKey: string,
+  limit = MAX_STORED_SHARES_PER_OWNER,
+): Promise<SharePayload[]> {
+  if (useSupabase) return supabaseStore.listShares(ownerKey, limit);
+  if (useRedis) return newestFirst(await redisOwnerShares(ownerKey), limit);
+  return newestFirst(
+    Array.from(memoryMap().values()).filter((p) => p.ownerKey === ownerKey),
+    limit,
+  );
+}
+
+/** Deletes `ownerKey`'s expired shares so they no longer count against the per-owner cap. */
+export async function pruneExpiredShares(ownerKey: string): Promise<void> {
+  if (useSupabase) return supabaseStore.pruneExpiredShares(ownerKey);
+  if (useRedis) {
+    const index = ownerIndexKey(ownerKey);
+    for (const s of await redisOwnerShares(ownerKey)) {
+      if (new Date(s.expiresAt).getTime() > Date.now()) continue;
+      await redis(['DEL', KEY_PREFIX + s.id]);
+      await redis(['SREM', index, s.id]);
+    }
+    return;
+  }
+  let deleted = false;
+  for (const [id, p] of memoryMap()) {
+    if (p.ownerKey === ownerKey && new Date(p.expiresAt).getTime() <= Date.now()) {
+      memoryMap().delete(id);
+      deleted = true;
+    }
+  }
+  if (deleted) persistMirror();
 }
 
 /** Deletes only the shares owned by `ownerKey` (legacy rows without one belong to the demo user). */
 export async function clearForOwner(ownerKey: string): Promise<void> {
   if (useSupabase) return supabaseStore.clearForOwner(ownerKey);
   if (useRedis) {
+    const index = ownerIndexKey(ownerKey);
+    const ownedIds = (await redis(['SMEMBERS', index])) as string[];
+    for (const id of ownedIds ?? []) await redis(['DEL', KEY_PREFIX + id]);
+    await redis(['DEL', index]);
     const ids = (await redis(['SMEMBERS', INDEX_KEY])) as string[];
     for (const id of ids ?? []) {
       const s = await getShare(id);
