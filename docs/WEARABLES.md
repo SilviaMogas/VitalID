@@ -18,6 +18,9 @@ Apple Health / Health Connect via device push). WHOOP keeps its own module.
 Apply `supabase/migrations/20261013_vital_id_wearables.sql` first.
 Routes: `GET /api/connectors/wearables/{oura,strava}/connect`, `POST …/sync`,
 `GET …/status`, `POST …/disconnect`.
+Sync is limited per user and provider (provider API quotas are per app): one
+successful sync per 5 min and 10 attempts per hour, shared with the first sync
+after connecting; over the limit `…/sync` returns 429 with `Retry-After`.
 
 ## Not doable in 30 minutes
 
