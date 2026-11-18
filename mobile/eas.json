@@ -12,6 +12,13 @@
         "simulator": true
       }
     },
+    "dapp-store": {
+      "android": {
+        "buildType": "apk",
+        "credentialsSource": "remote",
+        "keystoreName": "dapp-store"
+      }
+    },
     "production": {
       "android": {
         "buildType": "app-bundle"

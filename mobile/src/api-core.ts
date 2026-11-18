@@ -38,6 +38,7 @@ export const REFRESH_STORAGE_KEY = "vitalid.native.refresh";
 const PROACTIVE_REFRESH_SECONDS = 30;
 const MAX_TOKEN_LENGTH = 8192;
 const API_PATHS = new Set(["account", "identity", "consent", "shares", "shares/preview"]);
+const AUTH_PATHS = new Set(["auth/signin", "auth/refresh", "auth/signout", "auth/sol/message", "auth/sol/verify"]);
 const ID = "[A-Za-z0-9_-]{1,128}";
 const SHARE_PATH = new RegExp(`^shares/${ID}(?:/revoke)?$`);
 
@@ -83,7 +84,7 @@ export function validateApiPath(path: string, allowAuth = false): string {
   ) {
     throw new ApiError(0, "invalid_path");
   }
-  if (allowAuth && (path === "auth/signin" || path === "auth/refresh" || path === "auth/signout")) {
+  if (allowAuth && AUTH_PATHS.has(path)) {
     return path;
   }
   if (!API_PATHS.has(path) && !SHARE_PATH.test(path)) {
@@ -294,7 +295,15 @@ class ApiCore {
     return promise;
   }
 
-  async signIn(email: string, password: string): Promise<void> {
+  async walletChallenge(publicKey: string): Promise<string> {
+    const response = await this.rawRequest("auth/sol/message", { publicKey }, undefined, "POST");
+    if (response.status !== 200) throw new ApiError(response.status, responseCode(response.payload));
+    const payload = response.payload as { message?: unknown } | null;
+    if (typeof payload?.message !== "string") throw new ApiError(502, "invalid_response");
+    return payload.message;
+  }
+
+  async establishSession(path: "auth/signin" | "auth/sol/verify", body: unknown): Promise<void> {
     const generation = ++this.generation;
     this.session = null;
     this.refreshFlight = null;
@@ -307,7 +316,7 @@ class ApiCore {
       throw new ApiError(0, "storage_error");
     }
     if (generation !== this.generation) throw new ApiError(401, "session_changed");
-    const response = await this.rawRequest("auth/signin", { email, password }, undefined, "POST");
+    const response = await this.rawRequest(path, body, undefined, "POST");
     if (generation !== this.generation) throw new ApiError(401, "session_changed");
     if (response.status === 401) throw new ApiError(401, responseCode(response.payload));
     if (response.status >= 500) throw new ApiError(response.status, "unavailable");
@@ -391,7 +400,10 @@ export function createApiTransport(options: ApiCoreOptions) {
   const client = new ApiCore(options);
   return {
     restore: () => client.restore(),
-    signIn: (email: string, password: string) => client.signIn(email, password),
+    signIn: (email: string, password: string) => client.establishSession("auth/signin", { email, password }),
+    walletChallenge: (publicKey: string) => client.walletChallenge(publicKey),
+    signInWithWallet: (proof: { publicKey: string; message: string; signature: string }) =>
+      client.establishSession("auth/sol/verify", proof),
     signOut: () => client.signOut(),
     request: <T>(path: string, requestOptions?: { method?: "GET" | "POST"; body?: unknown }) =>
       client.request<T>(path, requestOptions),

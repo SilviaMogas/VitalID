@@ -1,6 +1,7 @@
 import 'server-only';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { base58Decode } from './base58';
+import { mobileWalletMessageHeading } from './seeker-identity';
 import { readServerSupabaseEnv } from '@/lib/supabase/env';
 import { getWalletNonceStore } from '@/lib/auth/wallet-nonce';
 import { walletEmail as syntheticWalletEmail, type WalletChain } from '@/lib/auth/wallet-identity';
@@ -10,9 +11,8 @@ import { walletEmail as syntheticWalletEmail, type WalletChain } from '@/lib/aut
  * nonce-bound message, the wallet signs it with the account's Ed25519 key and
  * the server verifies the signature — proof of key ownership, no password.
  *
- * The nonce is stateless: `${ts}.${rand}.${hmac}` so it survives serverless
- * instances; freshness is enforced by TTL. A replayed signature can only
- * recreate a session for the same wallet it was already issued to.
+ * The HMAC challenge survives serverless instances, expires and can be used
+ * once. Mobile bearer sessions use a distinct, wallet-bound audience.
  */
 
 const NONCE_TTL_MS = 5 * 60 * 1000;
@@ -55,25 +55,37 @@ export function isSolanaPublicKey(value: string): boolean {
   }
 }
 
-export function issueMessage(publicKey: string, host: string): string {
+type WalletAudience = 'web' | 'mobile';
+
+function nonceMac(body: string, audience: WalletAudience, publicKey: string, host: string): string {
+  return mac(audience === 'mobile' ? `mobile:${host}:${publicKey}:${body}` : body);
+}
+
+function messageHeading(host: string, audience: WalletAudience): string {
+  return audience === 'mobile'
+    ? mobileWalletMessageHeading(host)
+    : `${host} wants you to sign in with your Solana account:`;
+}
+
+export function issueMessage(publicKey: string, host: string, audience: WalletAudience = 'web'): string {
   const issued = new Date();
   const body = `${issued.getTime()}.${randomBytes(8).toString('hex')}`;
-  return `${host} wants you to sign in with your Solana account:
+  return `${messageHeading(host, audience)}
 ${publicKey}
 
 URI: https://${host}
-Nonce: ${body}.${mac(body)}
+Nonce: ${body}.${nonceMac(body, audience, publicKey, host)}
 Issued At: ${issued.toISOString()}`;
 }
 
 export type WalletVerify = 'ok' | 'bad_message' | 'expired' | 'bad_signature' | 'unavailable';
 
-function nonceTimestamp(nonce: string): number | null {
+function nonceTimestamp(nonce: string, audience: WalletAudience, publicKey: string, host: string): number | null {
   const match = /^(\d{13})\.([a-f0-9]{16})\.([a-f0-9]{32})$/.exec(nonce);
   if (!match) return null;
   const [, timestamp, random, tag] = match;
   const body = `${timestamp}.${random}`;
-  const expected = Buffer.from(mac(body), 'utf8');
+  const expected = Buffer.from(nonceMac(body, audience, publicKey, host), 'utf8');
   const given = Buffer.from(tag, 'utf8');
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
   return Number(timestamp);
@@ -84,13 +96,14 @@ export async function verifyWalletMessage(
   signature: string,
   message: string,
   host: string,
+  audience: WalletAudience = 'web',
 ): Promise<WalletVerify> {
   if (!isSolanaPublicKey(publicKey) || message.length > MAX_MESSAGE_LENGTH) return 'bad_message';
   if (signature.length > MAX_SIGNATURE_LENGTH) return 'bad_signature';
   const lines = message.split('\n');
   if (
     lines.length !== 6 ||
-    lines[0] !== `${host} wants you to sign in with your Solana account:` ||
+    lines[0] !== messageHeading(host, audience) ||
     lines[1] !== publicKey ||
     lines[2] !== '' ||
     lines[3] !== `URI: https://${host}` ||
@@ -100,7 +113,7 @@ export async function verifyWalletMessage(
     return 'bad_message';
   }
   const nonce = lines[4].slice('Nonce: '.length);
-  const timestamp = nonceTimestamp(nonce);
+  const timestamp = nonceTimestamp(nonce, audience, publicKey, host);
   const issuedAt = lines[5].slice('Issued At: '.length);
   if (timestamp === null || new Date(timestamp).toISOString() !== issuedAt) return 'bad_message';
   if (Math.abs(Date.now() - timestamp) > NONCE_TTL_MS) return 'expired';

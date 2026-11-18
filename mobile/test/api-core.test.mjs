@@ -77,6 +77,29 @@ test("refresh is single-flight and proactive", async () => {
   assert.equal(storage.value(), "refresh-2");
 });
 
+test("wallet challenge and proof use the signed-out transport and store only the refresh token", async () => {
+  const storage = fakeStorage();
+  const proof = { publicKey: "test-public-key", message: "test-message", signature: "test-signature" };
+  const calls = [];
+  const transport = createApiTransport({
+    origin: "https://www.vitalid.site",
+    storage,
+    fetcher: async (url, init) => {
+      const path = new URL(url).pathname.replace("/api/mobile/v1/", "");
+      calls.push([path, JSON.parse(init.body), init.headers.get("authorization"), init.credentials]);
+      return path === "auth/sol/message" ? response(200, { message: proof.message }) : response(200, session());
+    },
+  });
+  assert.equal(await transport.walletChallenge(proof.publicKey), proof.message);
+  assert.deepEqual(storage.writes, []);
+  await transport.signInWithWallet(proof);
+  assert.deepEqual(calls, [
+    ["auth/sol/message", { publicKey: proof.publicKey }, null, "omit"],
+    ["auth/sol/verify", proof, null, "omit"],
+  ]);
+  assert.deepEqual(storage.writes, [["clear"], ["set", "refresh-1"]]);
+});
+
 test("invalid refresh clears credentials, transient refresh preserves them", async () => {
   const invalidStore = fakeStorage("refresh-1");
   const invalid = createApiTransport({

@@ -1,9 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { generateKeyPairSync, sign } from "node:crypto";
 
 process.env.SUPABASE_URL = "https://supabase.local.test";
 process.env.SUPABASE_SECRET_KEY = "synthetic-service-key";
 process.env.AUTH_THROTTLE_STORE = "memory";
+process.env.WALLET_NONCE_STORE = "memory";
+process.env.SOL_WALLET_SECRET = "test-mobile-wallet-secret";
 process.env.NODE_ENV = "test";
 
 const users = {
@@ -52,6 +55,8 @@ globalThis.__mobileRefreshes = {
 
 const route = await import("@/app/api/mobile/v1/[...path]/route");
 const { CONSENT_POLICY_VERSIONS } = await import("@/lib/legal");
+const { base58Encode } = await import("@/lib/solpay/base58");
+const { issueMessage, walletEmail, walletPassword } = await import("@/lib/solpay/wallet-auth");
 
 function grant(userId, versions = CONSENT_POLICY_VERSIONS) {
   const records = {};
@@ -96,6 +101,57 @@ function resetData() {
 }
 
 resetData();
+
+test("Seeker grants a cookie-free session to the bound account only after a single-use mobile signature", async () => {
+  const wallet = generateKeyPairSync("ed25519");
+  const publicKey = base58Encode(wallet.publicKey.export({ format: "der", type: "spki" }).subarray(-32));
+  const email = walletEmail(publicKey);
+  const user = {
+    id: "00000000-0000-4000-8000-00000000000e",
+    email,
+    email_confirmed_at: "2026-01-01T00:00:00.000Z",
+    app_metadata: { vitalid_wallet: { chain: "solana", address: publicKey } },
+  };
+  globalThis.__mobileAuthUsers["seeker-access"] = user;
+  globalThis.__mobileUsersByEmail[email] = user;
+  globalThis.__mobileCredentials[email] = {
+    user,
+    password: walletPassword(publicKey),
+    session: { access_token: "seeker-access", refresh_token: "seeker-refresh", expires_at: 4102444800 },
+  };
+  const attempt = (message, signature = base58Encode(sign(null, Buffer.from(message), wallet.privateKey))) =>
+    call("POST", "auth/sol/verify", { body: { publicKey, message, signature } });
+  const challenge = await call("POST", "auth/sol/message", { body: { publicKey } });
+  assert.equal(challenge.status, 200);
+  assert.equal(challenge.headers.get("cache-control"), "no-store");
+  const { message } = await body(challenge);
+  assert.match(message, /^www\.vitalid\.site wants you to sign in to the Vital ID Android app/);
+  assert.equal((await body(await attempt(message, "1".repeat(64)))).error, "bad_signature");
+  const webMessage = issueMessage(publicKey, "www.vitalid.site");
+  assert.equal((await body(await attempt(webMessage))).error, "bad_message");
+  const valid = await attempt(message);
+  assert.equal(valid.status, 200);
+  assert.equal(valid.headers.get("pragma"), "no-cache");
+  assert.equal(valid.headers.get("set-cookie"), null);
+  assert.equal(globalThis.__mobileCookies.vitalid_at, undefined);
+  const session = await body(valid);
+  assert.equal(session.user.id, user.id);
+  assert.equal(session.refreshToken, "seeker-refresh");
+  const account = await call("GET", "account", { token: session.accessToken });
+  assert.equal((await body(account)).consent.healthCurrent, false);
+  assert.equal((await call("GET", "identity", { token: session.accessToken })).status, 403);
+  assert.equal((await body(await attempt(message))).error, "expired");
+});
+
+test("a correctly signed but unregistered wallet does not create an account", async () => {
+  const wallet = generateKeyPairSync("ed25519");
+  const publicKey = base58Encode(wallet.publicKey.export({ format: "der", type: "spki" }).subarray(-32));
+  const { message } = await body(await call("POST", "auth/sol/message", { body: { publicKey } }));
+  const signature = base58Encode(sign(null, Buffer.from(message), wallet.privateKey));
+  const response = await call("POST", "auth/sol/verify", { body: { publicKey, message, signature } });
+  assert.equal(response.status, 401);
+  assert.deepEqual(await body(response), { error: "wallet_account_required" });
+});
 
 test("missing or invalid bearer never falls back to a valid member cookie", async () => {
   globalThis.__mobileCookies = { vitalid_at: "token-a" };
