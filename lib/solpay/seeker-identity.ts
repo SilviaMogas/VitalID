@@ -4,6 +4,8 @@ export const seekerIdentity = {
   icon: 'icons/vitalid-192.png',
 } as const;
 
+export const seekerAndroidPackage = 'site.vitalid.app';
+
 export function mobileWalletMessageHeading(host: string): string {
   return `${host} wants you to sign in to the Vital ID Android app with your Solana account:`;
 }

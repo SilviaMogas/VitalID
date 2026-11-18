@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 process.env.SUPABASE_URL = "https://supabase.local.test";
 process.env.SUPABASE_SECRET_KEY = "synthetic-service-key";
@@ -54,6 +55,7 @@ globalThis.__mobileRefreshes = {
 };
 
 const route = await import("@/app/api/mobile/v1/[...path]/route");
+const assetLinks = await import("@/app/.well-known/assetlinks.json/route");
 const { CONSENT_POLICY_VERSIONS } = await import("@/lib/legal");
 const { base58Encode } = await import("@/lib/solpay/base58");
 const { issueMessage, walletEmail, walletPassword } = await import("@/lib/solpay/wallet-auth");
@@ -101,6 +103,40 @@ function resetData() {
 }
 
 resetData();
+
+test("Android association publishes only a configured SHA-256 fingerprint for the Expo package", async (t) => {
+  const name = "SEEKER_ANDROID_CERT_SHA256";
+  const original = process.env[name];
+  t.after(() => {
+    if (original === undefined) delete process.env[name];
+    else process.env[name] = original;
+  });
+
+  delete process.env[name];
+  const missing = assetLinks.GET();
+  assert.equal(missing.status, 404);
+  assert.equal(missing.headers.get("cache-control"), "no-store");
+  process.env[name] = "AA:" + "f".repeat(62);
+  assert.equal(assetLinks.GET().status, 404);
+
+  const packageName = JSON.parse(readFileSync(new URL("../../mobile/app.json", import.meta.url), "utf8")).expo.android.package;
+  const rawFingerprint = "a0".repeat(32);
+  const colonFingerprint = Array(32).fill("A0").join(":");
+  for (const fingerprint of [rawFingerprint, colonFingerprint]) {
+    process.env[name] = fingerprint;
+    const response = assetLinks.GET();
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-type"), /^application\/json\b/);
+    assert.deepEqual(await body(response), [{
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: packageName,
+        sha256_cert_fingerprints: [colonFingerprint],
+      },
+    }]);
+  }
+});
 
 test("Seeker grants a cookie-free session to the bound account only after a single-use mobile signature", async () => {
   const wallet = generateKeyPairSync("ed25519");

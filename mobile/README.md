@@ -89,21 +89,31 @@ The result is `android/app/build/outputs/apk/release/app-release.apk`. The
 local Expo build uses development signing; use test accounts and test data
 only. Expo Go cannot run this native wallet module.
 
-Before using the dApp Store profile:
+Before testing and submitting the dApp Store build:
 
-1. Deploy the updated API on `https://www.vitalid.site` and check that an
-   unauthenticated `GET /api/mobile/v1/account` returns 401 JSON.
+1. Ensure Vercel can deploy Vital ID to `https://www.vitalid.site`.
 2. Link the Vital ID Expo project and create a **non-default** remote Android
    credential named `dapp-store`, separate from Google Play's. Keep the same
    signing key for future dApp Store updates. Build the signed APK with
    `eas build --platform android --profile dapp-store`. Increment the local
    Android version code for subsequent releases.
-3. Publish `/.well-known/assetlinks.json` on the canonical HTTPS domain,
-   listing package `site.vitalid.app` and the actual dApp Store signing
-   certificate's SHA-256 fingerprint under `delegate_permission/common.handle_all_urls`.
-   Check that it returns `200 application/json` without redirects. Do not
-   publish the preview certificate as the store identity.
-4. Test on a physical Seeker: use an existing test wallet account, cancel one
-   prompt, then sign in, verify consent gating, preview and revoke a test
-   share, and sign out. Review the production privacy policy and account
-   deletion path before submitting to the [Solana dApp Store](https://docs.solanamobile.com/dapp-store/submit-new-app).
+3. Run `apksigner verify --print-certs <release.apk>`. Set
+   `SEEKER_ANDROID_CERT_SHA256` on Vercel to the **Signer #1 certificate SHA-256
+   digest** from the signed dApp Store APK (not the APK file hash or preview
+   certificate), then deploy. The server publishes the association for
+   `site.vitalid.app` at
+   `https://www.vitalid.site/.well-known/assetlinks.json`; verify it returns
+   `200 application/json` without redirects and contains the same fingerprint.
+   Without a valid fingerprint the route returns `404`. Confirm that an
+   unauthenticated `GET /api/mobile/v1/account` returns `401` JSON.
+4. Test the release APK on a physical Seeker with an existing Vital ID Solana
+   test account and synthetic data only. Cancel one wallet prompt, then sign
+   in with the same wallet, verify consent gating, preview and revoke a test
+   share, and sign out. If the local debug-signed APK is already installed,
+   uninstall it before installing the release APK; the signing keys differ.
+5. Before submitting to the [Solana dApp Store](https://docs.solanamobile.com/dapp-store/submit-new-app),
+   verify public `/terms` and `/privacy` pages and confirm that the published
+   privacy contact can handle account deletion requests. Prepare an opaque
+   512×512 icon, a 1200×600 banner, and 4–8 screenshots
+   or videos using only synthetic test data. The publisher completes identity
+   verification and signs submissions with their publisher wallet.
