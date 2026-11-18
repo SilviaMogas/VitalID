@@ -123,6 +123,7 @@ function findElements(node, type, found = []) {
 
 function loadShell(api) {
   const harness = createHookHarness();
+  let changeAppState;
   const placeholder = (name) => function Placeholder() { return name; };
   const Button = placeholder("Button");
   const Notice = placeholder("Notice");
@@ -157,7 +158,10 @@ function loadShell(api) {
   const reactNative = {
     AppState: {
       currentState: "active",
-      addEventListener: () => ({ remove() {} }),
+      addEventListener: (_event, listener) => {
+        changeAppState = listener;
+        return { remove() {} };
+      },
     },
     KeyboardAvoidingView: "KeyboardAvoidingView",
     Platform: { OS: "ios" },
@@ -192,12 +196,30 @@ function loadShell(api) {
     throw new Error(`Unexpected App.tsx dependency: ${specifier}`);
   };
   appModule._compile(outputText, filename);
-  return { Shell: appModule.exports.Shell, harness, screens, ui };
+  return { Shell: appModule.exports.Shell, harness, screens, ui, setAppState: (state) => changeAppState(state) };
 }
 
 function settleMicrotasks() {
   return new Promise((resolve) => setImmediate(resolve));
 }
+
+test("opening an external wallet hides the sign-in form without unmounting it", async () => {
+  const { Shell, harness, screens, setAppState } = loadShell(createApi().api);
+  const props = { locale: "en", setLocale() {} };
+
+  harness.render(Shell, props);
+  await settleMicrotasks();
+  const foreground = harness.render(Shell, props);
+  assert.equal(findElements(foreground, screens.SignIn).length, 1);
+  setAppState("background");
+  const background = harness.render(Shell, props);
+  const hidden = findElements(background, "View").find((view) =>
+    view.props.importantForAccessibility === "no-hide-descendants");
+  assert.equal(hidden?.props.style.display, "none");
+  assert.equal(findElements(hidden, screens.SignIn).length, 1);
+  setAppState("active");
+  assert.equal(findElements(harness.render(Shell, props), screens.SignIn).length, 1);
+});
 
 test("account lookup 503 after sign-in recovers through retry and saved refresh", async () => {
   const fake = createApi();
