@@ -51,7 +51,11 @@ const STUBS = {
     }
   `,
   "@/lib/consent": `
+    import { CONSENT_POLICY_VERSIONS } from "@/lib/legal";
     const state = () => (globalThis.__mobileConsents ??= new Map());
+    export function hasCurrentHealthConsent(consents) {
+      return consents?.health_data?.policyVersion === CONSENT_POLICY_VERSIONS.health_data;
+    }
     export function getConsentStore() {
       return {
         async latest(userId) { return state().get(userId) ?? null; },

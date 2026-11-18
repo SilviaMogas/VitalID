@@ -31,6 +31,7 @@ const shareStrings = {
   "share.preview.currentSignals": ["Latest recovery, sleep, HRV and activity readings.", "أحدث قراءات التعافي والنوم وتقلب النبض والنشاط."],
   "share.preview.recentTrends": ["Trend insights against your own baseline.", "رؤى الاتجاهات مقارنة بخط أساسك الشخصي."],
   "share.preview.healthProfile": ["Height, weight, medications.", "الطول والوزن والأدوية."],
+  "share.consentNeeded": ["Health-data consent is required to share your data.", "يلزم الموافقة على معالجة البيانات الصحية لمشاركة بياناتك."],
   "share.duration.15": ["15 minutes", "١٥ دقيقة"],
   "share.duration.60": ["1 hour", "ساعة واحدة"],
   "share.duration.1440": ["24 hours", "٢٤ ساعة"],

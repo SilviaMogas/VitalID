@@ -4,7 +4,7 @@ import {
   type ShareField,
 } from '@/lib/sharing';
 import { resolveUserData } from '@/lib/user-data';
-import { getShareApiUser, isSameOrigin, shareJson } from '@/lib/share-api';
+import { getShareApiUser, isSameOrigin, requireHealthConsent, shareJson } from '@/lib/share-api';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -13,6 +13,8 @@ export async function POST(req: Request) {
   if (!isSameOrigin(req)) return shareJson({ error: 'unavailable' }, 403);
   const user = await getShareApiUser();
   if (!user) return shareJson({ error: 'unavailable' }, 401);
+  const consentError = await requireHealthConsent(user.id);
+  if (consentError) return consentError;
 
   let body: unknown;
   try {
