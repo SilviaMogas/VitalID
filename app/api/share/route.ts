@@ -14,7 +14,7 @@ import {
 } from '@/lib/sharing';
 import { resolveUserData } from '@/lib/user-data';
 import { createShare, listShares, pruneExpiredShares } from '@/lib/share-store';
-import { getShareApiUser, isSameOrigin, requireHealthConsent, shareJson } from '@/lib/share-api';
+import { getConsentingShareUser, getShareApiUser, isSameOrigin, shareJson } from '@/lib/share-api';
 import { recipientAccountExists } from '@/lib/auth/server';
 import { getMembershipStore } from '@/lib/membership/store';
 import { hasFeature } from '@/lib/plans';
@@ -56,10 +56,9 @@ function canonicalJson(value: unknown): string {
 
 export async function POST(req: Request) {
   if (!isSameOrigin(req)) return shareJson({ error: 'unavailable' }, 403);
-  const user = await getShareApiUser();
-  if (!user) return shareJson({ error: 'unavailable' }, 401);
-  const consentError = await requireHealthConsent(user.id);
-  if (consentError) return consentError;
+  const auth = await getConsentingShareUser();
+  if ('response' in auth) return auth.response;
+  const { user } = auth;
 
   let body: unknown;
   try {

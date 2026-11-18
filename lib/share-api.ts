@@ -31,3 +31,13 @@ export async function getShareApiUser() {
     return null;
   }
 }
+
+export async function getConsentingShareUser(): Promise<
+  | { user: NonNullable<Awaited<ReturnType<typeof getShareApiUser>>> }
+  | { response: Response }
+> {
+  const user = await getShareApiUser();
+  if (!user) return { response: shareJson({ error: "unavailable" }, 401) };
+  const response = await requireHealthConsent(user.id);
+  return response ? { response } : { user };
+}
