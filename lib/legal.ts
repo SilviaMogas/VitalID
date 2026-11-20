@@ -59,7 +59,7 @@ Provisional contact: ${LEGAL_CONTACT_EMAIL} — to be verified before launch. //
 We collect only the data needed to run the service:
 
 - Account data: first name, last name, email address, country and city, and sign-in credentials (authentication is managed by Supabase Auth; Vital ID does not store your password).
-- Optional Solana wallet sign-in: your public wallet address, a short-lived sign-in message, and the signature you approve are sent to Vital ID to verify control of the wallet. Sign-in does not send a blockchain transaction or require your private key or recovery phrase. Vital ID does not write your health data to Solana.
+- Optional Solana wallet sign-in: your public wallet address, a short-lived sign-in message, and the signature you approve are sent to Vital ID to verify control of the wallet. We keep the public wallet address linked to your Vital ID account in Supabase Auth so we can recognise your account the next time you sign in with the wallet. Sign-in does not send a blockchain transaction or require your private key or recovery phrase. Vital ID does not write your health data to Solana.
 - Profile data you enter: date of birth, gender, nationality, height, weight and an optional profile photo.
 - Health data you enter or connect: allergies, medications, medical conditions, blood type, emergency contact, lifestyle baseline (sleep, resting heart rate, steps, workouts, hydration and calorie targets), and signals received from connected sources (currently WHOOP via OAuth; other providers are marked as sample data until real integrations exist).
 - Technical data: website session cookies, Android session tokens, and your chosen language.
@@ -122,7 +122,7 @@ Vital ID («Vital ID»، «نحن») خدمة للهوية الصحية المح
 نجمع فقط البيانات اللازمة لتشغيل الخدمة:
 
 - بيانات الحساب: الاسم الأول واسم العائلة والبريد الإلكتروني والبلد والمدينة وبيانات اعتماد الدخول (تُدار المصادقة عبر Supabase Auth؛ ولا يخزّن Vital ID كلمة مرورك).
-- تسجيل الدخول الاختياري بمحفظة Solana: نتحقق من تحكمك في المحفظة باستخدام عنوانها العام ورسالة تسجيل دخول قصيرة الصلاحية والتوقيع الذي توافق عليه. لا يتطلب تسجيل الدخول إرسال معاملة على البلوكتشين أو مشاركة مفتاحك الخاص أو عبارة الاسترداد. لا يكتب Vital ID بياناتك الصحية على شبكة Solana.
+- تسجيل الدخول الاختياري بمحفظة Solana: نتحقق من تحكمك في المحفظة باستخدام عنوانها العام ورسالة تسجيل دخول قصيرة الصلاحية والتوقيع الذي توافق عليه. نحتفظ بعنوان المحفظة العام مرتبطًا بحسابك في Vital ID ضمن Supabase Auth لنتعرّف على حسابك عند تسجيل الدخول مجددًا بالمحفظة. لا يتطلب تسجيل الدخول إرسال معاملة على البلوكتشين أو مشاركة مفتاحك الخاص أو عبارة الاسترداد. لا يكتب Vital ID بياناتك الصحية على شبكة Solana.
 - بيانات الملف التي تدخلها: تاريخ الميلاد والجنس والجنسية والطول والوزن وصورة ملف اختيارية.
 - البيانات الصحية التي تدخلها أو تربطها: الحساسية والأدوية والحالات الطبية وفصيلة الدم وجهة اتصال الطوارئ وخط أساس نمط الحياة (النوم ونبض القلب أثناء الراحة والخطوات والتمارين وأهداف الترطيب والسعرات)، والمؤشرات الواردة من المصادر المتصلة (حاليًا WHOOP عبر OAuth؛ أما المزودون الآخرون فمُعَدّون كبيانات نموذجية حتى تتوفر تكاملات حقيقية).
 - البيانات التقنية: ملفات تعريف الارتباط لجلسة الموقع، ورموز جلسة أندرويد، واللغة التي اخترتها.
