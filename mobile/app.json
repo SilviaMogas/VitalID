@@ -25,6 +25,12 @@
     "plugins": [
       "expo-secure-store",
       "expo-localization"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "529e50d3-55a1-452a-bc3d-01156093a13b"
+      }
+    },
+    "owner": "silviamogas"
   }
 }
