@@ -32,6 +32,7 @@ export const CONSENT_POLICY_VERSIONS: Record<ConsentType, string> = {
   health_data: PRIVACY_VERSION,
 };
 export const LEGAL_CONTACT_EMAIL = "hello@vitalid.site";
+const DATA_CONTROLLER = "BMBWeb3 Global FZCO";
 
 export type LegalDocKind = "privacy" | "terms";
 
@@ -51,15 +52,15 @@ export interface RenderedSection {
 const PRIVACY_EN = `## 1. Who we are
 Vital ID ("Vital ID", "we", "us") is a portable health-identity service available at vitalid.site and through the Vital ID Android app for Solana Seeker. It lets you view wearable and manually entered health signals against your own baseline and share selected fields through temporary, revocable links.
 
-Vital ID acts as the data controller for the personal data described in this policy. // TODO-LEGAL: replace with the legal entity name and registered address.
+${DATA_CONTROLLER} is the controller for the personal data described in this policy. Its registered office is IFZA Business Park, Building A1, Dubai Silicon Oasis, P.O. Box 342001, Dubai, United Arab Emirates.
 
-Provisional contact: ${LEGAL_CONTACT_EMAIL} — to be verified before launch. // TODO-LEGAL: appoint and publish a real DPO / privacy contact if required.
+Privacy and account deletion requests: ${LEGAL_CONTACT_EMAIL}. // TODO-LEGAL: appoint and publish DPO details if required.
 
 ## 2. Data we collect
 We collect only the data needed to run the service:
 
 - Account data: first name, last name, email address, country and city, and sign-in credentials (authentication is managed by Supabase Auth; Vital ID does not store your password).
-- Optional Solana wallet sign-in: your public wallet address, a short-lived sign-in message, and the signature you approve are sent to Vital ID to verify control of the wallet. Sign-in does not send a blockchain transaction or require your private key or recovery phrase. Vital ID does not write your health data to Solana.
+- Optional Solana wallet sign-in: your public wallet address, a short-lived sign-in message, and the signature you approve are sent to Vital ID to verify control of the wallet. We keep the public wallet address linked to your Vital ID account in Supabase Auth so we can recognise your account the next time you sign in with the wallet. Sign-in does not send a blockchain transaction or require your private key or recovery phrase. Vital ID does not write your health data to Solana.
 - Profile data you enter: date of birth, gender, nationality, height, weight and an optional profile photo.
 - Health data you enter or connect: allergies, medications, medical conditions, blood type, emergency contact, lifestyle baseline (sleep, resting heart rate, steps, workouts, hydration and calorie targets), and signals received from connected sources (currently WHOOP via OAuth; other providers are marked as sample data until real integrations exist).
 - Technical data: website session cookies, Android session tokens, and your chosen language.
@@ -109,20 +110,20 @@ Vital ID is not directed at children. // TODO-LEGAL: set a minimum age (13/16 de
 The "Fatima" demo profile and connectors marked "sample data" display synthetic data bundled with the app for demonstration. Do not rely on them; they are not your data and are not real medical records.
 
 ## 13. Changes
-We may update this policy; the version date above always shows the current one. Material changes will be flagged in the app and we may ask you to review them.`;
+We may update this policy. The “Last updated” date above shows when this notice was last revised. It is separate from the policy version recorded with your consent. Material changes will be flagged in the app and we may ask you to review them.`;
 
 const PRIVACY_AR = `## ١. من نحن
 Vital ID («Vital ID»، «نحن») خدمة للهوية الصحية المحمولة متاحة على vitalid.site وعبر تطبيق Vital ID لنظام أندرويد على جهاز Solana Seeker. تتيح لك عرض المؤشرات الصحية الواردة من الأجهزة القابلة للارتداء أو المُدخلة يدويًا ومقارنتها بمستواك المرجعي الشخصي، ومشاركة الحقول التي تختارها عبر روابط مؤقتة قابلة للإلغاء.
 
-يعمل Vital ID كمسؤول عن البيانات الشخصية الموصوفة في هذه السياسة. // TODO-LEGAL: استبدال باسم الكيان القانوني والعنوان المسجّل.
+الجهة المسؤولة عن معالجة البيانات الشخصية الموضّحة في هذه السياسة هي ${DATA_CONTROLLER}. مقرّها المسجّل في مجمّع IFZA للأعمال، المبنى A1، واحة دبي للسيليكون، ص. ب. 342001، دبي، الإمارات العربية المتحدة.
 
-جهة اتصال مؤقتة: ${LEGAL_CONTACT_EMAIL} — ستُؤكَّد قبل الإطلاق. // TODO-LEGAL: تعيين ونشر مسؤول حقيقي لحماية البيانات / جهة اتصال للخصوصية إذا لزم الأمر.
+للاستفسارات المتعلقة بالخصوصية وطلبات حذف الحساب، راسلنا على ${LEGAL_CONTACT_EMAIL}. // TODO-LEGAL: تعيين مسؤول لحماية البيانات ونشر بيانات التواصل معه إذا لزم الأمر.
 
 ## ٢. البيانات التي نجمعها
 نجمع فقط البيانات اللازمة لتشغيل الخدمة:
 
 - بيانات الحساب: الاسم الأول واسم العائلة والبريد الإلكتروني والبلد والمدينة وبيانات اعتماد الدخول (تُدار المصادقة عبر Supabase Auth؛ ولا يخزّن Vital ID كلمة مرورك).
-- تسجيل الدخول الاختياري بمحفظة Solana: نتحقق من تحكمك في المحفظة باستخدام عنوانها العام ورسالة تسجيل دخول قصيرة الصلاحية والتوقيع الذي توافق عليه. لا يتطلب تسجيل الدخول إرسال معاملة على البلوكتشين أو مشاركة مفتاحك الخاص أو عبارة الاسترداد. لا يكتب Vital ID بياناتك الصحية على شبكة Solana.
+- تسجيل الدخول الاختياري بمحفظة Solana: نتحقق من تحكمك في المحفظة باستخدام عنوانها العام ورسالة تسجيل دخول قصيرة الصلاحية والتوقيع الذي توافق عليه. نحتفظ بعنوان المحفظة العام مرتبطًا بحسابك في Vital ID ضمن Supabase Auth لنتعرّف على حسابك عند تسجيل الدخول مجددًا بالمحفظة. لا يتطلب تسجيل الدخول إرسال معاملة على البلوكتشين أو مشاركة مفتاحك الخاص أو عبارة الاسترداد. لا يكتب Vital ID بياناتك الصحية على شبكة Solana.
 - بيانات الملف التي تدخلها: تاريخ الميلاد والجنس والجنسية والطول والوزن وصورة ملف اختيارية.
 - البيانات الصحية التي تدخلها أو تربطها: الحساسية والأدوية والحالات الطبية وفصيلة الدم وجهة اتصال الطوارئ وخط أساس نمط الحياة (النوم ونبض القلب أثناء الراحة والخطوات والتمارين وأهداف الترطيب والسعرات)، والمؤشرات الواردة من المصادر المتصلة (حاليًا WHOOP عبر OAuth؛ أما المزودون الآخرون فمُعَدّون كبيانات نموذجية حتى تتوفر تكاملات حقيقية).
 - البيانات التقنية: ملفات تعريف الارتباط لجلسة الموقع، ورموز جلسة أندرويد، واللغة التي اخترتها.
@@ -172,7 +173,7 @@ Vital ID غير موجّه للأطفال. // TODO-LEGAL: تحديد حد أدن
 يعرض ملف «فاطمة» التجريبي والموصلات الموسومة «بيانات نموذجية» بيانات اصطناعية مرفقة بالتطبيق لأغراض العرض. لا تعتمد عليها؛ فهي ليست بياناتك وليست سجلات طبية حقيقية.
 
 ## ١٣. التغييرات
-قد نحدّث هذه السياسة؛ ويُظهر تاريخ الإصدار أعلاه النسخة الحالية دائمًا. ستُعلَم التغييرات الجوهرية داخل التطبيق وقد نطلب منك مراجعتها.`;
+قد نحدّث هذه السياسة. يشير تاريخ «آخر تحديث» أعلاه إلى آخر مراجعة لهذا الإشعار، وهو منفصل عن إصدار السياسة المسجّل مع موافقتك. سننبّهك إلى التغييرات الجوهرية داخل التطبيق وقد نطلب منك مراجعتها.`;
 
 const TERMS_EN = `## 1. Agreement
 These Terms of Service govern your use of Vital ID (vitalid.site). By creating an account or using the service you accept them. If you do not agree, do not use the service.
