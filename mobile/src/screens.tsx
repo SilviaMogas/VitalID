@@ -3,6 +3,7 @@ import { Alert, Share } from "react-native";
 import type { MobileAccount, MobileShare, MobileShareField, MobileShareSummary } from "../../types/mobile";
 import type { VitalIdSnapshot } from "../../types/health";
 import { api, ApiError, publicShareUrl, API_ORIGIN } from "./api";
+import { seekerAvailable, signInWithSeeker } from "./seeker";
 import { Button, Card, Check, Disclosure, Input, JobState, Notice, Page, PolicyLinks, Row, s, T, Title, useCopy, useJob } from "./ui";
 import type { Label } from "./strings";
 
@@ -33,6 +34,16 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => Promise<void> }) {
         autoCapitalize="none" textContentType="password" autoComplete="current-password" editable={!job.busy}
         onSubmitEditing={submit} returnKeyType="go" />
       <Button label={t(job.busy ? "signingIn" : "signIn")} disabled={job.busy || !email.trim() || !password} onPress={submit} />
+      {seekerAvailable && <>
+        <Button label={t("signInWallet")} secondary disabled={job.busy} onPress={() => {
+          void job.run(async () => {
+            setPassword("");
+            await signInWithSeeker();
+            await onSignedIn();
+          });
+        }} />
+        <T style={s.caption}>{t("walletHint")}</T>
+      </>}
       <JobState {...job} />
     </Card>
     <T style={s.caption}>{t("existingOnly")}</T><PolicyLinks />

@@ -37,6 +37,11 @@ const STUBS = {
           return record ? { data: { session: record.session, user: record.user }, error: null } : { data: { session: null, user: null }, error: { status: 400, code: "refresh_token_not_found", message: "refresh token not found" } };
         },
         admin: {
+          async generateLink({ email }) {
+            const user = fakeUser(email);
+            return user ? { data: { user }, error: null }
+              : { data: { user: null }, error: { code: "user_not_found" } };
+          },
           async signOut() {
             if (globalThis.__mobileSignoutError) return { error: globalThis.__mobileSignoutError };
             return { error: null };

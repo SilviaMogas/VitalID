@@ -39,7 +39,7 @@ export function Shell({ locale, setLocale }: { locale: Locale; setLocale: (value
 
   const failed = useCallback((e: unknown) => {
     if (!(e instanceof ApiError)) return;
-    if (e.code === "session_changed" || e.code === "invalid_credentials") return;
+    if (["session_changed", "invalid_credentials", "wallet_account_required", "bad_signature", "bad_message", "expired"].includes(e.code)) return;
     if (e.status === 401) { setAccount(null); setKnownShares([]); setRevokedIds(new Set()); setError("authError"); }
     else if (e.code === "consent_required" || e.code === "consent_version_mismatch") {
       setAccount((old) => old ? { ...old, consent: { healthCurrent: false, termsCurrent: false, privacyCurrent: false } } : null);
@@ -61,7 +61,7 @@ export function Shell({ locale, setLocale }: { locale: Locale; setLocale: (value
   }
   const requiresConsent = !!account && !currentConsent(account);
   let content: React.ReactNode;
-  if (!foreground) content = <Page><T style={s.title}>Vital ID</T><T>{t("privacyScreen")}</T></Page>;
+  if (!foreground && account) content = null;
   else if (starting || signingOut) content = <Page><JobState busy error={null} /></Page>;
   else if (error === "storageError") content = <Page><Notice error>{t(error)}</Notice>
     <Button label={t("forget")} secondary onPress={() => void signOut()} /></Page>;
@@ -89,7 +89,12 @@ export function Shell({ locale, setLocale }: { locale: Locale; setLocale: (value
         {account && <Pressable accessibilityRole="button" onPress={() => void signOut()} style={styles.headerAction}><T style={s.caption}>{t("signOut")}</T></Pressable>}
       </Row>
       {!!error && !account && (error === "authError" || error === "localSignOut") && <Notice error>{t(error)}</Notice>}
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>{content}</KeyboardAvoidingView>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <View style={foreground ? styles.visible : styles.hidden} importantForAccessibility={foreground ? "auto" : "no-hide-descendants"}>
+          {content}
+        </View>
+        {!foreground && <Page><T style={s.title}>Vital ID</T><T>{t("privacyScreen")}</T></Page>}
+      </KeyboardAvoidingView>
       {account && foreground && <Row style={styles.tabs}>{(["share", "identity", "access"] as Tab[]).map((item) =>
         <Pressable key={item} accessibilityRole="tab" accessibilityState={{ selected: tab === item }} onPress={() => setTab(item)}
           style={[styles.tab, tab === item && styles.tabSelected]}>
@@ -104,6 +109,8 @@ export default function App() {
 }
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
+  visible: { flex: 1 },
+  hidden: { display: "none" },
   header: { paddingHorizontal: 20, paddingVertical: 8, borderBottomWidth: 1, borderColor: colors.border },
   mark: { height: 32, width: 32, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: colors.teal },
   markText: { color: "white", fontWeight: "800", fontSize: 20 },

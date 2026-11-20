@@ -8,13 +8,16 @@ import {
 } from '@/lib/auth/mobile';
 import { throttlePasswordLogin } from '@/lib/auth/login-throttle';
 import { withRequestAuthUser } from '@/lib/auth/request-user';
-import { isConfirmedUser } from '@/lib/auth/server';
+import { grantVerifiedWalletSession, isAuthConfigured, isConfirmedUser } from '@/lib/auth/server';
+import { walletEmail } from '@/lib/auth/wallet-identity';
 import { getConsentStore } from '@/lib/consent';
 import { CONSENT_POLICY_VERSIONS } from '@/lib/legal';
 import { hasFeature } from '@/lib/plans';
 import { buildSnapshot, SHARE_DURATIONS, SHARE_FIELDS } from '@/lib/sharing';
 import { isSameOrigin } from '@/lib/share-api';
 import { resolveUserData } from '@/lib/user-data';
+import { seekerIdentity } from '@/lib/solpay/seeker-identity';
+import { isSolanaPublicKey, issueMessage, verifyWalletMessage } from '@/lib/solpay/wallet-auth';
 import {
   GET as listSharesHandler,
   POST as createShareHandler,
@@ -34,6 +37,7 @@ const MAX_BODY_BYTES = 128 * 1024;
 const MAX_STRING_LENGTH = 8192;
 const SHARE_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const VERSION_KEYS = ['health_data', 'terms_of_service', 'privacy_policy'] as const;
+const SEEKER_HOST = new URL(seekerIdentity.uri).host;
 
 function json(body: unknown, status = 200, tokenResponse = false): Response {
   const headers = new Headers({
@@ -352,12 +356,15 @@ async function dispatch(request: Request, context: RouteContext, method: string)
     const { path } = await context.params;
     const segments = Array.isArray(path) ? path : [];
     const joined = segments.join('/');
-    tokenResponse = method === 'POST' && (joined === 'auth/signin' || joined === 'auth/refresh');
+    tokenResponse = method === 'POST' && ['auth/signin', 'auth/refresh', 'auth/sol/verify'].includes(joined);
     if (request.url.includes('?') || request.url.includes('#')) {
       return normalizeResponse(json({ error: 'invalid_request' }, 400), tokenResponse);
     }
     if (method !== 'GET' && method !== 'POST') {
       return normalizeResponse(json({ error: 'method_not_allowed' }, 405), tokenResponse);
+    }
+    if (method === 'POST' && (joined === 'auth/sol/message' || joined === 'auth/sol/verify')) {
+      return normalizeResponse(await dispatchSeekerAuth(request, joined.endsWith('/verify')), tokenResponse);
     }
     if (method === 'POST' && joined === 'auth/signin') {
       const parsed = await readJsonObject(request);
@@ -415,6 +422,43 @@ async function dispatch(request: Request, context: RouteContext, method: string)
   } catch {
     return normalizeResponse(json({ error: 'unavailable' }, 503), tokenResponse);
   }
+}
+
+async function dispatchSeekerAuth(request: Request, verify: boolean): Promise<Response> {
+  if (!isAuthConfigured()) return json({ error: 'unavailable' }, 503);
+  const parsed = await readJsonObject(request);
+  if (!parsed.ok) return parsed.response;
+  const { publicKey, message, signature } = parsed.value;
+  if (typeof publicKey !== 'string' || !isSolanaPublicKey(publicKey)) {
+    return json({ error: 'invalid_public_key' }, 400);
+  }
+  if (!verify) return json({ message: issueMessage(publicKey, SEEKER_HOST, 'mobile') });
+  if (typeof message !== 'string' || typeof signature !== 'string') {
+    return json({ error: 'invalid_request' }, 400);
+  }
+  const throttled = await throttlePasswordLogin(request, walletEmail(publicKey, 'solana'), async () => {
+    const verdict = await verifyWalletMessage(publicKey, signature, message, SEEKER_HOST, 'mobile');
+    if (verdict !== 'ok') {
+      return json({ error: verdict }, verdict === 'unavailable' ? 503 : 401);
+    }
+    const grant = await grantVerifiedWalletSession(publicKey, { consentTerms: false, consentHealthData: false });
+    if (!grant.ok) {
+      if (grant.code === 'consent_required' || grant.code === 'invalid_credentials' || grant.code === 'email_not_confirmed') {
+        return json({ error: 'wallet_account_required' }, 401);
+      }
+      return json({ error: 'unavailable' }, 503);
+    }
+    return json(sessionResponse({
+      accessToken: grant.session.access_token,
+      refreshToken: grant.session.refresh_token,
+      expiresAt: grant.session.expires_at ?? Math.floor(Date.now() / 1000) + grant.session.expires_in,
+      user: grant.user,
+    }));
+  }, (response) => response.ok);
+  if (!throttled.limited) return throttled.result;
+  const response = json({ error: 'rate_limited' }, 429);
+  response.headers.set('Retry-After', String(throttled.retryAfterSeconds));
+  return response;
 }
 
 export function GET(request: Request, context: RouteContext) {
