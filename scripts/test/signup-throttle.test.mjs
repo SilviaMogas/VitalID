@@ -45,7 +45,7 @@ const route = await import('../../app/api/auth/signup/route.ts');
 function signup(email, ip = '203.0.113.10', overrides = {}) {
   return route.POST(new Request('https://vitalid.example/api/auth/signup', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-real-ip': ip },
+    headers: { 'content-type': 'application/json', origin: 'https://vitalid.example', 'x-real-ip': ip },
     body: JSON.stringify({
       firstName: 'Synthetic',
       lastName: 'Person',
