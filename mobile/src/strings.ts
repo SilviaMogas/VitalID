@@ -98,7 +98,7 @@ const strings = {
   emptyValue: ["Not provided", "غير متوفر"],
   sourceNote: ["Manual values are self-reported. Provider readings are shown only when returned by the backend. None of this establishes clinical truth.", "القيم اليدوية مُدخلة ذاتياً. تظهر قراءات المزوّد فقط عندما يعيدها الخادم. لا يثبت أي من ذلك حقيقة طبية."],
   limitations: ["What's not connected", "ما لم يتم ربطه"],
-  limitationsBody: ["CUDIS, Muse, Apple Health and Health Connect are not connected by this app. Mobile wallet signing and SOL/USDC payments are not included. The Solana/BBS laboratory is a separate demonstration.", "لا يربط هذا التطبيق CUDIS أو Muse أو Apple Health أو Health Connect. توقيع المحفظة والدفع بـ SOL/USDC غير مشمولين. مختبر Solana/BBS عرض منفصل."],
+  limitationsBody: ["CUDIS, Muse, Apple Health and Health Connect are not connected by this app. On Android, a compatible Solana wallet can sign a message to sign in. The app does not send transactions or accept SOL/USDC payments. The Solana/BBS laboratory is a separate demonstration.", "لا يربط هذا التطبيق CUDIS أو Muse أو Apple Health أو Health Connect. على أندرويد، يمكن لمحفظة Solana متوافقة توقيع رسالة لتسجيل الدخول. لا يرسل التطبيق معاملات ولا يقبل مدفوعات بـ SOL أو USDC. مختبر Solana/BBS عرض منفصل."],
   incomplete: ["Your web profile setup is incomplete. Missing values remain empty; no sample data is added.", "إعداد ملفك على الويب غير مكتمل. تبقى القيم المفقودة فارغة، دون إضافة بيانات تجريبية."],
   privacyScreen: ["Your health information is hidden while the app is in the background.", "يتم إخفاء معلوماتك الصحية عندما يكون التطبيق في الخلفية."],
   connectionError: ["Could not reach Vital ID. Check your connection and try again.", "تعذّر الاتصال بـ Vital ID. تحقق من الاتصال وأعد المحاولة."],
