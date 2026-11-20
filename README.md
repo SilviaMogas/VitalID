@@ -267,8 +267,9 @@ Keep the existing Supabase credentials and any configured `SOL_WALLET_SECRET`
 when migrating: wallet accounts rely on the same signing secret. Set any
 needed `NEXT_PUBLIC_*` variables in the build environment.
 
-The config enables the `workers.dev` URL but does not change DNS. Before
-attaching the custom domain, confirm that an unauthenticated request to
+The config serves `www.vitalid.site` and keeps the `workers.dev` URL enabled.
+Deploy only to the production `vitalid` Worker; deployment applies the custom
+domain. On the canonical host, confirm that an unauthenticated request to
 `/api/mobile/v1/account` returns `401` JSON and that a POST to
 `/api/mobile/v1/auth/sol/message` with a valid public key returns a challenge.
 The `401` alone does not prove that the authentication backend is configured. See the
