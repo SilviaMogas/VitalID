@@ -33,8 +33,8 @@ dashboard SQL editor or `supabase db push`. Until applied, signups answer
 
 ## Pending launch gates (not done here)
 
-- Real controller entity + registered address; verified DPO/contact
-  (`hello@vitalid.site` is provisional).
+- Legal controller name and registered address; DPO appointment and contact
+  details if required. Account deletion requests go to `hello@vitalid.site`.
 - Consent withdrawal workflow (contact-only today).
 - Consent gates for users created **before** this pack and for other
   health-data endpoints (not just the WHOOP connect path).

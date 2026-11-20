@@ -53,7 +53,7 @@ Vital ID ("Vital ID", "we", "us") is a portable health-identity service availabl
 
 Vital ID acts as the data controller for the personal data described in this policy. // TODO-LEGAL: replace with the legal entity name and registered address.
 
-Provisional contact: ${LEGAL_CONTACT_EMAIL} — to be verified before launch. // TODO-LEGAL: appoint and publish a real DPO / privacy contact if required.
+Privacy and account deletion requests: ${LEGAL_CONTACT_EMAIL}. // TODO-LEGAL: appoint and publish DPO details if required.
 
 ## 2. Data we collect
 We collect only the data needed to run the service:
@@ -116,7 +116,7 @@ Vital ID («Vital ID»، «نحن») خدمة للهوية الصحية المح
 
 يعمل Vital ID كمسؤول عن البيانات الشخصية الموصوفة في هذه السياسة. // TODO-LEGAL: استبدال باسم الكيان القانوني والعنوان المسجّل.
 
-جهة اتصال مؤقتة: ${LEGAL_CONTACT_EMAIL} — ستُؤكَّد قبل الإطلاق. // TODO-LEGAL: تعيين ونشر مسؤول حقيقي لحماية البيانات / جهة اتصال للخصوصية إذا لزم الأمر.
+للاستفسارات المتعلقة بالخصوصية وطلبات حذف الحساب، راسلنا على ${LEGAL_CONTACT_EMAIL}. // TODO-LEGAL: تعيين مسؤول لحماية البيانات ونشر بيانات التواصل معه إذا لزم الأمر.
 
 ## ٢. البيانات التي نجمعها
 نجمع فقط البيانات اللازمة لتشغيل الخدمة:
