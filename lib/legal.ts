@@ -32,6 +32,7 @@ export const CONSENT_POLICY_VERSIONS: Record<ConsentType, string> = {
   health_data: PRIVACY_VERSION,
 };
 export const LEGAL_CONTACT_EMAIL = "hello@vitalid.site";
+const DATA_CONTROLLER = "BMBWeb3 Global FZCO";
 
 export type LegalDocKind = "privacy" | "terms";
 
@@ -51,7 +52,7 @@ export interface RenderedSection {
 const PRIVACY_EN = `## 1. Who we are
 Vital ID ("Vital ID", "we", "us") is a portable health-identity service available at vitalid.site and through the Vital ID Android app for Solana Seeker. It lets you view wearable and manually entered health signals against your own baseline and share selected fields through temporary, revocable links.
 
-Vital ID acts as the data controller for the personal data described in this policy. // TODO-LEGAL: replace with the legal entity name and registered address.
+${DATA_CONTROLLER} is the controller for the personal data described in this policy. Its registered office is IFZA Business Park, Building A1, Dubai Silicon Oasis, P.O. Box 342001, Dubai, United Arab Emirates.
 
 Privacy and account deletion requests: ${LEGAL_CONTACT_EMAIL}. // TODO-LEGAL: appoint and publish DPO details if required.
 
@@ -114,7 +115,7 @@ We may update this policy. The “Last updated” date above shows when this not
 const PRIVACY_AR = `## ١. من نحن
 Vital ID («Vital ID»، «نحن») خدمة للهوية الصحية المحمولة متاحة على vitalid.site وعبر تطبيق Vital ID لنظام أندرويد على جهاز Solana Seeker. تتيح لك عرض المؤشرات الصحية الواردة من الأجهزة القابلة للارتداء أو المُدخلة يدويًا ومقارنتها بمستواك المرجعي الشخصي، ومشاركة الحقول التي تختارها عبر روابط مؤقتة قابلة للإلغاء.
 
-يعمل Vital ID كمسؤول عن البيانات الشخصية الموصوفة في هذه السياسة. // TODO-LEGAL: استبدال باسم الكيان القانوني والعنوان المسجّل.
+الجهة المسؤولة عن معالجة البيانات الشخصية الموضّحة في هذه السياسة هي ${DATA_CONTROLLER}. مقرّها المسجّل في مجمّع IFZA للأعمال، المبنى A1، واحة دبي للسيليكون، ص. ب. 342001، دبي، الإمارات العربية المتحدة.
 
 للاستفسارات المتعلقة بالخصوصية وطلبات حذف الحساب، راسلنا على ${LEGAL_CONTACT_EMAIL}. // TODO-LEGAL: تعيين مسؤول لحماية البيانات ونشر بيانات التواصل معه إذا لزم الأمر.
 

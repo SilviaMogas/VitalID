@@ -33,8 +33,8 @@ dashboard SQL editor or `supabase db push`. Until applied, signups answer
 
 ## Pending launch gates (not done here)
 
-- Legal controller name and registered address; DPO appointment and contact
-  details if required. Account deletion requests go to `hello@vitalid.site`.
+- DPO appointment and contact details if required. Account deletion requests
+  go to `hello@vitalid.site`.
 - Consent withdrawal workflow (contact-only today).
 - Consent gates for users created **before** this pack and for other
   health-data endpoints (not just the WHOOP connect path).
@@ -44,8 +44,7 @@ dashboard SQL editor or `supabase db push`. Until applied, signups answer
 
 ## TODO-LEGAL checklist (for a human lawyer)
 
-- Controller entity + registered address (privacy §1).
-- DPO / privacy contact (§1).
+- DPO appointment and contact details if required (privacy §1).
 - Data residency, international-transfer mechanism (SCCs), UAE PDPL alignment (§9).
 - Exact retention periods per category + deletion schedule (§7).
 - Minimum age per market and any age-assurance flow (§11, terms §3).
