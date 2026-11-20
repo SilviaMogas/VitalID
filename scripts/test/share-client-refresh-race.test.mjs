@@ -62,6 +62,13 @@ function loadShareClient() {
     ],
     ["@/components/membership/LockedFeature", { LockedFeature: passThrough }],
     ["@/components/membership/UpgradeChip", { LockIcon: noop, UpgradeChip: noop }],
+    [
+      "@/components/legal/HealthDataConsent",
+      {
+        HealthDataConsent: ({ id, checked, onChange }) =>
+          React.createElement("input", { id, type: "checkbox", checked, onChange }),
+      },
+    ],
     ["@/components/vital-id/VitalIdSections", { SectionTitle: passThrough }],
     ["@/components/mascot/MascotNote", { MascotNote: passThrough }],
     ["@/components/companions/Companion", { Companion: noop }],

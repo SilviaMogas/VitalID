@@ -25,6 +25,7 @@ import {
 import { getInsurer, INSURERS, type InsurerId } from "@/lib/insurers";
 import { InsurerMonogram, resolveRecipients } from "@/components/share/InsurerBadge";
 import { DisclosurePreview } from "@/components/share/DisclosurePreview";
+import { HealthDataConsent } from "@/components/legal/HealthDataConsent";
 
 interface ShareSummary {
   id: string;
@@ -86,6 +87,9 @@ export default function ShareClient() {
   const [accountCodeFeedback, setAccountCodeFeedback] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ snapshot: SharePayload["snapshot"] } | null>(null);
   const [previewError, setPreviewError] = useState(false);
+  const [consentRequired, setConsentRequired] = useState(false);
+  const [healthConsent, setHealthConsent] = useState(false);
+  const [previewReload, setPreviewReload] = useState(0);
   const [disclosureConsent, setDisclosureConsent] = useState(false);
   const sharesRequestVersion = useRef(0);
   const latestAppliedSharesVersion = useRef(0);
@@ -117,14 +121,42 @@ export default function ShareClient() {
       cache: "no-store",
       signal: controller.signal,
     }).then(async (res) => {
-      if (!res.ok) throw new Error("Preview unavailable");
       const data = await res.json();
-      if (!controller.signal.aborted) setPreview(data);
+      if (res.status === 403 && data.error === "consent_required") {
+        if (!controller.signal.aborted) setConsentRequired(true);
+        return;
+      }
+      if (!res.ok) throw new Error("Preview unavailable");
+      if (!controller.signal.aborted) {
+        setConsentRequired(false);
+        setPreview(data);
+      }
     }).catch(() => {
       if (!controller.signal.aborted) setPreviewError(true);
     });
     return () => controller.abort();
-  }, [fieldKey]);
+  }, [fieldKey, previewReload]);
+
+  async function acceptHealthConsent() {
+    if (!healthConsent) return;
+    setBusy(true);
+    try {
+      const response = await fetch("/api/consent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "health_data" }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      setError(null);
+      setHealthConsent(false);
+      setConsentRequired(false);
+      setPreviewReload((current) => current + 1);
+    } catch {
+      setError(t("common.error"));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const link = useMemo(
     () =>
@@ -204,6 +236,13 @@ export default function ShareClient() {
           expectedSnapshot: preview.snapshot,
         }),
       });
+      if (res.status === 403) {
+        const data = await res.json();
+        if (data.error === "consent_required") {
+          setConsentRequired(true);
+          return;
+        }
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const created = (await res.json()) as SharePayload;
       const createdShare: ShareSummary = {
@@ -538,7 +577,20 @@ export default function ShareClient() {
           </h2>
           <p className="mt-2 text-sm text-muted">{locale === "ar" ? "هذه البيانات فقط هي التي ستظهر في الرابط. افتح كل قسم للمراجعة، أو عد إلى الخطوة ٢ لإزالة أي فئة." : "Only the data below will be included. Open each section to review it, or go back to step 2 to remove a category."}</p>
         </div>
-        {preview ? (
+        {consentRequired ? (
+          <div role="alert" className="space-y-3 rounded-2xl bg-warn-soft p-4 text-sm text-ink-2">
+            <p>{t("share.consentNeeded")}</p>
+            <HealthDataConsent id="share-consent" checked={healthConsent} onChange={setHealthConsent} />
+            <button
+              type="button"
+              disabled={!healthConsent || busy}
+              onClick={acceptHealthConsent}
+              className="press w-full rounded-2xl bg-brand py-3.5 text-sm font-semibold text-white shadow-lift transition hover:bg-brand-deep disabled:opacity-50"
+            >
+              {t("wellness.enable")}
+            </button>
+          </div>
+        ) : preview ? (
           <DisclosurePreview snapshot={preview.snapshot} />
         ) : (
           <p className="text-sm text-muted">
@@ -563,22 +615,26 @@ export default function ShareClient() {
         </p>
       </section>
 
-      <button
-        type="button"
-        onClick={generate}
-        disabled={busy || !preview || !disclosureConsent || !validRecipient}
-        className="press w-full rounded-2xl bg-brand py-3.5 text-sm font-semibold text-white shadow-lift transition hover:bg-brand-deep disabled:opacity-50"
-      >
-        {busy ? t("share.generating") : t("share.generate")}
-      </button>
-      {(!validRecipient || !preview || !disclosureConsent) && (
-        <p className="text-center text-xs text-muted" role="status">
-          {!validRecipient
-            ? (locale === "ar" ? "أضف رمز حساب المستلم في الخطوة ٤ للمتابعة." : "Add the recipient’s account code in step 4 to continue.")
-            : !preview
-              ? (locale === "ar" ? "اختر البيانات وانتظر تحميل المعاينة." : "Choose your data and wait for the preview to load.")
-              : (locale === "ar" ? "راجع البيانات وحدد مربع الموافقة لإنشاء الرابط." : "Review the data and tick the confirmation to create your link.")}
-        </p>
+      {!consentRequired && (
+        <>
+          <button
+            type="button"
+            onClick={generate}
+            disabled={busy || !preview || !disclosureConsent || !validRecipient}
+            className="press w-full rounded-2xl bg-brand py-3.5 text-sm font-semibold text-white shadow-lift transition hover:bg-brand-deep disabled:opacity-50"
+          >
+            {busy ? t("share.generating") : t("share.generate")}
+          </button>
+          {(!validRecipient || !preview || !disclosureConsent) && (
+            <p className="text-center text-xs text-muted" role="status">
+              {!validRecipient
+                ? (locale === "ar" ? "أضف رمز حساب المستلم في الخطوة ٤ للمتابعة." : "Add the recipient’s account code in step 4 to continue.")
+                : !preview
+                  ? (locale === "ar" ? "اختر البيانات وانتظر تحميل المعاينة." : "Choose your data and wait for the preview to load.")
+                  : (locale === "ar" ? "راجع البيانات وحدد مربع الموافقة لإنشاء الرابط." : "Review the data and tick the confirmation to create your link.")}
+            </p>
+          )}
+        </>
       )}
 
       {/* Result card */}

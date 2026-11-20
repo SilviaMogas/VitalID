@@ -10,6 +10,8 @@ const { resolveUserData } = await import('@/lib/user-data');
 const { getOnboardingStore } = await import('@/lib/onboarding/store');
 const { buildSnapshot } = await import('@/lib/sharing');
 const { applyPlanToConnectors } = await import('@/lib/connectors');
+const { getConsentStore } = await import('@/lib/consent');
+const { CONSENT_POLICY_VERSIONS } = await import('@/lib/legal');
 
 const SYNTHETIC_SOURCES = new Set(['circularRing', 'demoWearable']);
 const A = { id: '00000000-0000-4000-8000-00000000000a', email: 'a@example.test' };
@@ -120,7 +122,7 @@ test('Fatima demo cannot become a recipient snapshot', async () => {
   assert.throws(() => buildSnapshot(d.snapshot, ['currentSignals', 'identity']), /Demo data/);
 });
 
-test('share API rejects a demo before persistence and allows own member readings', async () => {
+test('share API requires member auth and current consent before allowing own member readings', async () => {
   const { POST } = await import('@/app/api/share/route');
   const makeRequest = (expectedSnapshot) => new Request('https://example.test/api/share', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -128,9 +130,10 @@ test('share API rejects a demo before persistence and allows own member readings
   });
   globalThis.__createdShare = null;
   globalThis.__testUser = null;
-  assert.equal((await POST(makeRequest())).status, 403);
+  assert.equal((await POST(makeRequest())).status, 401);
   assert.equal(globalThis.__createdShare, null);
   globalThis.__testUser = A;
+  await getConsentStore().record(A.id, 'health_data', CONSENT_POLICY_VERSIONS.health_data);
   const { POST: preview } = await import('@/app/api/share/preview/route');
   const previewResponse = await preview(new Request('https://example.test/api/share/preview', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },

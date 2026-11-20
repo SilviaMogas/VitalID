@@ -8,10 +8,20 @@ const { POST: createShare, GET: listOwnShares } = await import('@/app/api/share/
 const { SupabaseShareStore } = await import('@/lib/supabase/shares');
 const { POST: previewShare } = await import('@/app/api/share/preview/route');
 const { isSameOrigin } = await import('@/lib/share-api');
+const { getConsentStore } = await import('@/lib/consent');
+const { CONSENT_POLICY_VERSIONS } = await import('@/lib/legal');
 const { NextRequest } = await import('next/server.js');
 const owner = { id: '00000000-0000-4000-8000-00000000000a', email: 'owner@example.test' };
 const recipient = { id: '00000000-0000-4000-8000-00000000000b', email: 'recipient@example.test' };
 globalThis.__recipientAccountLookup = (id) => id === recipient.id;
+
+async function grantHealthConsent(userId = owner.id, policyVersion = CONSENT_POLICY_VERSIONS.health_data) {
+  await getConsentStore().record(userId, 'health_data', policyVersion);
+}
+
+function emptyPost(path) {
+  return new Request(`https://example.test${path}`, { method: 'POST' });
+}
 
 test('same-origin guard preserves exact loopback host and port through real NextRequest normalization', () => {
   const request = (host, origin, urlHost = host) => new NextRequest(`http://${urlHost}/api/share/preview`, {
@@ -204,7 +214,38 @@ test('legacy shares never disclose identity or sender names when identity was no
   assert.doesNotMatch(JSON.stringify(result), /Owner Name|localizedName|identity/);
 });
 
+test('share preview and creation require current health-data consent', async () => {
+  globalThis.__testShares = new Map();
+  globalThis.__createdShare = null;
+  globalThis.__testUser = { id: '00000000-0000-4000-8000-00000000000c' };
+
+  const preview = await previewShare(emptyPost('/api/share/preview'));
+  assert.equal(preview.status, 403);
+  assert.deepEqual(await preview.json(), { error: 'consent_required' });
+
+  const created = await createShare(emptyPost('/api/share'));
+  assert.equal(created.status, 403);
+  assert.deepEqual(await created.json(), { error: 'consent_required' });
+  assert.equal(globalThis.__createdShare, null);
+  assert.equal(globalThis.__testShares.size, 0);
+});
+
+test('share creation rejects outdated health-data consent', async () => {
+  const user = { id: '00000000-0000-4000-8000-00000000000d' };
+  await grantHealthConsent(user.id, 'outdated-policy');
+  globalThis.__testShares = new Map();
+  globalThis.__createdShare = null;
+  globalThis.__testUser = user;
+
+  const response = await createShare(emptyPost('/api/share'));
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), { error: 'consent_required' });
+  assert.equal(globalThis.__createdShare, null);
+  assert.equal(globalThis.__testShares.size, 0);
+});
+
 test('create requires a valid recipient account id and returns the same safe snapshot as preview', async () => {
+  await grantHealthConsent();
   globalThis.__testShares = new Map();
   globalThis.__createdShare = null;
   globalThis.__testUser = owner;
@@ -270,6 +311,7 @@ async function createIdentityShareFor(recipientUserId, durationMinutes = 60) {
   globalThis.__testShares = new Map();
   globalThis.__createdShare = null;
   globalThis.__testUser = owner;
+  await grantHealthConsent();
   const previewResponse = await previewShare(new Request('https://example.test/api/share/preview', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -342,6 +384,7 @@ test('preview requires a signed-in member, rejects unknown fields, and never per
   });
 
   assert.equal((await previewShare(request(['identity']))).status, 401);
+  await grantHealthConsent();
   globalThis.__testUser = owner;
   assert.equal((await previewShare(request(['identity', 'ownerKey']))).status, 400);
   assert.equal(globalThis.__createdShare, null);
@@ -352,6 +395,7 @@ function storedShare(id, ownerKey, createdAt, expiresAt = '2099-01-01T00:00:00.0
 }
 
 async function postIdentityShare() {
+  await grantHealthConsent();
   const previewResponse = await previewShare(new Request('https://example.test/api/share/preview', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
