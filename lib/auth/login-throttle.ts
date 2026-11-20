@@ -142,3 +142,9 @@ export async function throttleSignup(request: Request, email: string): Promise<n
   ]);
   return Math.max(emailRetryAfter, ipRetryAfter);
 }
+
+/** Counts new wallet accounts against the same per-IP sign-up bucket as email sign-up; returns seconds to wait (0 = allowed). */
+export async function throttleWalletSignup(request: Request): Promise<number> {
+  const ipKey = `signup-ip:${sha256(clientIp(request))}`;
+  return withStoreFallback((store) => store.hit(ipKey, SIGNUP_IP_LIMIT, SIGNUP_WINDOW_SECONDS));
+}

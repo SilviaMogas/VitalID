@@ -28,9 +28,9 @@ declare global {
 }
 
 export class WalletLoginError extends Error {
-  readonly reason: "notFound" | "rejected" | "unavailable" | "failed";
+  readonly reason: "notFound" | "rejected" | "unavailable" | "rateLimited" | "failed";
 
-  constructor(reason: "notFound" | "rejected" | "unavailable" | "failed") {
+  constructor(reason: "notFound" | "rejected" | "unavailable" | "rateLimited" | "failed") {
     super(reason);
     this.reason = reason;
   }
@@ -60,7 +60,9 @@ async function post(path: string, body: object): Promise<Record<string, unknown>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new WalletLoginError(res.status === 503 ? "unavailable" : "failed");
+  if (!res.ok) {
+    throw new WalletLoginError(res.status === 503 ? "unavailable" : res.status === 429 ? "rateLimited" : "failed");
+  }
   return res.json();
 }
 
