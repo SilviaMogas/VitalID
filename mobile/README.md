@@ -91,14 +91,14 @@ only. Expo Go cannot run this native wallet module.
 
 Before testing and submitting the dApp Store build:
 
-1. Ensure Vercel can deploy Vital ID to `https://www.vitalid.site`.
+1. Ensure your deployment serves Vital ID on `https://www.vitalid.site`.
 2. Link the Vital ID Expo project and create a **non-default** remote Android
    credential named `dapp-store`, separate from Google Play's. Keep the same
    signing key for future dApp Store updates. Build the signed APK with
    `eas build --platform android --profile dapp-store`. Increment the local
    Android version code for subsequent releases.
 3. Run `apksigner verify --print-certs <release.apk>`. Set
-   `SEEKER_ANDROID_CERT_SHA256` on Vercel to the **Signer #1 certificate SHA-256
+   `SEEKER_ANDROID_CERT_SHA256` on the server to the **Signer #1 certificate SHA-256
    digest** from the signed dApp Store APK (not the APK file hash or preview
    certificate), then deploy. The server publishes the association for
    `site.vitalid.app` at

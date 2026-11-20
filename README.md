@@ -249,6 +249,33 @@ npm run dev                  # http://localhost:3000
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_{PLUS,PRO}_{MONTHLY,ANNUAL}` | Paid plans | [`docs/BILLING.md`](docs/BILLING.md) |
 | `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET` | Live WHOOP connection | [`docs/CONNECTORS.md`](docs/CONNECTORS.md) |
 
+## Deploy to Cloudflare Workers
+
+Use Node.js 22.12 or newer and run these commands from the repo root:
+
+```sh
+npm ci --ignore-scripts
+npm run cf:build
+npm run cf:preview   # optional: verify the built app locally in workerd
+npm run cf:deploy   # publish to the existing vitalid Worker
+```
+
+In Workers Builds, use `npm run cf:build` as the build command and
+`npm run cf:deploy` as the deploy command. Set runtime secrets under
+**Settings → Variables and Secrets**; do not commit them to Wrangler config.
+Keep the existing Supabase credentials and any configured `SOL_WALLET_SECRET`
+when migrating: wallet accounts rely on the same signing secret. Set any
+needed `NEXT_PUBLIC_*` variables in the build environment.
+
+The config serves `www.vitalid.site` and keeps the `workers.dev` URL enabled.
+Deploy only to the production `vitalid` Worker; deployment applies the custom
+domain. On the canonical host, confirm that an unauthenticated request to
+`/api/mobile/v1/account` returns `401` JSON and that a POST to
+`/api/mobile/v1/auth/sol/message` with a valid public key returns a challenge.
+The `401` alone does not prove that the authentication backend is configured. See the
+[Seeker release checklist](mobile/README.md#seeker--solana-dapp-store) for
+wallet verification and the Android signing certificate.
+
 ## How it was built
 
 Vital ID was built during a hackathon by **Silvia Mogas** orchestrating several autonomous

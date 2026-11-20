@@ -6,6 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare deploy",
     "lint": "eslint",
     "test:community": "node --experimental-strip-types --no-warnings --import ./scripts/test/register-community.mjs --test scripts/test/community-route.test.mjs",
     "test:wearables": "node --experimental-strip-types --no-warnings --import ./scripts/test/register.mjs --test scripts/test/wearables.test.mjs",
@@ -20,7 +23,7 @@
     "@supabase/supabase-js": "^2.116.0",
     "@vercel/analytics": "^2.0.1",
     "ethers": "6.17.0",
-    "next": "15.5.26",
+    "next": "15.5.29",
     "qrcode.react": "^4.2.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -29,14 +32,16 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@opennextjs/cloudflare": "1.20.17",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.5.26",
+    "eslint-config-next": "15.5.29",
     "react-test-renderer": "19.1.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "4.165.0"
   }
 }
