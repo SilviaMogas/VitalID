@@ -62,11 +62,10 @@ expired consent cannot trap an existing permission.
 
 ## Release status
 
-No paid EAS jobs, store publication, or production signing has been performed.
-Any locally assembled APK is for testing only and must not be treated as a
-production release. Store signing, publishing, and Apple/Google release
-compliance review—including account-deletion requirements—are still pending.
-An iOS JavaScript bundle is not an iOS/Xcode compilation or App Store build.
+The dApp Store profile uses the Vital ID Expo project's dedicated release key.
+Locally assembled APKs are for testing only. Store submission and release
+compliance review remain separate from generating a signed APK. An iOS
+JavaScript bundle is not an iOS/Xcode compilation or App Store build.
 
 ### Seeker / Solana dApp Store
 
