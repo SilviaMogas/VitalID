@@ -13,6 +13,7 @@ import {
   isVitalIdShareValid,
   stripSnapshot,
 } from '@/lib/share-storage/shared';
+import { ShareLimitError } from '@/lib/sharing';
 import { getSupabaseServerClient } from './server';
 
 export const VITAL_ID_SHARES_TABLE = 'vital_id_shares';
@@ -96,6 +97,7 @@ export class SupabaseShareStore implements ShareStore {
       .insert(toRow(record))
       .select('*')
       .single<VitalIdShareRow>();
+    if (error?.code === 'P0001' && error.message === 'share_limit') throw new ShareLimitError();
     if (error) throw new Error(`createVitalIdShare failed: ${error.message}`);
     return fromRow(data);
   }
