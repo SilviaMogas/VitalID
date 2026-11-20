@@ -109,7 +109,7 @@ Vital ID is not directed at children. // TODO-LEGAL: set a minimum age (13/16 de
 The "Fatima" demo profile and connectors marked "sample data" display synthetic data bundled with the app for demonstration. Do not rely on them; they are not your data and are not real medical records.
 
 ## 13. Changes
-We may update this policy; the version date above always shows the current one. Material changes will be flagged in the app and we may ask you to review them.`;
+We may update this policy. The “Last updated” date above shows when this notice was last revised. It is separate from the policy version recorded with your consent. Material changes will be flagged in the app and we may ask you to review them.`;
 
 const PRIVACY_AR = `## ١. من نحن
 Vital ID («Vital ID»، «نحن») خدمة للهوية الصحية المحمولة متاحة على vitalid.site وعبر تطبيق Vital ID لنظام أندرويد على جهاز Solana Seeker. تتيح لك عرض المؤشرات الصحية الواردة من الأجهزة القابلة للارتداء أو المُدخلة يدويًا ومقارنتها بمستواك المرجعي الشخصي، ومشاركة الحقول التي تختارها عبر روابط مؤقتة قابلة للإلغاء.
@@ -172,7 +172,7 @@ Vital ID غير موجّه للأطفال. // TODO-LEGAL: تحديد حد أدن
 يعرض ملف «فاطمة» التجريبي والموصلات الموسومة «بيانات نموذجية» بيانات اصطناعية مرفقة بالتطبيق لأغراض العرض. لا تعتمد عليها؛ فهي ليست بياناتك وليست سجلات طبية حقيقية.
 
 ## ١٣. التغييرات
-قد نحدّث هذه السياسة؛ ويُظهر تاريخ الإصدار أعلاه النسخة الحالية دائمًا. ستُعلَم التغييرات الجوهرية داخل التطبيق وقد نطلب منك مراجعتها.`;
+قد نحدّث هذه السياسة. يشير تاريخ «آخر تحديث» أعلاه إلى آخر مراجعة لهذا الإشعار، وهو منفصل عن إصدار السياسة المسجّل مع موافقتك. سننبّهك إلى التغييرات الجوهرية داخل التطبيق وقد نطلب منك مراجعتها.`;
 
 const TERMS_EN = `## 1. Agreement
 These Terms of Service govern your use of Vital ID (vitalid.site). By creating an account or using the service you accept them. If you do not agree, do not use the service.
