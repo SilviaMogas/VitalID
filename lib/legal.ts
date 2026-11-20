@@ -14,6 +14,7 @@ import type { ConsentType } from "@/lib/consent";
  */
 
 export const PRIVACY_VERSION = "2026-10-08";
+const PRIVACY_LAST_UPDATED = "2026-11-20";
 
 /** Browser flag for the demo session's health-data consent (no server account). */
 export const HEALTH_CONSENT_STORAGE_KEY = "vitalid.consent.healthData";
@@ -48,7 +49,7 @@ export interface RenderedSection {
 }
 
 const PRIVACY_EN = `## 1. Who we are
-Vital ID ("Vital ID", "we", "us") is a portable health-identity web application available at vitalid.site. It lets you aggregate wearable and manually entered health signals, view them against your own baseline, and share selected fields through temporary, revocable links.
+Vital ID ("Vital ID", "we", "us") is a portable health-identity service available at vitalid.site and through the Vital ID Android app for Solana Seeker. It lets you view wearable and manually entered health signals against your own baseline and share selected fields through temporary, revocable links.
 
 Vital ID acts as the data controller for the personal data described in this policy. // TODO-LEGAL: replace with the legal entity name and registered address.
 
@@ -58,9 +59,10 @@ Provisional contact: ${LEGAL_CONTACT_EMAIL} — to be verified before launch. //
 We collect only the data needed to run the service:
 
 - Account data: first name, last name, email address, country and city, and sign-in credentials (authentication is managed by Supabase Auth; Vital ID does not store your password).
+- Optional Solana wallet sign-in: your public wallet address, a short-lived sign-in message, and the signature you approve are sent to Vital ID to verify control of the wallet. Sign-in does not send a blockchain transaction or require your private key or recovery phrase. Vital ID does not write your health data to Solana.
 - Profile data you enter: date of birth, gender, nationality, height, weight and an optional profile photo.
 - Health data you enter or connect: allergies, medications, medical conditions, blood type, emergency contact, lifestyle baseline (sleep, resting heart rate, steps, workouts, hydration and calorie targets), and signals received from connected sources (currently WHOOP via OAuth; other providers are marked as sample data until real integrations exist).
-- Technical data: session cookies, your chosen language, and product analytics (Vercel Analytics).
+- Technical data: website session cookies, Android session tokens, and your chosen language.
 - Payment data: processed entirely by Stripe. We never see or store your card number — we only store your plan and payment status.
 
 ## 3. Legal bases (GDPR)
@@ -78,7 +80,7 @@ We use your data to operate the service: build your baseline and trends, render 
 We share data only with the processors needed to run Vital ID:
 
 - Supabase — database and authentication hosting.
-- Vercel — application hosting and privacy-friendly product analytics.
+- Cloudflare — hosts the website and API used by the Android app.
 - Stripe — payment processing (your card data goes to Stripe directly).
 - WHOOP — data source you optionally connect via OAuth; their own privacy policy applies to data they hold.
 - Insurers or recipients you choose — only through a temporary share link you create yourself, with only the fields you selected, for as long as the link is valid. // TODO-LEGAL: confirm the full sub-processor list and add DPAs where required.
@@ -95,10 +97,10 @@ You can ask us to delete your account via the contact above; the process is curr
 Where the GDPR applies you have the right to: access your data; rectify it; erase it; restrict or object to processing; data portability; withdraw consent at any time (including your Art. 9 health-data consent); and lodge a complaint with your supervisory authority. To exercise any right, email us at the contact address above. // TODO-LEGAL: add a self-service export/delete flow.
 
 ## 9. International transfers
-Our processors (Supabase, Vercel, Stripe, WHOOP) may process data outside your country. // TODO-LEGAL: document regions, transfer mechanism (e.g. SCCs) and UAE PDPL alignment.
+Our providers (Supabase, Cloudflare, Stripe, WHOOP) may process data outside your country. // TODO-LEGAL: document regions, transfer mechanism (e.g. SCCs) and UAE PDPL alignment.
 
 ## 10. Security
-Sessions use httpOnly cookies; health tables are reachable only through server-side service keys with row-level security enabled and no public policies; share tokens are 128-bit random strings; and share payloads contain only the fields you selected. No method is 100% secure — email us immediately if you suspect a breach.
+Website sessions use HttpOnly cookies. The Android app keeps the access token in memory and saves the refresh token in the device's secure storage. Health tables are reachable only through server-side service keys with row-level security enabled and no public policies. Share tokens are 128-bit random strings, and share payloads contain only the fields you selected. No method is 100% secure — email us immediately if you suspect a breach.
 
 ## 11. Children
 Vital ID is not directed at children. // TODO-LEGAL: set a minimum age (13/16 depending on market) and add age assurance if needed.
@@ -110,7 +112,7 @@ The "Fatima" demo profile and connectors marked "sample data" display synthetic 
 We may update this policy; the version date above always shows the current one. Material changes will be flagged in the app and we may ask you to review them.`;
 
 const PRIVACY_AR = `## ١. من نحن
-Vital ID («Vital ID»، «نحن») تطبيق ويب للهوية الصحية المحمولة متاح على vitalid.site. يتيح لك تجميع المؤشرات الصحية من الأجهزة القابلة للارتداء أو المُدخلة يدويًا، وعرضها مقابل خط أساسك الشخصي، ومشاركة حقول مختارة عبر روابط مؤقتة قابلة للإلغاء.
+Vital ID («Vital ID»، «نحن») خدمة للهوية الصحية المحمولة متاحة على vitalid.site وعبر تطبيق Vital ID لنظام أندرويد على جهاز Solana Seeker. تتيح لك عرض المؤشرات الصحية الواردة من الأجهزة القابلة للارتداء أو المُدخلة يدويًا ومقارنتها بمستواك المرجعي الشخصي، ومشاركة الحقول التي تختارها عبر روابط مؤقتة قابلة للإلغاء.
 
 يعمل Vital ID كمسؤول عن البيانات الشخصية الموصوفة في هذه السياسة. // TODO-LEGAL: استبدال باسم الكيان القانوني والعنوان المسجّل.
 
@@ -120,9 +122,10 @@ Vital ID («Vital ID»، «نحن») تطبيق ويب للهوية الصحية
 نجمع فقط البيانات اللازمة لتشغيل الخدمة:
 
 - بيانات الحساب: الاسم الأول واسم العائلة والبريد الإلكتروني والبلد والمدينة وبيانات اعتماد الدخول (تُدار المصادقة عبر Supabase Auth؛ ولا يخزّن Vital ID كلمة مرورك).
+- تسجيل الدخول الاختياري بمحفظة Solana: نتحقق من تحكمك في المحفظة باستخدام عنوانها العام ورسالة تسجيل دخول قصيرة الصلاحية والتوقيع الذي توافق عليه. لا يتطلب تسجيل الدخول إرسال معاملة على البلوكتشين أو مشاركة مفتاحك الخاص أو عبارة الاسترداد. لا يكتب Vital ID بياناتك الصحية على شبكة Solana.
 - بيانات الملف التي تدخلها: تاريخ الميلاد والجنس والجنسية والطول والوزن وصورة ملف اختيارية.
 - البيانات الصحية التي تدخلها أو تربطها: الحساسية والأدوية والحالات الطبية وفصيلة الدم وجهة اتصال الطوارئ وخط أساس نمط الحياة (النوم ونبض القلب أثناء الراحة والخطوات والتمارين وأهداف الترطيب والسعرات)، والمؤشرات الواردة من المصادر المتصلة (حاليًا WHOOP عبر OAuth؛ أما المزودون الآخرون فمُعَدّون كبيانات نموذجية حتى تتوفر تكاملات حقيقية).
-- البيانات التقنية: ملفات تعريف جلسة الارتباط واللغة المختارة وتحليلات المنتج (Vercel Analytics).
+- البيانات التقنية: ملفات تعريف الارتباط لجلسة الموقع، ورموز جلسة أندرويد، واللغة التي اخترتها.
 - بيانات الدفع: تُعالَج بالكامل عبر Stripe. لا نرى رقم بطاقتك ولا نخزّنه — نخزّن فقط خطتك وحالة الدفع.
 
 ## ٣. الأسس القانونية (اللائحة العامة لحماية البيانات)
@@ -140,7 +143,7 @@ Vital ID («Vital ID»، «نحن») تطبيق ويب للهوية الصحية
 نشارك البيانات فقط مع المعالجين اللازمين لتشغيل Vital ID:
 
 - Supabase — استضافة قاعدة البيانات والمصادقة.
-- Vercel — استضافة التطبيق وتحليلات منتج مراعية للخصوصية.
+- Cloudflare — استضافة الموقع وواجهة برمجة التطبيقات التي يستخدمها تطبيق أندرويد.
 - Stripe — معالجة المدفوعات (تذهب بيانات بطاقتك إلى Stripe مباشرة).
 - WHOOP — مصدر بيانات تربطه اختياريًا عبر OAuth؛ وتنطبق سياسة خصوصيتهم على البيانات التي يحتفظون بها.
 - شركات التأمين أو المستلمين الذين تختارهم — فقط عبر رابط مشاركة مؤقت تنشئه بنفسك، وبالحقول التي حددتها فقط، وللمدة التي يكون فيها الرابط صالحًا. // TODO-LEGAL: تأكيد قائمة المعالجين الفرعيين الكاملة وإضافة اتفاقيات معالجة البيانات عند الحاجة.
@@ -157,10 +160,10 @@ Vital ID («Vital ID»، «نحن») تطبيق ويب للهوية الصحية
 عند انطباق GDPR يحق لك: الوصول إلى بياناتك؛ وتصحيحها؛ ومحوها؛ وتقييد معالجتها أو الاعتراض عليها؛ ونقلها؛ وسحب موافقتك في أي وقت (بما فيها موافقة المادة ٩ على البيانات الصحية)؛ وتقديم شكوى لدى السلطة الرقابية. لممارسة أي حق، راسلنا على عنوان التواصل أعلاه. // TODO-LEGAL: إضافة مسار تصدير/حذف ذاتي الخدمة.
 
 ## ٩. عمليات النقل الدولية
-قد تعالج الجهات المُعالِجة لدينا (Supabase وVercel وStripe وWHOOP) البيانات خارج بلدك. // TODO-LEGAL: توثيق المناطق وآلية النقل (مثل البنود التعاقدية القياسية) والتوافق مع القانون الاتحادي الإماراتي لحماية البيانات الشخصية.
+قد يعالج مزوّدو الخدمات لدينا (Supabase وCloudflare وStripe وWHOOP) البيانات خارج بلدك. // TODO-LEGAL: توثيق المناطق وآلية النقل (مثل البنود التعاقدية القياسية) والتوافق مع القانون الاتحادي الإماراتي لحماية البيانات الشخصية.
 
 ## ١٠. الأمان
-تستخدم الجلسات ملفات تعريف ارتباط httpOnly؛ ولا يمكن الوصول إلى جداول الصحة إلا عبر مفاتيح خدمة من جهة الخادم مع تفعيل أمان مستوى الصف ودون سياسات عامة؛ ورموز المشاركة سلاسل عشوائية بطول 128 بت؛ ولا تحتوي حمولات المشاركة إلا على الحقول التي اخترتها. لا توجد طريقة آمنة بنسبة ١٠٠٪ — راسلنا فورًا إذا اشتبهت في اختراق.
+تستخدم جلسات الموقع ملفات تعريف ارتباط من نوع HttpOnly. يحتفظ تطبيق أندرويد برمز الوصول في الذاكرة ويحفظ رمز تحديث الجلسة في مساحة التخزين الآمنة على الجهاز. لا يمكن الوصول إلى جداول الصحة إلا عبر مفاتيح خدمة من جهة الخادم، مع تفعيل أمان مستوى الصف ودون سياسات عامة. رموز المشاركة سلاسل عشوائية بطول 128 بت، ولا تتضمن البيانات المشتركة إلا الحقول التي اخترتها. لا توجد طريقة آمنة بنسبة ١٠٠٪ — راسلنا فورًا إذا اشتبهت في اختراق.
 
 ## ١١. الأطفال
 Vital ID غير موجّه للأطفال. // TODO-LEGAL: تحديد حد أدنى للعمر (13/16 حسب السوق) وإضافة تحقق من العمر إذا لزم الأمر.
@@ -254,7 +257,7 @@ Vital ID ليس جهازًا طبيًا ولا يقدّم استشارة أو ت
 const SOURCES: Record<LegalDocKind, { title: [string, string]; updated: [string, string]; version: string; text: [string, string] }> = {
   privacy: {
     title: ["Privacy Policy", "سياسة الخصوصية"],
-    updated: [`Last updated: ${PRIVACY_VERSION}.`, `آخر تحديث: ${PRIVACY_VERSION}.`],
+    updated: [`Last updated: ${PRIVACY_LAST_UPDATED}.`, `آخر تحديث: ${PRIVACY_LAST_UPDATED}.`],
     version: PRIVACY_VERSION,
     text: [PRIVACY_EN, PRIVACY_AR],
   },
