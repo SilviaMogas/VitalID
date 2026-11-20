@@ -25,4 +25,5 @@ export { OAUTH_PROVIDERS, readProviderEnv, isProviderConfigured } from './regist
 export { getWearableStore, hashToken } from './store';
 export { issueState, consumeState } from './state';
 export { syncWearable } from './sync';
+export { reserveWearableSync, syncCooldownRemaining, SYNC_COOLDOWN_SECONDS, SYNC_HOURLY_LIMIT } from './sync-limit';
 export * from './types';

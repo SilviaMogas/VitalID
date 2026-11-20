@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import {
+  MAX_STORED_SHARES_PER_OWNER,
   SHARE_DURATIONS,
   SHARE_FIELDS,
   SHARE_PURPOSES,
@@ -12,7 +13,7 @@ import {
   type SharePurpose,
 } from '@/lib/sharing';
 import { resolveUserData } from '@/lib/user-data';
-import { createShare, listShares } from '@/lib/share-store';
+import { createShare, listShares, pruneExpiredShares } from '@/lib/share-store';
 import { getShareApiUser, isSameOrigin, shareJson } from '@/lib/share-api';
 import { recipientAccountExists } from '@/lib/auth/server';
 import { getMembershipStore } from '@/lib/membership/store';
@@ -106,6 +107,10 @@ export async function POST(req: Request) {
     if (!(await recipientAccountExists(normalizedRecipientUserId))) {
       return shareJson({ error: 'unavailable' }, 404);
     }
+    await pruneExpiredShares(user.id);
+    if ((await listShares(user.id, MAX_STORED_SHARES_PER_OWNER)).length >= MAX_STORED_SHARES_PER_OWNER) {
+      return shareJson({ error: 'share_limit' }, 429);
+    }
     const now = new Date();
     const payload: SharePayload = {
       id: randomId(),
@@ -131,7 +136,7 @@ export async function GET() {
   const user = await getShareApiUser();
   if (!user) return shareJson({ error: 'unavailable' }, 401);
   try {
-    const shares = (await listShares()).filter((s) => s.ownerKey === user.id);
+    const shares = (await listShares(user.id)).filter((s) => s.ownerKey === user.id);
     shares.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     return shareJson(shares.map(summarize));
   } catch {

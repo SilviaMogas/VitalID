@@ -109,9 +109,13 @@ export async function setShareRecipients(
   return stored ? { ...payload, sentTo: updated } : null;
 }
 
-export async function listShares(): Promise<SharePayload[]> {
-  const rows = await store().listVitalIdShares();
+export async function listShares(ownerKey: string, limit: number): Promise<SharePayload[]> {
+  const rows = await store().listVitalIdSharesForOwner(ownerKey, limit);
   return rows.map(toPayload);
+}
+
+export async function pruneExpiredShares(ownerKey: string): Promise<void> {
+  await store().deleteExpiredVitalIdSharesForOwner(ownerKey);
 }
 
 /**

@@ -30,11 +30,10 @@ needed.
 
 ## Product boundary
 
-The app supports English and Arabic, and signs in existing Vital ID accounts
-with email and password. Signup, onboarding, and native wallet login are not
-implemented here; those flows remain on the existing web application. The
-client requires the current API routes to be merged and deployed before a
-production APK can sign in.
+The app supports English and Arabic. Existing members can sign in with email
+and password, or use the Solana wallet tied to their Vital ID account on
+Android. Signup and onboarding remain on the website. Deploy the mobile API
+routes before testing with the production backend.
 
 Health information and sharing are gated by explicit, current consent. Share
 previews show the selected fields before authorization, and shares enforce
@@ -68,3 +67,53 @@ Any locally assembled APK is for testing only and must not be treated as a
 production release. Store signing, publishing, and Apple/Google release
 compliance review—including account-deletion requirements—are still pending.
 An iOS JavaScript bundle is not an iOS/Xcode compilation or App Store build.
+
+### Seeker / Solana dApp Store
+
+On Android, **Sign in with a Solana wallet** opens the device's selected
+Mobile Wallet Adapter wallet, including Seed Vault Wallet on Seeker. The app
+requests a mainnet message signature, never a transaction or seed phrase.
+The server verifies a short-lived, single-use challenge before returning a
+native session; neither wallet sign-in nor selective sharing writes health
+data on-chain. This is not device attestation and does not require a Seeker
+NFT or an SKR balance.
+
+For a local test APK, from `mobile/` with the Android SDK and JDK 17 installed:
+
+```sh
+npx expo prebuild --platform android --no-install
+./android/gradlew -p android :app:assembleRelease -PreactNativeArchitectures=arm64-v8a
+```
+
+The result is `android/app/build/outputs/apk/release/app-release.apk`. The
+local Expo build uses development signing; use test accounts and test data
+only. Expo Go cannot run this native wallet module.
+
+Before testing and submitting the dApp Store build:
+
+1. Ensure Vercel can deploy Vital ID to `https://www.vitalid.site`.
+2. Link the Vital ID Expo project and create a **non-default** remote Android
+   credential named `dapp-store`, separate from Google Play's. Keep the same
+   signing key for future dApp Store updates. Build the signed APK with
+   `eas build --platform android --profile dapp-store`. Increment the local
+   Android version code for subsequent releases.
+3. Run `apksigner verify --print-certs <release.apk>`. Set
+   `SEEKER_ANDROID_CERT_SHA256` on Vercel to the **Signer #1 certificate SHA-256
+   digest** from the signed dApp Store APK (not the APK file hash or preview
+   certificate), then deploy. The server publishes the association for
+   `site.vitalid.app` at
+   `https://www.vitalid.site/.well-known/assetlinks.json`; verify it returns
+   `200 application/json` without redirects and contains the same fingerprint.
+   Without a valid fingerprint the route returns `404`. Confirm that an
+   unauthenticated `GET /api/mobile/v1/account` returns `401` JSON.
+4. Test the release APK on a physical Seeker with an existing Vital ID Solana
+   test account and synthetic data only. Cancel one wallet prompt, then sign
+   in with the same wallet, verify consent gating, preview and revoke a test
+   share, and sign out. If the local debug-signed APK is already installed,
+   uninstall it before installing the release APK; the signing keys differ.
+5. Before submitting to the [Solana dApp Store](https://docs.solanamobile.com/dapp-store/submit-new-app),
+   verify public `/terms` and `/privacy` pages and confirm that the published
+   privacy contact can handle account deletion requests. Prepare an opaque
+   512×512 icon, a 1200×600 banner, and 4–8 screenshots
+   or videos using only synthetic test data. The publisher completes identity
+   verification and signs submissions with their publisher wallet.

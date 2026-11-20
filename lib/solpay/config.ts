@@ -29,10 +29,23 @@ export interface SolPayConfig {
   expiryMs: number;
 }
 
-function readCluster(): SolCluster {
-  const raw = process.env.SOL_PAY_CLUSTER?.toLowerCase() ?? 'devnet';
+function isProductionEnv(): boolean {
+  return process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+}
+
+/**
+ * Production must name its cluster explicitly: an unset value or a test
+ * cluster (free faucet SOL) disables Solana Pay unless
+ * SOL_PAY_ALLOW_TEST_CLUSTER=1 is set deliberately.
+ */
+function readCluster(): SolCluster | null {
+  const raw = process.env.SOL_PAY_CLUSTER?.trim().toLowerCase();
+  const production = isProductionEnv();
+  if (!raw) return production ? null : 'devnet';
   if (raw === 'mainnet-beta' || raw === 'mainnet') return 'mainnet-beta';
-  if (raw === 'testnet' || raw === 'devnet') return raw;
+  if (raw === 'testnet' || raw === 'devnet') {
+    return production && process.env.SOL_PAY_ALLOW_TEST_CLUSTER !== '1' ? null : raw;
+  }
   throw new Error(`SOL_PAY_CLUSTER must be mainnet-beta, testnet or devnet (got "${raw}")`);
 }
 
@@ -53,6 +66,7 @@ export function solPayLamports(plan: 'plus' | 'pro', interval: BillingInterval):
 
 export function readSolPayConfig(): SolPayConfig | null {
   const cluster = readCluster();
+  if (!cluster) return null;
   const treasury = process.env.SOL_TREASURY_ADDRESS;
   if (!treasury || !isSolanaAddress(treasury)) return null;
   return {

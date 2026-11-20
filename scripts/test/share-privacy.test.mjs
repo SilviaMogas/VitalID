@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 for (const key of ['SUPABASE_URL', 'SUPABASE_SECRET_KEY', 'NEXT_PUBLIC_SUPABASE_URL']) delete process.env[key];
 
 const { GET: getShare } = await import('@/app/api/share/[id]/route');
-const { POST: createShare } = await import('@/app/api/share/route');
+const { POST: createShare, GET: listOwnShares } = await import('@/app/api/share/route');
+const { SupabaseShareStore } = await import('@/lib/supabase/shares');
 const { POST: previewShare } = await import('@/app/api/share/preview/route');
 const { isSameOrigin } = await import('@/lib/share-api');
 const { NextRequest } = await import('next/server.js');
@@ -344,4 +345,102 @@ test('preview requires a signed-in member, rejects unknown fields, and never per
   globalThis.__testUser = owner;
   assert.equal((await previewShare(request(['identity', 'ownerKey']))).status, 400);
   assert.equal(globalThis.__createdShare, null);
+});
+
+function storedShare(id, ownerKey, createdAt, expiresAt = '2099-01-01T00:00:00.000Z') {
+  return { ...fixture(), id, ownerKey, createdAt, expiresAt };
+}
+
+async function postIdentityShare() {
+  const previewResponse = await previewShare(new Request('https://example.test/api/share/preview', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({selectedFields: ['identity']}),
+  }));
+  const {snapshot} = await previewResponse.json();
+  return createShare(new Request('https://example.test/api/share', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      purpose: 'doctor',
+      selectedFields: ['identity'],
+      durationMinutes: 60,
+      recipientUserId: recipient.id,
+      expectedSnapshot: snapshot,
+    }),
+  }));
+}
+
+test('share listing queries only the caller\'s shares', async () => {
+  globalThis.__testShares = new Map();
+  globalThis.__listSharesCalls = [];
+  for (let i = 0; i < 1000; i++) {
+    const share = storedShare(`other-${i}`, recipient.id, '2026-02-01T00:00:00.000Z');
+    globalThis.__testShares.set(share.id, share);
+  }
+  globalThis.__testShares.set('own-old', storedShare('own-old', owner.id, '2026-01-01T00:00:00.000Z'));
+  globalThis.__testShares.set('own-new', storedShare('own-new', owner.id, '2026-01-02T00:00:00.000Z'));
+  globalThis.__testUser = owner;
+
+  const response = await listOwnShares();
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).map((s) => s.id), ['own-new', 'own-old']);
+  assert.deepEqual(globalThis.__listSharesCalls.at(-1), [owner.id, 50]);
+  globalThis.__testShares = new Map();
+});
+
+test('create rejects new shares once the owner has the maximum stored', async () => {
+  globalThis.__testShares = new Map();
+  globalThis.__createdShare = null;
+  globalThis.__testUser = owner;
+  for (let i = 0; i < 50; i++) {
+    globalThis.__testShares.set(`own-${i}`, storedShare(`own-${i}`, owner.id, '2026-01-01T00:00:00.000Z'));
+  }
+
+  const limited = await postIdentityShare();
+  assert.equal(limited.status, 429);
+  assert.deepEqual(await limited.json(), { error: 'share_limit' });
+  assert.equal(globalThis.__createdShare, null);
+  assert.equal(globalThis.__testShares.size, 50);
+
+  for (const share of globalThis.__testShares.values()) share.expiresAt = '2026-01-01T01:00:00.000Z';
+  const created = await postIdentityShare();
+  assert.equal(created.status, 201);
+  assert.equal(globalThis.__testShares.size, 1);
+  assert.equal(globalThis.__testShares.has(globalThis.__createdShare.id), true);
+  globalThis.__testShares = new Map();
+});
+
+function recordingClient(result) {
+  const calls = [];
+  const builder = new Proxy({}, {
+    get(_, method) {
+      if (method === 'then') return (resolve, reject) => Promise.resolve(result).then(resolve, reject);
+      return (...args) => { calls.push([method, ...args]); return builder; };
+    },
+  });
+  return { calls, client: { from: (...args) => { calls.push(['from', ...args]); return builder; } } };
+}
+
+test('Supabase owner listing is a single owner-filtered, limited query', async () => {
+  const row = {
+    id: '11111111-1111-4111-8111-111111111111', token: 'tok', created_at: '2026-01-01T00:00:00.000Z',
+    expires_at: '2099-01-01T00:00:00.000Z', revoked: false, purpose: 'doctor', selected_fields: ['identity'],
+    sentTo: [], ownerKey: owner.id, sharedBy: 'Owner Name', recipientUserId: recipient.id,
+  };
+  const list = recordingClient({ data: [row], error: null });
+  const summaries = await new SupabaseShareStore(list.client).listVitalIdSharesForOwner(owner.id, 50);
+  assert.deepEqual(list.calls.filter(([m]) => m === 'from'), [['from', 'vital_id_shares']]);
+  assert.ok(list.calls.some((c) => c[0] === 'eq' && c[1] === 'snapshot->>ownerKey' && c[2] === owner.id));
+  assert.ok(list.calls.some((c) => c[0] === 'limit' && c[1] === 50));
+  assert.equal(list.calls.some(([m]) => m === 'range'), false);
+  assert.equal(summaries.length, 1);
+  assert.equal(summaries[0].ownerKey, owner.id);
+
+  const now = new Date('2026-03-01T00:00:00.000Z');
+  const prune = recordingClient({ error: null });
+  await new SupabaseShareStore(prune.client).deleteExpiredVitalIdSharesForOwner(owner.id, now);
+  assert.ok(prune.calls.some(([m]) => m === 'delete'));
+  assert.ok(prune.calls.some((c) => c[0] === 'eq' && c[1] === 'snapshot->>ownerKey' && c[2] === owner.id));
+  assert.ok(prune.calls.some((c) => c[0] === 'lt' && c[1] === 'expires_at' && c[2] === now.toISOString()));
 });

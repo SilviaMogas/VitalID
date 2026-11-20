@@ -79,9 +79,14 @@ export async function clearSessionCookies(): Promise<void> {
   store.delete(REFRESH_COOKIE);
 }
 
-export type AuthResult =
-  | { ok: true; user: AuthUser; created?: boolean; pendingConfirmation?: boolean }
-  | { ok: false; code: 'invalid_credentials' | 'email_not_confirmed' | 'confirmation_send_failed' | 'email_taken' | 'weak_password' | 'not_configured' | 'consent_required' | 'reserved_email' | 'rate_limited' | 'unknown'; message: string; retryAfterSeconds?: number };
+type AuthFailure = { ok: false; code: 'invalid_credentials' | 'email_not_confirmed' | 'confirmation_send_failed' | 'email_taken' | 'weak_password' | 'not_configured' | 'consent_required' | 'reserved_email' | 'rate_limited' | 'unknown'; message: string; retryAfterSeconds?: number };
+export type AuthResult = { ok: true; user: AuthUser; created?: boolean; pendingConfirmation?: boolean } | AuthFailure;
+type PasswordGrant = AuthFailure | {
+  ok: true;
+  user: AuthUser;
+  session: { access_token: string; refresh_token: string; expires_at?: number; expires_in: number };
+  created?: boolean;
+};
 
 export function isConfirmedUser(user: {
   email?: string | null;
@@ -145,7 +150,7 @@ export async function signUpWithPassword(input: {
   return { ok: true, user: toAuthUser(data.user), pendingConfirmation: true };
 }
 
-export async function signInWithPassword(input: { email: string; password: string }): Promise<AuthResult> {
+async function grantPasswordSession(input: { email: string; password: string }): Promise<PasswordGrant> {
   if (!isAuthConfigured()) return { ok: false, code: 'not_configured', message: 'auth not configured' };
   const { data, error } = await authClient().auth.signInWithPassword(input);
   if (error && (error.code === 'email_not_confirmed' || /email not confirmed/i.test(error.message))) {
@@ -157,8 +162,14 @@ export async function signInWithPassword(input: { email: string; password: strin
   if (!isConfirmedUser(data.user)) {
     return { ok: false, code: 'email_not_confirmed', message: 'email not confirmed' };
   }
-  await writeSessionCookies(data.session.access_token, data.session.refresh_token);
-  return { ok: true, user: toAuthUser(data.user) };
+  return { ok: true, user: toAuthUser(data.user), session: data.session };
+}
+
+export async function signInWithPassword(input: { email: string; password: string }): Promise<AuthResult> {
+  const result = await grantPasswordSession(input);
+  if (!result.ok) return result;
+  await writeSessionCookies(result.session.access_token, result.session.refresh_token);
+  return { ok: true, user: result.user };
 }
 
 /**
@@ -166,12 +177,12 @@ export async function signInWithPassword(input: { email: string; password: strin
  * user under an injective synthetic email whose password is derived from the
  * server secret — created on first login, re-derived on every later one.
  */
-export async function signInWithWallet(
+export async function grantVerifiedWalletSession(
   address: string,
   consents: { consentTerms: boolean; consentHealthData: boolean },
   chain: WalletChain = 'solana',
   options: { beforeCreateAccount?: () => Promise<number> } = {},
-): Promise<AuthResult> {
+): Promise<PasswordGrant> {
   if (!isAuthConfigured()) return { ok: false, code: 'not_configured', message: 'auth not configured' };
   if (chain === 'solana' ? !isSolanaPublicKey(address) : !/^0x[0-9a-fA-F]{40}$/.test(address)) {
     return { ok: false, code: 'invalid_credentials', message: 'invalid wallet identity' };
@@ -181,15 +192,13 @@ export async function signInWithWallet(
   const password = walletPasswordForChain(identity.address, chain);
   const admin = getSupabaseServerClient();
 
-  const completePasswordSignIn = async (attempt: AuthResult): Promise<AuthResult> => {
+  const completePasswordSignIn = async (attempt: PasswordGrant): Promise<PasswordGrant> => {
     if (!attempt.ok) return attempt;
     const { data, error } = await admin.auth.admin.getUserById(attempt.user.id);
     if (error || !data.user) {
-      await clearSessionCookies();
       return { ok: false, code: 'unknown', message: error?.message ?? 'wallet user not found' };
     }
     if (!hasWalletBinding(data.user, identity)) {
-      await clearSessionCookies();
       return { ok: false, code: 'invalid_credentials', message: 'wallet account binding mismatch' };
     }
     if (trustedWalletFromAppMetadata(data.user.email, data.user.app_metadata)) return attempt;
@@ -197,13 +206,12 @@ export async function signInWithWallet(
       app_metadata: { ...data.user.app_metadata, vitalid_wallet: identity },
     });
     if (updateError || !updated.user) {
-      await clearSessionCookies();
       return { ok: false, code: 'unknown', message: updateError?.message ?? 'wallet metadata update failed' };
     }
-    return { ok: true, user: toAuthUser(updated.user) };
+    return { ...attempt, user: toAuthUser(updated.user) };
   };
 
-  const first = await completePasswordSignIn(await signInWithPassword({ email, password }));
+  const first = await completePasswordSignIn(await grantPasswordSession({ email, password }));
   if (first.ok) return first;
   if (first.code !== 'invalid_credentials') return first;
   // Password grant failed: either the wallet has no account yet or its
@@ -230,13 +238,13 @@ export async function signInWithWallet(
       app_metadata: { ...existingUser.app_metadata, vitalid_wallet: identity },
     });
     if (error) return { ok: false, code: 'unknown', message: error.message };
-    return signInWithPassword({ email, password });
+    return completePasswordSignIn(await grantPasswordSession({ email, password }));
   }
   if (chain === 'solana') {
     const legacyEmail = legacySolanaWalletEmail(identity.address);
     // Prefer the current derived secret so an ordinary legacy sign-in does
     // not write credentials through the admin API.
-    const legacy = await completePasswordSignIn(await signInWithPassword({ email: legacyEmail, password }));
+    const legacy = await completePasswordSignIn(await grantPasswordSession({ email: legacyEmail, password }));
     if (legacy.ok) return legacy;
     if (legacy.code !== 'invalid_credentials') return legacy;
 
@@ -262,7 +270,7 @@ export async function signInWithWallet(
           app_metadata: { ...legacyUser.app_metadata, vitalid_wallet: identity },
         });
         if (error) return { ok: false, code: 'unknown', message: error.message };
-        return signInWithPassword({ email: legacyUser.email ?? legacyEmail, password });
+        return completePasswordSignIn(await grantPasswordSession({ email: legacyUser.email ?? legacyEmail, password }));
       }
     }
   }
@@ -282,9 +290,21 @@ export async function signInWithWallet(
     app_metadata: { vitalid_wallet: identity },
   });
   if (error) return { ok: false, code: 'unknown', message: error.message };
-  const created = await signInWithPassword({ email, password });
+  const created = await completePasswordSignIn(await grantPasswordSession({ email, password }));
   if (!created.ok) return created;
-  return { ok: true, user: created.user, created: true };
+  return { ...created, created: true };
+}
+
+export async function signInWithWallet(
+  address: string,
+  consents: { consentTerms: boolean; consentHealthData: boolean },
+  chain: WalletChain = 'solana',
+  options: { beforeCreateAccount?: () => Promise<number> } = {},
+): Promise<AuthResult> {
+  const result = await grantVerifiedWalletSession(address, consents, chain, options);
+  if (!result.ok) return result;
+  await writeSessionCookies(result.session.access_token, result.session.refresh_token);
+  return { ok: true, user: result.user, ...(result.created ? { created: true } : {}) };
 }
 
 export async function signOut(): Promise<void> {

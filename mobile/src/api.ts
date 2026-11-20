@@ -1,10 +1,11 @@
 import * as SecureStore from "expo-secure-store";
+import { seekerIdentity } from "../../lib/solpay/seeker-identity";
 import { ApiError, createApiTransport, REFRESH_STORAGE_KEY, validateApiOrigin } from "./api-core";
 
 export { ApiError };
 
 const development = typeof __DEV__ !== "undefined" && __DEV__;
-const configuredOrigin = process.env.EXPO_PUBLIC_API_ORIGIN ?? "https://www.vitalid.site";
+const configuredOrigin = process.env.EXPO_PUBLIC_API_ORIGIN ?? seekerIdentity.uri;
 export const API_ORIGIN = validateApiOrigin(configuredOrigin, development);
 
 const storage = {
@@ -21,12 +22,7 @@ const transport = createApiTransport({
   storage,
 });
 
-export const api = {
-  restore: transport.restore,
-  signIn: transport.signIn,
-  signOut: transport.signOut,
-  request: transport.request,
-};
+export const api = transport;
 
 export function publicShareUrl(id: string): string {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(id)) throw new Error("invalid_share_id");

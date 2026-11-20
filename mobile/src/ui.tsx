@@ -82,6 +82,12 @@ export function PolicyLinks() {
 export function errorLabel(error: unknown): Label {
   if (!(error instanceof ApiError)) return "connectionError";
   if (error.code === "invalid_credentials") return "credentialsError";
+  if (error.code === "wallet_account_required") return "walletAccount";
+  if (error.code === "wallet_missing") return "walletMissing";
+  if (error.code === "wallet_declined") return "walletDeclined";
+  if (["wallet_failed", "bad_signature", "bad_message", "expired"].includes(error.code)) return "walletError";
+  if (error.status === 429) return "tryLater";
+  if (error.status === 402 || error.status === 0) return "connectionError";
   if (error.code === "consent_required" || error.code === "consent_version_mismatch") return "consentError";
   if (error.status === 401) return "authError";
   if (error.status === 409) return "changedError";

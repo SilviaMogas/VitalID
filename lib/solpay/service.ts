@@ -3,7 +3,14 @@ import { generateKeyPairSync } from 'node:crypto';
 import type { BillingInterval } from '@/lib/plans';
 import { base58Encode } from './base58';
 import { readSolPayConfig, solPayLamports, type SolPayConfig } from './config';
-import { createRpc, getParsedTransaction, getSignaturesForAddress, type ParsedTransaction, type SolanaRpc } from './rpc';
+import {
+  createRpc,
+  getParsedTransaction,
+  getSignaturesForAddress,
+  type ParsedTransaction,
+  type SignatureInfo,
+  type SolanaRpc,
+} from './rpc';
 import { getSolPaymentStore, type SolPayment } from './store';
 
 export const SOL_PAY_LABEL = 'Vital ID';
@@ -129,9 +136,38 @@ export function extractPayment(
   return { lamports, payer };
 }
 
+// Anyone can add a reference to cheap transactions, so the newest page of
+// signatures is not trusted to contain the payment: page back to the request
+// creation and check the oldest successful candidates first.
+const SIGNATURE_PAGE_SIZE = 1000;
+const MAX_SIGNATURE_PAGES = 10;
+const MAX_TRANSACTION_LOOKUPS = 25;
+const BLOCK_TIME_SKEW_SECONDS = 300;
+
+/** Successful signatures for `reference` since `notBefore` (unix s), oldest first. */
+async function candidateSignatures(client: SolanaRpc, reference: string, notBefore: number): Promise<SignatureInfo[]> {
+  const found: SignatureInfo[] = [];
+  let before: string | undefined;
+  for (let page = 0; page < MAX_SIGNATURE_PAGES; page += 1) {
+    const batch = await getSignaturesForAddress(client, reference, SIGNATURE_PAGE_SIZE, before);
+    let reachedStart = false;
+    for (const info of batch) {
+      if (typeof info.blockTime === 'number' && info.blockTime < notBefore) {
+        reachedStart = true;
+        break;
+      }
+      if (!info.err) found.push(info);
+    }
+    if (reachedStart || batch.length < SIGNATURE_PAGE_SIZE) break;
+    before = batch[batch.length - 1].signature;
+  }
+  return found.reverse();
+}
+
 /**
  * Checks the chain for a settlement of `reference` owned by `userKey` and,
  * on a valid transfer, claims it and activates the plan. Safe to poll.
+ * After `expiresAt` only transfers whose block time precedes it still count.
  */
 export async function confirmSolPayment(
   reference: string,
@@ -151,19 +187,26 @@ export async function confirmSolPayment(
     if (payment.signature) await store.applyPayment(reference);
     return { state: 'paid' };
   }
-  if (Date.parse(payment.expiresAt) <= Date.now()) return { state: 'expired' };
+  const expiresAtSeconds = Math.floor(Date.parse(payment.expiresAt) / 1000);
+  const expired = Date.parse(payment.expiresAt) <= Date.now();
 
   const config = readSolPayConfig();
-  if (!config || config.treasury !== payment.treasury) return { state: 'missing' };
+  if (!config || config.treasury !== payment.treasury) return { state: expired ? 'expired' : 'missing' };
   const client = rpc ?? createRpc(config.rpcUrl);
   const expected = BigInt(payment.lamports);
+  const notBefore = Math.floor(Date.parse(payment.createdAt) / 1000) - BLOCK_TIME_SKEW_SECONDS;
 
   let underpaid: string | null = null;
-  const signatures = await getSignaturesForAddress(client, reference, 10);
-  for (const { signature, err } of signatures) {
-    if (err) continue;
+  const signatures = await candidateSignatures(client, reference, notBefore);
+  let lookups = 0;
+  for (const { signature, blockTime: signatureBlockTime } of signatures) {
+    if (lookups >= MAX_TRANSACTION_LOOKUPS) break;
+    if (typeof signatureBlockTime === 'number' && signatureBlockTime > expiresAtSeconds) continue;
+    lookups += 1;
     const tx = await getParsedTransaction(client, signature, config.commitment);
     if (!tx) continue;
+    const blockTime = typeof tx.blockTime === 'number' ? tx.blockTime : signatureBlockTime;
+    if (typeof blockTime === 'number' ? blockTime < notBefore || blockTime > expiresAtSeconds : expired) continue;
     const extracted = extractPayment(tx, payment.treasury, reference);
     if (!extracted) continue;
     if (extracted.lamports < expected) {
@@ -179,5 +222,6 @@ export async function confirmSolPayment(
     }
     // 'signature-used': this signature settled a different request — keep scanning.
   }
+  if (expired) return { state: 'expired' };
   return underpaid !== null ? { state: 'underpaid', paidLamports: underpaid } : { state: 'pending' };
 }

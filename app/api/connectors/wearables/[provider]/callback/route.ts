@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOnboardingStore } from '@/lib/onboarding/store';
 import {
-  consumeState, exchangeCode, getWearableStore, isProviderConfigured, publicOrigin, redirectUri, syncWearable,
+  consumeState, exchangeCode, getWearableStore, isProviderConfigured, publicOrigin, redirectUri,
+  reserveWearableSync, syncWearable,
 } from '@/lib/connectors/wearables';
 import { getCurrentUser, hasHealthConsent, resolveProvider, unknownProvider, type ProviderCtx } from '../../_shared';
 
@@ -41,7 +42,8 @@ export async function GET(req: NextRequest, ctx: ProviderCtx) {
       lastSyncError: null,
     });
     await getOnboardingStore().setConnectorStatus(user.id, id, 'connected', new Date().toISOString());
-    await syncWearable(id, user.id).catch(() => undefined); // best-effort first sync
+    const syncAllowed = await reserveWearableSync(user.id, id).then((wait) => wait === 0, () => false);
+    if (syncAllowed) await syncWearable(id, user.id).catch(() => undefined); // best-effort first sync
     return home('connected');
   } catch {
     return home('error');
