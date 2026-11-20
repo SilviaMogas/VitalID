@@ -269,7 +269,9 @@ needed `NEXT_PUBLIC_*` variables in the build environment.
 
 The config enables the `workers.dev` URL but does not change DNS. Before
 attaching the custom domain, confirm that an unauthenticated request to
-`/api/mobile/v1/account` returns `401` JSON. See the
+`/api/mobile/v1/account` returns `401` JSON and that a POST to
+`/api/mobile/v1/auth/sol/message` with a valid public key returns a challenge.
+The `401` alone does not prove that the authentication backend is configured. See the
 [Seeker release checklist](mobile/README.md#seeker--solana-dapp-store) for
 wallet verification and the Android signing certificate.
 
