@@ -14,7 +14,7 @@ import {
 } from '@/lib/sharing';
 import { resolveUserData } from '@/lib/user-data';
 import { createShare, listShares, pruneExpiredShares } from '@/lib/share-store';
-import { getShareApiUser, isSameOrigin, shareJson } from '@/lib/share-api';
+import { getConsentingShareUser, getShareApiUser, isSameOrigin, shareJson } from '@/lib/share-api';
 import { recipientAccountExists } from '@/lib/auth/server';
 import { getMembershipStore } from '@/lib/membership/store';
 import { hasFeature } from '@/lib/plans';
@@ -56,7 +56,9 @@ function canonicalJson(value: unknown): string {
 
 export async function POST(req: Request) {
   if (!isSameOrigin(req)) return shareJson({ error: 'unavailable' }, 403);
-  const user = await getShareApiUser();
+  const auth = await getConsentingShareUser();
+  if ('response' in auth) return auth.response;
+  const { user } = auth;
 
   let body: unknown;
   try {
@@ -90,7 +92,6 @@ export async function POST(req: Request) {
   try {
     const { snapshot: full, owner } = await resolveUserData();
     if (owner !== 'member') return shareJson({ error: 'unavailable' }, 403);
-    if (!user) return shareJson({ error: 'unavailable' }, 401);
     const plan = (await getMembershipStore().get(user.id))?.plan ?? 'free';
     if (durationMinutes !== 60 && !hasFeature(plan, 'configurableExpiry')) {
       return shareJson({ error: 'duration_not_available' }, 403);
