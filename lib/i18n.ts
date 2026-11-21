@@ -249,6 +249,7 @@ const setupStrings = {
   "auth.wallet.phantom": ["Phantom", "Phantom"],
   "auth.wallet.notFound": ["Wallet not detected — open this page inside your wallet's browser or install the extension.", "لم يتم العثور على المحفظة — افتح هذه الصفحة داخل متصفح محفظتك أو ثبّت الإضافة."],
   "auth.wallet.failed": ["Wallet sign-in failed or was cancelled.", "فشل تسجيل الدخول بالمحفظة أو تم إلغاؤه."],
+  "auth.wallet.rateLimited": ["Too many new wallet accounts from this network. Try again later.", "تم إنشاء عدد كبير جدًا من حسابات المحافظ من هذه الشبكة. حاول مرة أخرى لاحقًا."],
 
   "journey.stepPlan": ["Step 2 · Choose your plan", "الخطوة ٢ · اختر خطتك"],
   "checkout.continueOnboarding": ["Continue setup", "متابعة الإعداد"],

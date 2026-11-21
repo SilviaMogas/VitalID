@@ -79,7 +79,7 @@ export async function clearSessionCookies(): Promise<void> {
   store.delete(REFRESH_COOKIE);
 }
 
-type AuthFailure = { ok: false; code: 'invalid_credentials' | 'email_not_confirmed' | 'confirmation_send_failed' | 'email_taken' | 'weak_password' | 'not_configured' | 'consent_required' | 'reserved_email' | 'unknown'; message: string };
+type AuthFailure = { ok: false; code: 'invalid_credentials' | 'email_not_confirmed' | 'confirmation_send_failed' | 'email_taken' | 'weak_password' | 'not_configured' | 'consent_required' | 'reserved_email' | 'rate_limited' | 'unknown'; message: string; retryAfterSeconds?: number };
 export type AuthResult = { ok: true; user: AuthUser; created?: boolean; pendingConfirmation?: boolean } | AuthFailure;
 type PasswordGrant = AuthFailure | {
   ok: true;
@@ -181,6 +181,7 @@ export async function grantVerifiedWalletSession(
   address: string,
   consents: { consentTerms: boolean; consentHealthData: boolean },
   chain: WalletChain = 'solana',
+  options: { beforeCreateAccount?: () => Promise<number> } = {},
 ): Promise<PasswordGrant> {
   if (!isAuthConfigured()) return { ok: false, code: 'not_configured', message: 'auth not configured' };
   if (chain === 'solana' ? !isSolanaPublicKey(address) : !/^0x[0-9a-fA-F]{40}$/.test(address)) {
@@ -278,6 +279,10 @@ export async function grantVerifiedWalletSession(
   if (!consents.consentTerms || !consents.consentHealthData) {
     return { ok: false, code: 'consent_required', message: 'consent required for new wallet account' };
   }
+  const retryAfterSeconds = await options.beforeCreateAccount?.();
+  if (retryAfterSeconds && retryAfterSeconds > 0) {
+    return { ok: false, code: 'rate_limited', message: 'too many new wallet accounts', retryAfterSeconds };
+  }
   const { error } = await admin.auth.admin.createUser({
     email,
     password,
@@ -294,8 +299,9 @@ export async function signInWithWallet(
   address: string,
   consents: { consentTerms: boolean; consentHealthData: boolean },
   chain: WalletChain = 'solana',
+  options: { beforeCreateAccount?: () => Promise<number> } = {},
 ): Promise<AuthResult> {
-  const result = await grantVerifiedWalletSession(address, consents, chain);
+  const result = await grantVerifiedWalletSession(address, consents, chain, options);
   if (!result.ok) return result;
   await writeSessionCookies(result.session.access_token, result.session.refresh_token);
   return { ok: true, user: result.user, ...(result.created ? { created: true } : {}) };

@@ -4,6 +4,7 @@ import { hasCurrentHealthConsent, getConsentStore } from '@/lib/consent';
 import { CONSENT_POLICY_VERSIONS } from '@/lib/legal';
 import type { WalletChain } from '@/lib/auth/wallet-identity';
 import { isSameOrigin } from '@/lib/share-api';
+import { throttleWalletSignup } from '@/lib/auth/login-throttle';
 
 const NO_STORE = { headers: { 'Cache-Control': 'no-store' } };
 const LOOPBACK_HOST_RE = /^(127\.0\.0\.1|\[::1\])(?::\d+)?$/;
@@ -31,13 +32,25 @@ export function walletRequestOrigin(req: Request): URL | null {
 }
 
 export async function completeWalletSignIn(
+  req: Request,
   address: string,
   chain: WalletChain,
   consents: { consentTerms: boolean; consentHealthData: boolean },
 ): Promise<NextResponse> {
   try {
-    const result = await signInWithWallet(address, consents, chain);
+    const result = await signInWithWallet(address, consents, chain, {
+      beforeCreateAccount: () => throttleWalletSignup(req),
+    });
     if (!result.ok) {
+      if (result.code === 'rate_limited') {
+        return NextResponse.json({ error: 'rate_limited' }, {
+          status: 429,
+          headers: {
+            'Retry-After': String(result.retryAfterSeconds ?? 1),
+            'Cache-Control': 'no-store',
+          },
+        });
+      }
       const status = result.code === 'not_configured' ? 503 : result.code === 'consent_required' ? 400 : 500;
       return walletJson({ error: result.code }, status);
     }

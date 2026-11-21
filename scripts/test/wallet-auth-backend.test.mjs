@@ -10,6 +10,7 @@ process.env.SUPABASE_URL = 'https://supabase.wallet.test';
 process.env.SUPABASE_SECRET_KEY = 'synthetic-wallet-service-key';
 process.env.SOL_WALLET_SECRET = 'wallet-test-secret';
 process.env.WALLET_NONCE_STORE = 'memory';
+process.env.AUTH_THROTTLE_STORE = 'memory';
 process.env.NODE_ENV = 'test';
 globalThis.crypto ??= webcrypto;
 
@@ -133,6 +134,8 @@ const CONSENTS = { consentTerms: true, consentHealthData: true };
 
 beforeEach(() => {
   process.env.SOL_WALLET_SECRET = 'wallet-test-secret';
+  process.env.AUTH_THROTTLE_STORE = 'memory';
+  globalThis.__vitalIdLoginThrottleAttempts?.clear();
   users.clear();
   generateLinkErrors = new Map();
   ambiguousGenerateLinkEmails = new Set();
@@ -158,11 +161,24 @@ async function signSolana(wallet, message) {
   return base58Encode(new Uint8Array(signature));
 }
 
-function request(url, body, origin, host) {
+function request(url, body, origin, host, ip) {
   const headers = { 'content-type': 'application/json' };
   if (origin) headers.origin = origin;
   if (host) headers.host = host;
+  if (ip) headers['x-real-ip'] = ip;
   return new Request(url, { method: 'POST', headers, body: typeof body === 'string' ? body : JSON.stringify(body) });
+}
+
+async function verifyEthereumWallet(wallet, ip) {
+  const message = issueEthereumMessage(wallet.address, 1, ORIGIN);
+  const signature = await wallet.signMessage(message);
+  return ethVerifyRoute.POST(request(
+    'https://vitalid.example/api/auth/eth/verify',
+    { address: wallet.address, chainId: 1, signature, message, ...CONSENTS },
+    undefined,
+    undefined,
+    ip,
+  ));
 }
 
 test('Ethereum personal_sign verifies canonical messages and rejects replay, signer, chain and origin tampering', async () => {
@@ -494,6 +510,31 @@ test('Ethereum consent audit failure clears the newly created session and fails 
   assert.equal((await response.json()).error, 'consent_audit_failed');
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.deepEqual(cookieJar(), {});
+});
+
+test('wallet sign-up is limited per IP while existing accounts can still sign in', async () => {
+  const ip = '198.51.100.40';
+  const wallets = Array.from({ length: 10 }, () => Wallet.createRandom());
+  for (const wallet of wallets) {
+    const response = await verifyEthereumWallet(wallet, ip);
+    assert.equal(response.status, 200);
+  }
+  assert.equal(createUserInputs.length, 10);
+
+  const limited = await verifyEthereumWallet(Wallet.createRandom(), ip);
+  assert.equal(limited.status, 429);
+  assert.deepEqual(await limited.json(), { error: 'rate_limited' });
+  assert.ok(Number(limited.headers.get('retry-after')) > 0);
+  assert.equal(limited.headers.get('cache-control'), 'no-store');
+  assert.equal(createUserInputs.length, 10);
+
+  const existing = await verifyEthereumWallet(wallets[0], ip);
+  assert.equal(existing.status, 200);
+  assert.equal(createUserInputs.length, 10);
+
+  const otherIp = await verifyEthereumWallet(Wallet.createRandom(), '198.51.100.41');
+  assert.equal(otherIp.status, 200);
+  assert.equal(createUserInputs.length, 11);
 });
 
 test('Ethereum wallet completion clears cookies when account lookup throws', async () => {

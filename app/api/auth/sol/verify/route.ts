@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   if (verdict === 'unavailable') return walletJson({ error: 'unavailable' }, 503);
   if (verdict === 'bad_signature') return walletJson({ error: 'bad_signature' }, 401);
   if (verdict !== 'ok') return walletJson({ error: verdict }, 400);
-  return completeWalletSignIn(publicKey, 'solana', {
+  return completeWalletSignIn(req, publicKey, 'solana', {
     consentTerms: body?.consentTerms === true,
     consentHealthData: body?.consentHealthData === true,
   });
