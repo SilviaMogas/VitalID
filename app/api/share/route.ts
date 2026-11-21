@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import {
   MAX_STORED_SHARES_PER_OWNER,
+  ShareLimitError,
   SHARE_DURATIONS,
   SHARE_FIELDS,
   SHARE_PURPOSES,
@@ -128,7 +129,8 @@ export async function POST(req: Request) {
     };
     await createShare(payload);
     return shareJson(projectSharePayload(payload), 201);
-  } catch {
+  } catch (err) {
+    if (err instanceof ShareLimitError) return shareJson({ error: 'share_limit' }, 429);
     return shareJson({ error: 'unavailable' }, 500);
   }
 }

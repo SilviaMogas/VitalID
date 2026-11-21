@@ -60,6 +60,12 @@ export const SHARE_FIELDS: ShareField[] = [
 ];
 export const SHARE_DURATIONS: ShareDuration[] = [15, 60, 1440];
 export const MAX_STORED_SHARES_PER_OWNER = 50;
+export class ShareLimitError extends Error {
+  constructor() {
+    super('share_limit');
+    this.name = 'ShareLimitError';
+  }
+}
 export const SHARE_PURPOSES: SharePurpose[] = [
   "emergency",
   "doctor",

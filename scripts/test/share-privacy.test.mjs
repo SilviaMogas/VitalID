@@ -1,11 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 for (const key of ['SUPABASE_URL', 'SUPABASE_SECRET_KEY', 'NEXT_PUBLIC_SUPABASE_URL']) delete process.env[key];
 
 const { GET: getShare } = await import('@/app/api/share/[id]/route');
 const { POST: createShare, GET: listOwnShares } = await import('@/app/api/share/route');
 const { SupabaseShareStore } = await import('@/lib/supabase/shares');
+const { MAX_STORED_SHARES_PER_OWNER, ShareLimitError } = await import('@/lib/sharing');
 const { POST: previewShare } = await import('@/app/api/share/preview/route');
 const { isSameOrigin } = await import('@/lib/share-api');
 const { getConsentStore } = await import('@/lib/consent');
@@ -487,4 +489,50 @@ test('Supabase owner listing is a single owner-filtered, limited query', async (
   assert.ok(prune.calls.some(([m]) => m === 'delete'));
   assert.ok(prune.calls.some((c) => c[0] === 'eq' && c[1] === 'snapshot->>ownerKey' && c[2] === owner.id));
   assert.ok(prune.calls.some((c) => c[0] === 'lt' && c[1] === 'expires_at' && c[2] === now.toISOString()));
+});
+
+test('Supabase share creation maps the owner-cap trigger error', async () => {
+  const input = { selectedFields: ['identity'], fullSnapshot: { identity: { fullName: 'Owner Name' } } };
+  const limited = recordingClient({ data: null, error: { code: 'P0001', message: 'share_limit' } });
+  await assert.rejects(
+    () => new SupabaseShareStore(limited.client).createVitalIdShare(input),
+    (error) => error instanceof ShareLimitError,
+  );
+
+  const otherError = recordingClient({ data: null, error: { code: '23505', message: 'duplicate key' } });
+  await assert.rejects(
+    () => new SupabaseShareStore(otherError.client).createVitalIdShare(input),
+    (error) => error instanceof Error && !(error instanceof ShareLimitError) &&
+      error.message.startsWith('createVitalIdShare failed'),
+  );
+});
+
+test('create returns share_limit when the database cap trigger rejects a concurrent insert', async () => {
+  const existing = storedShare('existing-owner-share', owner.id, '2026-01-01T00:00:00.000Z');
+  globalThis.__testShares = new Map([[existing.id, existing]]);
+  globalThis.__createdShare = null;
+  globalThis.__testUser = owner;
+  globalThis.__createShareError = new ShareLimitError();
+  try {
+    const response = await postIdentityShare();
+    assert.equal(response.status, 429);
+    assert.deepEqual(await response.json(), { error: 'share_limit' });
+    assert.equal(globalThis.__testShares.size, 1);
+    assert.equal(globalThis.__createdShare, null);
+  } finally {
+    delete globalThis.__createShareError;
+  }
+});
+
+test('database owner cap migration matches the application share limit', async () => {
+  const migration = await readFile(
+    new URL('../../supabase/migrations/20261120_vital_id_shares_owner_cap.sql', import.meta.url),
+    'utf8',
+  );
+  assert.ok(migration.includes('before insert on public.vital_id_shares'));
+  assert.ok(migration.includes('pg_advisory_xact_lock'));
+  assert.ok(migration.includes("errcode = 'P0001'"));
+  const cap = migration.match(/>= (\d+)/);
+  assert.ok(cap);
+  assert.equal(Number(cap[1]), MAX_STORED_SHARES_PER_OWNER);
 });
